@@ -1,5 +1,7 @@
 .env
+private/.env
 vendor/*
 *.jpg
 *.mov
 *.mp4
+private/cron_state/*

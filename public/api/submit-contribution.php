@@ -13,6 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $input = json_decode(file_get_contents('php://input'), true);
 $amount = $input['amount'] ?? null;
 $contributorName = trim($input['contributor_name'] ?? '');
+$fund = strtolower(trim($input['fund'] ?? 'house'));
 
 if (!$amount || $amount <= 0) {
     http_response_code(400);
@@ -22,10 +23,22 @@ if (!$amount || $amount <= 0) {
 
 try {
     $pdo = getDbConnection();
+
+    // Whitelist fund → table mapping to avoid SQL injection
+    $allowedFunds = [
+        'house' => 'house_fund_contributions',
+        'honeymoon' => 'honeymoon_fund_contributions',
+    ];
+    $table = $allowedFunds[$fund] ?? null;
+    if ($table === null) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Invalid fund type']);
+        exit;
+    }
     
     // Insert contribution
     $stmt = $pdo->prepare("
-        INSERT INTO house_fund_contributions (amount, contributor_name)
+        INSERT INTO {$table} (amount, contributor_name)
         VALUES (?, ?)
     ");
     $stmt->execute([
@@ -36,7 +49,7 @@ try {
     // Get updated total
     $stmt = $pdo->query("
         SELECT COALESCE(SUM(amount), 0) as total
-        FROM house_fund_contributions
+        FROM {$table}
     ");
     $result = $stmt->fetch();
     $newTotal = $result['total'] ?? 0;

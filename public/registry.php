@@ -15,6 +15,7 @@ function toSentenceCase($text) {
 
 $items = [];
 $houseFundTotal = 0;
+$honeymoonFundTotal = 0;
 try {
     $pdo = getDbConnection();
     $stmt = $pdo->query("
@@ -32,6 +33,20 @@ try {
     ");
     $result = $stmt->fetch();
     $houseFundTotal = $result['total'] ?? 0;
+
+    // Get total honeymoon fund contributions
+    try {
+        $stmt = $pdo->query("
+            SELECT COALESCE(SUM(amount), 0) as total
+            FROM honeymoon_fund_contributions
+        ");
+        $result = $stmt->fetch();
+        $honeymoonFundTotal = $result['total'] ?? 0;
+    } catch (Exception $e) {
+        // Allow registry page to load even if the honeymoon table isn't set up yet.
+        $honeymoonFundTotal = 0;
+        error_log("Error loading honeymoon fund total: " . $e->getMessage());
+    }
 } catch (Exception $e) {
     error_log("Error loading registry items: " . $e->getMessage());
 }
@@ -45,8 +60,8 @@ include __DIR__ . '/includes/header.php';
         <h2>Our Wedding Registry</h2>
 
         <!-- House Fund Section -->
-        <div class="house-fund-section" id="house-fund-section">
-            <button type="button" class="house-fund-header" id="house-fund-toggle" aria-expanded="true" aria-controls="house-fund-body">
+        <div class="house-fund-section collapsed" id="house-fund-section">
+            <button type="button" class="house-fund-header" id="house-fund-toggle" aria-expanded="false" aria-controls="house-fund-body">
                 <h3>House Fund</h3>
                 <span class="house-fund-toggle-icon" aria-hidden="true"></span>
             </button>
@@ -69,7 +84,7 @@ include __DIR__ . '/includes/header.php';
                     
                     <div class="house-fund-total">
                         <p class="total-label">Total Contributed:</p>
-                        <p class="total-amount">$<?php echo number_format($houseFundTotal, 2); ?></p>
+                        <p class="total-amount" id="house-fund-total-amount">$<?php echo number_format($houseFundTotal, 2); ?></p>
                     </div>
                 </div>
                 
@@ -87,6 +102,53 @@ include __DIR__ . '/includes/header.php';
                         <button type="submit" class="btn">Submit Contribution</button>
                     </form>
                     <div id="house-fund-message" class="house-fund-message" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Honeymoon Fund Section -->
+        <div class="honeymoon-fund-section collapsed" id="honeymoon-fund-section">
+            <button type="button" class="honeymoon-fund-header" id="honeymoon-fund-toggle" aria-expanded="false" aria-controls="honeymoon-fund-body">
+                <h3>Honeymoon Fund</h3>
+                <span class="honeymoon-fund-toggle-icon" aria-hidden="true"></span>
+            </button>
+            <div class="honeymoon-fund-body" id="honeymoon-fund-body">
+                <div class="honeymoon-fund-image">
+                    <img src="/images/honeymoon-fund.jpg" alt="Honeymoon Fund">
+                </div>
+                <p>We would be honored if you would like to contribute to our honeymoon fund as a wedding gift.</p>
+                
+                <div class="honeymoon-fund-info-container">
+                    <div class="honeymoon-fund-payment-methods">
+                        <div class="payment-method">
+                            <strong>Venmo:</strong> @Melissa-Longua
+                        </div>
+                        <div class="payment-method">
+                            <strong>Check:</strong> Please make checks payable to Jacob Stephens. If mailing, send to:<br>
+                            <span class="address">3815 Haverford Ave, Unit 1<br>Philadelphia, PA 19104</span>
+                        </div>
+                    </div>
+                    
+                    <div class="honeymoon-fund-total">
+                        <p class="total-label">Total Contributed:</p>
+                        <p class="total-amount" id="honeymoon-fund-total-amount">$<?php echo number_format($honeymoonFundTotal, 2); ?></p>
+                    </div>
+                </div>
+                
+                <div class="honeymoon-fund-form-container">
+                    <p>If you've contributed, please let us know the amount (optional):</p>
+                    <form id="honeymoon-fund-form" class="honeymoon-fund-form">
+                        <div class="form-group">
+                            <label for="honeymoon-contribution-amount">Amount</label>
+                            <input type="number" id="honeymoon-contribution-amount" name="amount" step="0.01" min="0" placeholder="0.00" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="honeymoon-contributor-name">Your Name (optional)</label>
+                            <input type="text" id="honeymoon-contributor-name" name="contributor_name" placeholder="Enter your name">
+                        </div>
+                        <button type="submit" class="btn">Submit Contribution</button>
+                    </form>
+                    <div id="honeymoon-fund-message" class="honeymoon-fund-message" style="display: none;"></div>
                 </div>
             </div>
         </div>
@@ -204,14 +266,46 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         const isCollapsed = function() {
             try {
-                return localStorage.getItem(HOUSE_FUND_COLLAPSED_KEY) === '1';
+                const stored = localStorage.getItem(HOUSE_FUND_COLLAPSED_KEY);
+                // Default to collapsed if not yet set.
+                if (stored === null) return true;
+                return stored === '1';
             } catch (e) {
-                return false;
+                return true;
             }
         };
         setCollapsed(isCollapsed());
         houseFundToggle.addEventListener('click', function() {
             setCollapsed(!houseFundSection.classList.contains('collapsed'));
+        });
+    }
+
+    // Honeymoon fund section fold/unfold
+    const HONEYMOON_FUND_COLLAPSED_KEY = 'registry-honeymoon-fund-collapsed';
+    const honeymoonFundSection = document.getElementById('honeymoon-fund-section');
+    const honeymoonFundToggle = document.getElementById('honeymoon-fund-toggle');
+    const honeymoonFundBody = document.getElementById('honeymoon-fund-body');
+    if (honeymoonFundSection && honeymoonFundToggle && honeymoonFundBody) {
+        const setCollapsed = function(collapsed) {
+            honeymoonFundSection.classList.toggle('collapsed', collapsed);
+            honeymoonFundToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            try {
+                localStorage.setItem(HONEYMOON_FUND_COLLAPSED_KEY, collapsed ? '1' : '0');
+            } catch (e) {}
+        };
+        const isCollapsed = function() {
+            try {
+                const stored = localStorage.getItem(HONEYMOON_FUND_COLLAPSED_KEY);
+                // Default to collapsed if not yet set.
+                if (stored === null) return true;
+                return stored === '1';
+            } catch (e) {
+                return true;
+            }
+        };
+        setCollapsed(isCollapsed());
+        honeymoonFundToggle.addEventListener('click', function() {
+            setCollapsed(!honeymoonFundSection.classList.contains('collapsed'));
         });
     }
 
@@ -495,7 +589,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // House Fund form submission
     const houseFundForm = document.getElementById('house-fund-form');
     const houseFundMessage = document.getElementById('house-fund-message');
-    const totalAmountElement = document.querySelector('.total-amount');
+    const houseTotalAmountElement = document.getElementById('house-fund-total-amount');
     
     if (houseFundForm) {
         houseFundForm.addEventListener('submit', function(e) {
@@ -520,6 +614,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
+                    fund: 'house',
                     amount: amount,
                     contributor_name: contributorName
                 })
@@ -528,8 +623,8 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.success) {
                     // Update total amount
-                    if (totalAmountElement) {
-                        totalAmountElement.textContent = '$' + parseFloat(data.total).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                    if (houseTotalAmountElement) {
+                        houseTotalAmountElement.textContent = '$' + parseFloat(data.total).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
                     }
                     // Reset form
                     houseFundForm.reset();
@@ -559,6 +654,77 @@ document.addEventListener('DOMContentLoaded', function() {
         // Hide message after 5 seconds
         setTimeout(() => {
             houseFundMessage.style.display = 'none';
+        }, 5000);
+    }
+
+    // Honeymoon Fund form submission
+    const honeymoonFundForm = document.getElementById('honeymoon-fund-form');
+    const honeymoonFundMessage = document.getElementById('honeymoon-fund-message');
+    const honeymoonTotalAmountElement = document.getElementById('honeymoon-fund-total-amount');
+
+    if (honeymoonFundForm) {
+        honeymoonFundForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const amount = parseFloat(document.getElementById('honeymoon-contribution-amount').value);
+            const contributorName = document.getElementById('honeymoon-contributor-name').value.trim();
+            
+            if (!amount || amount <= 0) {
+                showHoneymoonFundMessage('Please enter a valid amount.', 'error');
+                return;
+            }
+            
+            // Disable form during submission
+            const submitBtn = honeymoonFundForm.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+            
+            fetch('/api/submit-contribution.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    fund: 'honeymoon',
+                    amount: amount,
+                    contributor_name: contributorName
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update total amount
+                    if (honeymoonTotalAmountElement) {
+                        honeymoonTotalAmountElement.textContent = '$' + parseFloat(data.total).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                    }
+                    // Reset form
+                    honeymoonFundForm.reset();
+                    showHoneymoonFundMessage(data.message || 'Thank you for your contribution!', 'success');
+                } else {
+                    showHoneymoonFundMessage(data.error || 'An error occurred. Please try again.', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showHoneymoonFundMessage('An error occurred. Please try again.', 'error');
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Contribution';
+            });
+        });
+    }
+
+    function showHoneymoonFundMessage(message, type) {
+        if (!honeymoonFundMessage) return;
+        
+        honeymoonFundMessage.textContent = message;
+        honeymoonFundMessage.className = 'honeymoon-fund-message ' + (type === 'success' ? 'success' : 'error');
+        honeymoonFundMessage.style.display = 'block';
+        
+        // Hide message after 5 seconds
+        setTimeout(() => {
+            honeymoonFundMessage.style.display = 'none';
         }, 5000);
     }
 });

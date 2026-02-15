@@ -82,6 +82,25 @@
 - Mobile navigation uses a hamburger menu
 - Desktop navigation shows links below the header
 
+## Crons
+
+### Registry Checker
+
+There is a CLI script that checks whether the registry is getting low on **available** items (published + not purchased) and emails admins.
+
+- **Script**: `private/cron/registry_checker.php`
+- **Config (in `private/.env`)**:
+  - `REGISTRY_LOW_AVAILABLE_THRESHOLD` (default: `10`)
+  - `REGISTRY_CHECK_COOLDOWN_HOURS` (default: `24`)
+  - `REGISTRY_CHECK_RECIPIENTS` (optional, comma-separated list of emails)
+  - `REGISTRY_CHECK_DRY_RUN=1` (optional, disables sending)
+
+Example cron (runs daily at 8am, logs output):
+
+```bash
+0 8 * * * cd /var/www/wedding.stephens.page && /usr/bin/php private/cron/registry_checker.php >> /var/log/wedding-registry-checker.log 2>&1
+```
+
 
 
 

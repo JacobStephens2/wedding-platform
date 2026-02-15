@@ -131,7 +131,16 @@ The image for the house fund is public/images/house-fund.jpg
 
 There should be an arrow the user can click on the house fund section to fold up and hide most of the house fund section, leaving only the title of the section and the clickable unfold icon. The chevron should be on the top right of the house fund container.
 
-The default state of the house fund section should be open on page load.
+The default state of the house fund section should be folded on page load.
+
+### Honeymoon Fund
+The image for the honeymoon fund is public/images/honeymoon-fund.jpg
+
+Like the house fund section, there should also be a honeymoon fund section on the registry page.
+
+There should be an arrow the user can click on the honeymoon fund section to fold up and hide most of the honeymoon fund section, leaving only the title of the section and the clickable unfold icon. The chevron should be on the top right of the honeymoon fund container.
+
+The default state of the honeymoon fund section should be folded on page load.
 
 ## About
 There should be an "about" page linked to from the menu. This page should have info about how kids are allowed and about the nuptial Mass and Communion. We can borrow wording from Kiera and Brett's wedding website if they have any relevant wording: https://www.zola.com/wedding/brettandkiera
@@ -186,6 +195,9 @@ Admins should be able to give guests a plus one. If a guest has a plus one, then
 ## Manage House Fund
 In the admin area there should be a manage house fund page which allows the user to manage the house fund (CRUD operations on entries).
 
+## Manage Honeymoon Fund
+In the admin area there should be a manage honeymoon fund page which allows the user to manage the honeymoon fund (CRUD operations on entries).
+
 ## Manage Registry
 The font used in the description field for registry item management should display the casing the user entered, like the description display on the registry display page. The font here should display both upper and lower case letters, not just upper case letters that are taller or shorter.
 
@@ -196,11 +208,24 @@ The font for the descriptions in this view in the list should be user case as we
 ### Registry Summary Info
 The registry admin page should have summary information at the top of the page, above the "Add New Registry Item" area, about how many items are on the registry total, how many are available, and how many are already purchased.
 
+We're planning on 150 guests. There should also be a table which shows count of registry items by price bands according to the guidance in private/sources/Registry Guidance.md. This will help us focus our efforts on what sort of priced items to add to the registry.
+
+The admin should be able to fold and unfold the view of the regitry items by price band section.
+
 ### Registry Item Ordering
 There should be a way that we can manually order the default order the registry items appear in on the public registry page.
 
 ### Publishing Status for Registry Items
 There should be a way to set the publishing status of registry items. By default new items should have a published status of "Published", meaning they display on the public registry page, but in editing registry items, admins should be able to set the registry item status to "Unpublished", which makes the registry item only visible in the registry management area, but not in the public list.
+
+# Crons
+
+## Registry Checker
+There should be a program (perhaps a cron), which runs regularly to check if we are getting low on registry items and sends an email to Melissa and Jacob and I notifying us that we should add more items to the registry.
+
+Run the cron checker manually with this command?
+
+sudo -u www-data bash -lc 'cd /var/www/wedding.stephens.page && /usr/bin/php private/cron/registry_checker.php'
 
 # Redirects
 
