@@ -1,27 +1,51 @@
 {
+  "files.associations": {
+    "*.md": "markdown"
+  },
   "editor.tokenColorCustomizations": {
     "textMateRules": [
       {
-        "scope": "markup.heading.markdown",
+        "scope": "entity.name.section.markdown",
         "settings": {
-          "foreground": "#7f8f65"
+          "foreground": "#61AFEF",
+          "fontStyle": "bold"
         }
       },
       {
-        "scope": [
-          "markup.heading.1.markdown",
-          "markup.heading.2.markdown",
-          "markup.heading.3.markdown",
-          "markup.heading.4.markdown",
-          "markup.heading.5.markdown",
-          "markup.heading.6.markdown"
-        ],
+        "scope": "markup.heading.2.markdown entity.name.section.markdown",
         "settings": {
-          "foreground": "#7f8f65",
+          "foreground": "#98C379",
+          "fontStyle": "bold"
+        }
+      },
+      {
+        "scope": "markup.heading.3.markdown entity.name.section.markdown",
+        "settings": {
+          "foreground": "#D19A66",
+          "fontStyle": "bold"
+        }
+      },
+      {
+        "scope": "markup.heading.4.markdown entity.name.section.markdown",
+        "settings": {
+          "foreground": "#C678DD",
+          "fontStyle": "bold"
+        }
+      },
+      {
+        "scope": "markup.heading.5.markdown entity.name.section.markdown",
+        "settings": {
+          "foreground": "#56B6C2",
+          "fontStyle": "bold"
+        }
+      },
+      {
+        "scope": "markup.heading.6.markdown entity.name.section.markdown",
+        "settings": {
+          "foreground": "#BE5046",
           "fontStyle": "bold"
         }
       }
     ]
   }
 }
-

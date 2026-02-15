@@ -937,7 +937,8 @@ header {
 }
 
 /* House Fund Section */
-.house-fund-section {
+.house-fund-section,
+.honeymoon-fund-section {
     background-color: white;
     padding: 2rem;
     border-radius: 8px;
@@ -946,7 +947,8 @@ header {
     text-align: left;
 }
 
-.house-fund-header {
+.house-fund-header,
+.honeymoon-fund-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -966,7 +968,18 @@ header {
     color: var(--color-gold);
 }
 
+.honeymoon-fund-header:hover .honeymoon-fund-toggle-icon,
+.honeymoon-fund-header:focus .honeymoon-fund-toggle-icon,
+.honeymoon-fund-header:focus-visible .honeymoon-fund-toggle-icon {
+    color: var(--color-gold);
+}
+
 .house-fund-header:focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 2px;
+}
+
+.honeymoon-fund-header:focus-visible {
     outline: 2px solid var(--color-gold);
     outline-offset: 2px;
 }
@@ -984,7 +997,25 @@ header {
     flex-shrink: 0;
 }
 
+.honeymoon-fund-toggle-icon {
+    display: inline-block;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    color: var(--color-green);
+    transform: rotate(-135deg); /* up chevron when expanded (click to fold) */
+    margin-bottom: 0;
+    transition: transform 0.25s ease, color 0.2s ease;
+    flex-shrink: 0;
+}
+
 .house-fund-section.collapsed .house-fund-toggle-icon {
+    transform: rotate(45deg); /* down chevron when collapsed (click to unfold) */
+    margin-bottom: 0.35rem;
+}
+
+.honeymoon-fund-section.collapsed .honeymoon-fund-toggle-icon {
     transform: rotate(45deg); /* down chevron when collapsed (click to unfold) */
     margin-bottom: 0.35rem;
 }
@@ -994,11 +1025,21 @@ header {
     transition: opacity 0.25s ease;
 }
 
+.honeymoon-fund-body {
+    overflow: hidden;
+    transition: opacity 0.25s ease;
+}
+
 .house-fund-section.collapsed .house-fund-body {
     display: none;
 }
 
-.house-fund-section h3 {
+.honeymoon-fund-section.collapsed .honeymoon-fund-body {
+    display: none;
+}
+
+.house-fund-section h3,
+.honeymoon-fund-section h3 {
     font-size: 2rem;
     color: var(--color-green);
     margin: 0;
@@ -1010,33 +1051,42 @@ header {
     margin-top: 1rem;
 }
 
-.house-fund-image {
+.honeymoon-fund-section:not(.collapsed) .honeymoon-fund-body {
+    margin-top: 1rem;
+}
+
+.house-fund-image,
+.honeymoon-fund-image {
     text-align: center;
     margin-bottom: 1.5rem;
 }
 
-.house-fund-image img {
+.house-fund-image img,
+.honeymoon-fund-image img {
     max-width: 100%;
     height: auto;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-.house-fund-body > p {
+.house-fund-body > p,
+.honeymoon-fund-body > p {
     text-align: center;
     margin-bottom: 1.5rem;
     font-family: 'Crimson Text', serif;
     font-size: 1.1rem;
 }
 
-.house-fund-info-container {
+.house-fund-info-container,
+.honeymoon-fund-info-container {
     display: flex;
     gap: 2rem;
     margin-bottom: 2rem;
     align-items: stretch;
 }
 
-.house-fund-payment-methods {
+.house-fund-payment-methods,
+.honeymoon-fund-payment-methods {
     flex: 1;
     padding: 1.5rem;
     background-color: var(--color-light);
@@ -1065,7 +1115,8 @@ header {
     font-style: italic;
 }
 
-.house-fund-total {
+.house-fund-total,
+.honeymoon-fund-total {
     flex: 0 0 300px;
     text-align: center;
     padding: 1.5rem;
@@ -1091,22 +1142,26 @@ header {
     margin: 0;
 }
 
-.house-fund-form-container {
+.house-fund-form-container,
+.honeymoon-fund-form-container {
     text-align: center;
 }
 
-.house-fund-form-container > p {
+.house-fund-form-container > p,
+.honeymoon-fund-form-container > p {
     margin-bottom: 1.5rem;
     font-family: 'Crimson Text', serif;
 }
 
-.house-fund-form {
+.house-fund-form,
+.honeymoon-fund-form {
     max-width: 400px;
     margin: 0 auto;
     text-align: left;
 }
 
-.house-fund-message {
+.house-fund-message,
+.honeymoon-fund-message {
     margin-top: 1rem;
     padding: 1rem;
     border-radius: 4px;
@@ -1114,13 +1169,15 @@ header {
     font-family: 'Crimson Text', serif;
 }
 
-.house-fund-message.success {
+.house-fund-message.success,
+.honeymoon-fund-message.success {
     background-color: #d4edda;
     color: #155724;
     border: 1px solid #c3e6cb;
 }
 
-.house-fund-message.error {
+.house-fund-message.error,
+.honeymoon-fund-message.error {
     background-color: #f8d7da;
     color: #721c24;
     border: 1px solid #f5c6cb;
@@ -1453,20 +1510,24 @@ header {
 }
 
 @media (max-width: 768px) {
-    .house-fund-section {
+    .house-fund-section,
+    .honeymoon-fund-section {
         padding: 1.5rem;
     }
     
-    .house-fund-section h3 {
+    .house-fund-section h3,
+    .honeymoon-fund-section h3 {
         font-size: 1.5rem;
     }
     
-    .house-fund-info-container {
+    .house-fund-info-container,
+    .honeymoon-fund-info-container {
         flex-direction: column;
         gap: 1.5rem;
     }
     
-    .house-fund-total {
+    .house-fund-total,
+    .honeymoon-fund-total {
         flex: 1;
     }
     
@@ -1474,7 +1535,8 @@ header {
         font-size: 2rem;
     }
     
-    .house-fund-payment-methods {
+    .house-fund-payment-methods,
+    .honeymoon-fund-payment-methods {
         padding: 1rem;
     }
     

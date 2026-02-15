@@ -557,6 +557,107 @@ $page_title = "Manage Registry - Jacob & Melissa";
             font-family: 'Crimson Text', serif;
             font-size: 1.1rem;
         }
+        .price-band-table-container {
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        .price-band-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0;
+            margin: 0 0 0.5rem 0;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font: inherit;
+            text-align: left;
+        }
+        .price-band-header h2 {
+            color: var(--color-green);
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        .price-band-toggle-icon {
+            display: inline-block;
+            width: 1.1rem;
+            height: 1.1rem;
+            border-right: 2px solid currentColor;
+            border-bottom: 2px solid currentColor;
+            color: var(--color-green);
+            transform: rotate(-135deg); /* up chevron when expanded */
+            transition: transform 0.25s ease, color 0.2s ease;
+            flex-shrink: 0;
+            margin-left: 1rem;
+        }
+        .price-band-header:hover .price-band-toggle-icon,
+        .price-band-header:focus .price-band-toggle-icon,
+        .price-band-header:focus-visible .price-band-toggle-icon {
+            color: var(--color-gold);
+        }
+        .price-band-header:focus-visible {
+            outline: 2px solid var(--color-gold);
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+        .price-band-body {
+            margin-top: 0.25rem;
+        }
+        .price-band-table-container.collapsed .price-band-toggle-icon {
+            transform: rotate(45deg); /* down chevron when collapsed */
+        }
+        .price-band-table-container.collapsed .price-band-body {
+            display: none;
+        }
+        .price-band-note {
+            margin: 0 0 1rem 0;
+            font-size: 0.95rem;
+            color: #666;
+            font-family: 'Crimson Text', serif;
+            line-height: 1.5;
+        }
+        .price-band-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+        }
+        .price-band-table th,
+        .price-band-table td {
+            padding: 0.85rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            vertical-align: top;
+        }
+        .price-band-table th {
+            background-color: var(--color-green);
+            color: white;
+            font-family: 'Cinzel', serif;
+            font-weight: 400;
+        }
+        .price-band-table tbody tr:hover {
+            background-color: #f5f5f5;
+        }
+        .price-band-status {
+            font-weight: bold;
+            font-family: 'Crimson Text', serif;
+        }
+        .price-band-status.low {
+            color: #b02a37;
+        }
+        .price-band-status.ok {
+            color: #2d5016;
+        }
+        .price-band-status.high {
+            color: #b45309;
+        }
+        .price-band-status.na {
+            color: #6c757d;
+            font-weight: normal;
+        }
         .unpublished-badge {
             display: inline-block;
             background-color: #6c757d;
@@ -683,6 +784,104 @@ $page_title = "Manage Registry - Jacob & Melissa";
                         $availableItems++;
                     }
                 }
+
+                // Price band guidance (kept in sync with private/sources/Registry Guidance.md)
+                $targetTotalMin = 50;
+                $targetTotalMax = 75;
+                $priceBands = [
+                    [
+                        'key' => 'under_25',
+                        'label' => 'Under $25',
+                        'min' => 0.01,
+                        'max' => 25.0,
+                        'minPct' => 0.10,
+                        'maxPct' => 0.15
+                    ],
+                    [
+                        'key' => '25_50',
+                        'label' => '$25–$50',
+                        'min' => 25.0,
+                        'max' => 50.0,
+                        'minPct' => 0.25,
+                        'maxPct' => 0.35
+                    ],
+                    [
+                        'key' => '50_100',
+                        'label' => '$50–$100',
+                        'min' => 50.0,
+                        'max' => 100.0,
+                        'minPct' => 0.25,
+                        'maxPct' => 0.30
+                    ],
+                    [
+                        'key' => '100_200',
+                        'label' => '$100–$200',
+                        'min' => 100.0,
+                        'max' => 200.0,
+                        'minPct' => 0.15,
+                        'maxPct' => 0.20
+                    ],
+                    [
+                        'key' => '200_400',
+                        'label' => '$200–$400',
+                        'min' => 200.0,
+                        'max' => 400.0,
+                        'minPct' => 0.05,
+                        'maxPct' => 0.10
+                    ],
+                    [
+                        'key' => '400_plus',
+                        'label' => '$400+',
+                        'min' => 400.0,
+                        'max' => null,
+                        'minPct' => 0.00,
+                        'maxPct' => 0.05
+                    ],
+                ];
+
+                $bandCounts = [];
+                foreach ($priceBands as $band) {
+                    $bandCounts[$band['key']] = ['total' => 0, 'available' => 0, 'purchased' => 0];
+                }
+                $noPriceCounts = ['total' => 0, 'available' => 0, 'purchased' => 0];
+
+                foreach ($items as $item) {
+                    $priceRaw = $item['price'] ?? null;
+                    $price = is_numeric($priceRaw) ? (float) $priceRaw : null;
+                    $isPurchased = !empty($item['purchased']);
+                    $bucket = null;
+
+                    if (empty($price) || $price <= 0) {
+                        $bucket = &$noPriceCounts;
+                    } else {
+                        foreach ($priceBands as $band) {
+                            $min = $band['min'];
+                            $max = $band['max'];
+                            if ($price >= $min && ($max === null || $price < $max)) {
+                                $bucket = &$bandCounts[$band['key']];
+                                break;
+                            }
+                        }
+                        if ($bucket === null) {
+                            // Should never happen (band coverage is exhaustive), but don't lose the item if it does.
+                            $bucket = &$noPriceCounts;
+                        }
+                    }
+
+                    $bucket['total']++;
+                    if ($isPurchased) {
+                        $bucket['purchased']++;
+                    } else {
+                        $bucket['available']++;
+                    }
+                    unset($bucket);
+                }
+
+                $targetRangeForBand = function (array $band) use ($targetTotalMin, $targetTotalMax) {
+                    $minTarget = (int) ceil(($band['minPct'] ?? 0) * $targetTotalMin);
+                    $maxTarget = (int) floor(($band['maxPct'] ?? 0) * $targetTotalMax);
+                    return [$minTarget, $maxTarget];
+                };
                 ?>
                 
                 <div class="summary-stats">
@@ -697,6 +896,68 @@ $page_title = "Manage Registry - Jacob & Melissa";
                     <div class="stat-card">
                         <span class="stat-value"><?php echo $purchasedItems; ?></span>
                         <span class="stat-label">Purchased</span>
+                    </div>
+                </div>
+
+                <div class="price-band-table-container">
+                    <button type="button" class="price-band-header" id="price-band-toggle" aria-expanded="true" aria-controls="price-band-body">
+                        <h2>Registry items by price band</h2>
+                        <span class="price-band-toggle-icon" aria-hidden="true"></span>
+                    </button>
+                    <div class="price-band-body" id="price-band-body">
+                        <p class="price-band-note">
+                            Counts are based on the item <strong>Price</strong> field (including unpublished items). Suggested ranges assume a 50–75 physical-item “shield” for ~150 guests.
+                        </p>
+                        <table class="price-band-table">
+                            <thead>
+                                <tr>
+                                    <th>Price band</th>
+                                    <th>Current</th>
+                                    <th>Suggested (50–75 items)</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($priceBands as $band): ?>
+                                    <?php
+                                        [$minTarget, $maxTarget] = $targetRangeForBand($band);
+                                        $current = $bandCounts[$band['key']]['total'] ?? 0;
+                                        $statusText = 'OK';
+                                        $statusClass = 'ok';
+                                        if ($current < $minTarget) {
+                                            $statusText = 'Low (need +' . ($minTarget - $current) . ')';
+                                            $statusClass = 'low';
+                                        } elseif ($current > $maxTarget) {
+                                            $statusText = 'High (+' . ($current - $maxTarget) . ')';
+                                            $statusClass = 'high';
+                                        }
+                                    ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($band['label']); ?></td>
+                                        <td>
+                                            <?php echo (int) $current; ?>
+                                            <span style="color:#666; font-family:'Crimson Text', serif;">
+                                                (<?php echo (int) ($bandCounts[$band['key']]['available'] ?? 0); ?> avail / <?php echo (int) ($bandCounts[$band['key']]['purchased'] ?? 0); ?> purchased)
+                                            </span>
+                                        </td>
+                                        <td><?php echo (int) $minTarget; ?>–<?php echo (int) $maxTarget; ?></td>
+                                        <td><span class="price-band-status <?php echo $statusClass; ?>"><?php echo htmlspecialchars($statusText); ?></span></td>
+                                    </tr>
+                                <?php endforeach; ?>
+
+                                <tr>
+                                    <td>No price</td>
+                                    <td>
+                                        <?php echo (int) $noPriceCounts['total']; ?>
+                                        <span style="color:#666; font-family:'Crimson Text', serif;">
+                                            (<?php echo (int) $noPriceCounts['available']; ?> avail / <?php echo (int) $noPriceCounts['purchased']; ?> purchased)
+                                        </span>
+                                    </td>
+                                    <td>0</td>
+                                    <td><span class="price-band-status na">Add prices so planning works</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
                 
@@ -817,6 +1078,36 @@ $page_title = "Manage Registry - Jacob & Melissa";
         <?php endif; ?>
     </main>
     <script>
+        // Price band table fold/unfold
+        (function() {
+            const PRICE_BAND_COLLAPSED_KEY = 'admin-registry-price-bands-collapsed';
+            const container = document.querySelector('.price-band-table-container');
+            const toggle = document.getElementById('price-band-toggle');
+            const body = document.getElementById('price-band-body');
+            if (!container || !toggle || !body) return;
+
+            function setCollapsed(collapsed) {
+                container.classList.toggle('collapsed', collapsed);
+                toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+                try {
+                    localStorage.setItem(PRICE_BAND_COLLAPSED_KEY, collapsed ? '1' : '0');
+                } catch (e) {}
+            }
+
+            function isCollapsed() {
+                try {
+                    return localStorage.getItem(PRICE_BAND_COLLAPSED_KEY) === '1';
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            setCollapsed(isCollapsed());
+            toggle.addEventListener('click', function() {
+                setCollapsed(!container.classList.contains('collapsed'));
+            });
+        })();
+
         // Reorder position inputs
         (function() {
             const saveBtn = document.getElementById('save-order-btn');
