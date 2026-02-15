@@ -134,7 +134,7 @@ There should be an arrow the user can click on the house fund section to fold up
 The default state of the house fund section should be folded on page load.
 
 ### Honeymoon Fund
-The image for the honeymoon fund is public/images/honeymoon-fund.jpg
+The image for the honeymoon fund is public/images/honeymoon-fund.jpg (do not hotlink external images; add a properly-licensed image file to the repo).
 
 Like the house fund section, there should also be a honeymoon fund section on the registry page.
 
@@ -149,6 +149,8 @@ There should be an "about" page linked to from the menu. This page should have i
 This page should have information about parking and transportation as well as information about our hotel block.
 
 ### Accommodations
+There should be a note on the travel page about cheaper hotel rooms other than our room blocks right under the section title so visitors are more likely to see it first, as it is a first option before the blocks given the money saving of it.
+
 We have a room block at the Residence Inn by Marriott (615 Righters Ferry Rd, Bala Cynwyd, PA 19004). The group rate booking link is: https://app.marriott.com/reslink?id=1769545389844&key=GRP&app=resvlink — available through March 11, 2026. A note on the page advises guests that they may find rooms closer to Bala Golf Club at a lower rate by searching independently. Rooms in this block are $300 per night.
 
 We have another room block at Courtyard by Marriott Philadelphia City Avenue

@@ -45,6 +45,8 @@ include __DIR__ . '/includes/header.php';
     
     <section class="travel-section">
         <h2>Accommodations</h2>
+
+        <p class="accommodations-note"><strong>Note:</strong> You may find rooms closer to Bala Golf Club (the reception venue) at a lower rate than the room block by searching independently. We encourage you to compare options to find what works best for&nbsp;you.</p>
         
         <div class="accommodation-option">
             <h3>Residence Inn by Marriott — Room Block</h3>
@@ -57,8 +59,6 @@ include __DIR__ . '/includes/header.php';
             <p class="address">4100 Presidential Boulevard, Philadelphia, PA 19131</p>
             <p>We've reserved another block of rooms at the Courtyard by Marriott for our wedding guests at a group rate of <strong>$200 per night</strong>. <a href="https://app.marriott.com/reslink?id=1770919186656&key=GRP&app=resvlink" target="_blank" rel="noopener noreferrer">Book through our room block here</a>.</p>
         </div>
-
-        <p class="accommodations-note"><strong>Note:</strong> You may find rooms closer to Bala Golf Club (the reception venue) at a lower rate than the room block by searching independently. We encourage you to compare options to find what works best for&nbsp;you.</p>
     </section>
     
     <section class="travel-section">
