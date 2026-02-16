@@ -174,6 +174,16 @@ if ($authenticated) {
         $search = trim($_GET['search'] ?? '');
         $groupFilter = trim($_GET['group_filter'] ?? '');
         
+        // Sorting
+        $sort = $_GET['sort'] ?? 'mailing_group';
+        $order = $_GET['order'] ?? 'ASC';
+        
+        $allowedSorts = ['first_name', 'last_name', 'mailing_group', 'group_name', 'has_plus_one', 'attending'];
+        if (!in_array($sort, $allowedSorts)) {
+            $sort = 'mailing_group';
+        }
+        $order = ($order === 'DESC') ? 'DESC' : 'ASC';
+        
         $where = [];
         $params = [];
         
@@ -193,18 +203,30 @@ if ($authenticated) {
         
         $stmt = $pdo->prepare("
             SELECT * FROM guests $whereClause
-            ORDER BY mailing_group ASC, id ASC
+            ORDER BY $sort $order, id ASC
         ");
         $stmt->execute($params);
         $guests = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Stats (always from full table)
+        // Counts are in "invites" (guests + granted plus-ones), per specification.
         $statsStmt = $pdo->query("
             SELECT 
-                COUNT(*) as total,
-                SUM(CASE WHEN attending = 'yes' THEN 1 ELSE 0 END) as attending,
-                SUM(CASE WHEN attending = 'no' THEN 1 ELSE 0 END) as declined,
-                SUM(CASE WHEN attending IS NULL THEN 1 ELSE 0 END) as pending
+                (
+                    COUNT(*) + COALESCE(SUM(CASE WHEN has_plus_one = 1 THEN 1 ELSE 0 END), 0)
+                ) as total,
+                (
+                    COALESCE(SUM(CASE WHEN attending = 'yes' THEN 1 ELSE 0 END), 0)
+                    + COALESCE(SUM(CASE WHEN has_plus_one = 1 AND plus_one_attending = 'yes' THEN 1 ELSE 0 END), 0)
+                ) as attending,
+                (
+                    COALESCE(SUM(CASE WHEN attending = 'no' THEN 1 ELSE 0 END), 0)
+                    + COALESCE(SUM(CASE WHEN has_plus_one = 1 AND plus_one_attending = 'no' THEN 1 ELSE 0 END), 0)
+                ) as declined,
+                (
+                    COALESCE(SUM(CASE WHEN attending IS NULL THEN 1 ELSE 0 END), 0)
+                    + COALESCE(SUM(CASE WHEN has_plus_one = 1 AND plus_one_attending IS NULL THEN 1 ELSE 0 END), 0)
+                ) as pending
             FROM guests
         ");
         $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
@@ -386,7 +408,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
         .guests-table th {
             background: var(--color-green);
             color: white;
-            padding: 0.75rem 1rem;
+            padding: 0;
             text-align: left;
             font-family: 'Cinzel', serif;
             font-size: 0.85rem;
@@ -395,6 +417,22 @@ $page_title = "Manage Guests - Jacob & Melissa";
             position: sticky;
             top: 0;
             z-index: 10;
+        }
+        .guests-table th a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: white;
+            text-decoration: none;
+            width: 100%;
+            height: 100%;
+        }
+        .guests-table th a:hover {
+            background: rgba(0,0,0,0.1);
+        }
+        .sort-indicator {
+            font-size: 0.7rem;
+            margin-left: 0.3rem;
+            opacity: 0.7;
         }
         .guests-table td {
             padding: 0.6rem 1rem;
@@ -530,7 +568,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
                 <div class="stats-bar">
                     <div class="stat-item">
                         <span class="stat-number"><?php echo $stats['total']; ?></span>
-                        <span class="stat-label">Total Guests</span>
+                        <span class="stat-label">Total Invites (incl. +1s)</span>
                     </div>
                     <div class="stat-item stat-attending">
                         <span class="stat-number"><?php echo $stats['attending']; ?></span>
@@ -615,16 +653,32 @@ $page_title = "Manage Guests - Jacob & Melissa";
                 
                 <!-- Guests Table -->
                 <span class="guest-count-label">Showing <?php echo count($guests); ?> guest<?php echo count($guests) !== 1 ? 's' : ''; ?></span>
+                <?php
+                function getSortUrl($field, $currentSort, $currentOrder) {
+                    $params = $_GET;
+                    if ($currentSort === $field) {
+                        $params['order'] = ($currentOrder === 'ASC') ? 'DESC' : 'ASC';
+                    } else {
+                        $params['sort'] = $field;
+                        $params['order'] = 'ASC';
+                    }
+                    return '/admin-guests?' . http_build_query($params);
+                }
+                function getSortIndicator($field, $currentSort, $currentOrder) {
+                    if ($currentSort !== $field) return '';
+                    return $currentOrder === 'ASC' ? ' <span class="sort-indicator">▲</span>' : ' <span class="sort-indicator">▼</span>';
+                }
+                ?>
                 <div class="guests-table-container">
                     <table class="guests-table">
                         <thead>
                             <tr>
-                                <th>First Name</th>
-                                <th>Last Name</th>
-                                <th>Group #</th>
-                                <th>Group Name</th>
-                                <th>+1</th>
-                                <th>RSVP Status</th>
+                                <th><a href="<?php echo getSortUrl('first_name', $sort, $order); ?>">First Name<?php echo getSortIndicator('first_name', $sort, $order); ?></a></th>
+                                <th><a href="<?php echo getSortUrl('last_name', $sort, $order); ?>">Last Name<?php echo getSortIndicator('last_name', $sort, $order); ?></a></th>
+                                <th><a href="<?php echo getSortUrl('mailing_group', $sort, $order); ?>">Group #<?php echo getSortIndicator('mailing_group', $sort, $order); ?></a></th>
+                                <th><a href="<?php echo getSortUrl('group_name', $sort, $order); ?>">Group Name<?php echo getSortIndicator('group_name', $sort, $order); ?></a></th>
+                                <th><a href="<?php echo getSortUrl('has_plus_one', $sort, $order); ?>">+1<?php echo getSortIndicator('has_plus_one', $sort, $order); ?></a></th>
+                                <th><a href="<?php echo getSortUrl('attending', $sort, $order); ?>">RSVP Status<?php echo getSortIndicator('attending', $sort, $order); ?></a></th>
                                 <th>Actions</th>
                             </tr>
                         </thead>

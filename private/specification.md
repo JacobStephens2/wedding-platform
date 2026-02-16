@@ -184,10 +184,14 @@ There should be a password protected page accessible at https://wedding.stephens
 
 There should be a link on the logged in and logged out view of this page which takes the user back to the main site.
 
-## Invite Lookup Management Page in Admin Area
+## Invite Lookup Management Page in Admin Area / Guest Management / Manage Guests
 There should be a page in the admin area which lets admins manage the invite list. The initial set of data should come from the private/Guest List Feb 10 2026.csv file. This CRUD area should show first name, last name, group number, and RSVP status.
 
 The header columns of the guest management page (/admin-guests) should stay sticky at the top of the page on scroll so the admin can continue to see what each column is as they scroll down.
+
+The headers of the guest table should be clickable to sort the table by the field of the column header clicked.
+
+The area at the top of the guest management page should include plus ones in the total count of invites. This will help us know how many invites we have extended and whether we need to hold off or not on extending more invitations.
 
 ### Giving a guest a plus one
 Admins should be able to give guests a plus one. If a guest has a plus one, then when they look themself up in the invite lookup of the RSVP page, they should see their name as well as a blank name field for their plus one. They should be able to indicate whether or not they are bringing a plus one.
