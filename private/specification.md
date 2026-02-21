@@ -249,6 +249,9 @@ The description field of the image editor should use a sentence case font, not a
 
 After uploading a photo, the system should attempt to prefill the date and description of the upload form based on the filename of the photo. `11-16-24 Balcony View of Hamilton.jpg` is an example of a filename. This filename has 11-16-24 as the date (November 16, 2024) and "Balcony View of Hamilton" as the description.
 
+### Marking Gallery Photos for the Story Page
+When adding or editing a photo in the gallery manager, the user should be able to mark a photo to appear in a section of the story page in addition to appearing in the gallery. They should have a select with options for the different sections of the story page (e.g. A Prayer and a Dance, The Sidewalk). The user should be able to indicate the position in the story page's carousel that the photo should appear (e.g. 1, 2, 3).
+
 # Crons
 
 ## Registry Checker
