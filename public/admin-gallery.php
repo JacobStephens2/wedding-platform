@@ -9,6 +9,21 @@ $error = '';
 $success = '';
 $authenticated = false;
 
+$storySections = [
+    ''                   => '(None — gallery only)',
+    'a_prayer_and_dance' => 'A Prayer and a Dance',
+    'the_sidewalk'       => 'The Sidewalk',
+    'tacos_and_theology' => 'Tacos and Theology',
+    'the_balcony'        => 'The Balcony',
+    'the_first_snow'     => 'The First Snow',
+    'pastaio'            => 'Pastaio',
+    'the_novena'         => 'The Novena',
+    'the_blessing'       => 'The Blessing',
+    'proposal'           => 'Written in Stone and Sky (Proposal)',
+    'blessing'           => 'Written in Stone and Sky (Blessing)',
+    'divine_mercy'       => 'Divine Mercy\'s Design',
+];
+
 if (isAdminAuthenticated()) {
     $authenticated = true;
 }
@@ -54,11 +69,32 @@ function handlePhotoUpload(array $file, string &$error): ?string {
     if ($isHeic) {
         $tmpSrc = escapeshellarg($file['tmp_name']);
         $tmpDst = escapeshellarg($targetPath);
-        $result = 0;
-        $output = [];
-        exec("convert $tmpSrc -quality 90 $tmpDst 2>&1", $output, $result);
-        if ($result !== 0 || !file_exists($targetPath)) {
-            $error = 'HEIC conversion failed: ' . implode(' ', $output);
+        $converted = false;
+        $errors = [];
+
+        $pyScript = "import sys;from pillow_heif import register_heif_opener;from PIL import Image;"
+            . "register_heif_opener();img=Image.open(sys.argv[1]);"
+            . "img.save(sys.argv[2],'JPEG',quality=90)";
+        $pyCmd = "python3 -c " . escapeshellarg($pyScript) . " $tmpSrc $tmpDst";
+        exec("$pyCmd 2>&1", $out1, $r1);
+        if ($r1 === 0 && file_exists($targetPath)) {
+            $converted = true;
+        } else {
+            $errors[] = implode(' ', $out1);
+        }
+
+        if (!$converted) {
+            $out2 = [];
+            exec("heif-convert -q 90 $tmpSrc $tmpDst 2>&1", $out2, $r2);
+            if ($r2 === 0 && file_exists($targetPath)) {
+                $converted = true;
+            } else {
+                $errors[] = implode(' ', $out2);
+            }
+        }
+
+        if (!$converted) {
+            $error = 'HEIC conversion failed: ' . implode(' | ', $errors);
             return null;
         }
     } else {
@@ -87,18 +123,23 @@ if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add
             }
         }
 
+        $storySection = trim($_POST['story_section'] ?? '');
+        $storyPosition = trim($_POST['story_position'] ?? '');
+
         if (empty($path) || empty($photoDate)) {
             $error = $error ?: 'File path (or upload) and date are required.';
         } else {
             $stmt = $pdo->prepare("
-                INSERT INTO gallery_photos (path, alt, photo_date, position)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO gallery_photos (path, alt, photo_date, position, story_section, story_position)
+                VALUES (?, ?, ?, ?, ?, ?)
             ");
             $stmt->execute([
                 $path,
                 $alt,
                 $photoDate,
                 $position !== '' ? $position : null,
+                $storySection !== '' ? $storySection : null,
+                $storyPosition !== '' ? (int)$storyPosition : null,
             ]);
             header('Location: /admin-gallery?added=1');
             exit;
@@ -125,12 +166,15 @@ if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upd
             }
         }
 
+        $storySection = trim($_POST['story_section'] ?? '');
+        $storyPosition = trim($_POST['story_position'] ?? '');
+
         if (empty($path) || empty($photoDate)) {
             $error = $error ?: 'File path (or upload) and date are required.';
         } else {
             $stmt = $pdo->prepare("
                 UPDATE gallery_photos
-                SET path = ?, alt = ?, photo_date = ?, position = ?
+                SET path = ?, alt = ?, photo_date = ?, position = ?, story_section = ?, story_position = ?
                 WHERE id = ?
             ");
             $stmt->execute([
@@ -138,6 +182,8 @@ if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upd
                 $alt,
                 $photoDate,
                 $position !== '' ? $position : null,
+                $storySection !== '' ? $storySection : null,
+                $storyPosition !== '' ? (int)$storyPosition : null,
                 $id,
             ]);
             header('Location: /admin-gallery?updated=1');
@@ -337,6 +383,16 @@ $page_title = "Manage Gallery - Jacob & Melissa";
             display: flex;
             gap: 0.75rem;
         }
+        .photo-story-badge {
+            display: inline-block;
+            font-family: 'Crimson Text', serif;
+            font-size: 0.75rem;
+            color: white;
+            background: var(--color-green);
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            margin-bottom: 0.4rem;
+        }
         .card-actions a {
             font-size: 0.85rem;
             text-decoration: none;
@@ -448,6 +504,25 @@ $page_title = "Manage Gallery - Jacob & Melissa";
                                 </select>
                             </div>
                         </div>
+                        <div class="form-row">
+                            <div class="form-group wide">
+                                <label for="story_section">Story Page Section</label>
+                                <select id="story_section" name="story_section">
+                                    <?php foreach ($storySections as $key => $label): ?>
+                                    <option value="<?php echo htmlspecialchars($key); ?>"
+                                        <?php echo (($editPhoto['story_section'] ?? '') === $key) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($label); ?>
+                                    </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="story_position">Position in Carousel</label>
+                                <input type="number" id="story_position" name="story_position" min="1"
+                                       placeholder="e.g., 1, 2, 3"
+                                       value="<?php echo htmlspecialchars($editPhoto['story_position'] ?? ''); ?>">
+                            </div>
+                        </div>
                         <?php if ($editPhoto): ?>
                         <img src="/assets.php?type=photo&path=<?php echo urlencode($editPhoto['path']); ?>" alt="Preview" class="photo-preview">
                         <?php endif; ?>
@@ -472,6 +547,9 @@ $page_title = "Manage Gallery - Jacob & Melissa";
                             <div class="photo-alt"><?php echo htmlspecialchars($photo['alt'] ?: '(no description)'); ?></div>
                             <div class="photo-date"><?php echo htmlspecialchars($photo['photo_date']); ?></div>
                             <div class="photo-path"><?php echo htmlspecialchars($photo['path']); ?></div>
+                            <?php if (!empty($photo['story_section'])): ?>
+                            <div class="photo-story-badge"><?php echo htmlspecialchars($storySections[$photo['story_section']] ?? $photo['story_section']); ?> (#<?php echo (int)$photo['story_position']; ?>)</div>
+                            <?php endif; ?>
                             <div class="card-actions">
                                 <a href="/admin-gallery?edit=<?php echo $photo['id']; ?>" class="edit-link">Edit</a>
                                 <a href="/admin-gallery?delete=<?php echo $photo['id']; ?>" class="delete-link"

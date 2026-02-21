@@ -1,7 +1,58 @@
 <?php
 require_once __DIR__ . '/../private/config.php';
+require_once __DIR__ . '/../private/db.php';
 $page_title = "Our Story - Jacob & Melissa";
 include __DIR__ . '/includes/header.php';
+
+$storyPhotos = [];
+try {
+    $pdo = getDbConnection();
+    $stmt = $pdo->query("
+        SELECT path, alt, story_section, story_position
+        FROM gallery_photos
+        WHERE story_section IS NOT NULL
+        ORDER BY story_section, story_position ASC
+    ");
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $storyPhotos[$row['story_section']][] = $row;
+    }
+} catch (Exception $e) {
+    error_log("Story photos error: " . $e->getMessage());
+}
+
+function renderCarousel(array $photos, bool $landscape = false): string {
+    if (empty($photos)) return '';
+    $cls = $landscape ? 'photo-carousel carousel-landscape' : 'photo-carousel';
+    $html = '<div class="' . $cls . '"><div class="carousel-container">';
+    foreach ($photos as $i => $p) {
+        $active = $i === 0 ? ' active' : '';
+        $src = '/assets.php?type=photo&path=' . urlencode($p['path']);
+        $alt = htmlspecialchars($p['alt']);
+        $html .= '<img src="' . $src . '" alt="' . $alt . '" class="carousel-image clickable-image' . $active . '">';
+    }
+    $html .= '</div>';
+    $html .= '<button class="carousel-btn carousel-prev" aria-label="Previous image">‹</button>';
+    $html .= '<button class="carousel-btn carousel-next" aria-label="Next image">›</button>';
+    $html .= '<div class="carousel-indicators">';
+    foreach ($photos as $i => $p) {
+        $active = $i === 0 ? ' active' : '';
+        $html .= '<span class="indicator' . $active . '" data-slide="' . $i . '"></span>';
+    }
+    $html .= '</div></div>';
+    return $html;
+}
+
+function renderBlockImages(array $photos): string {
+    if (empty($photos)) return '';
+    $html = '<div class="story-media-block">';
+    foreach ($photos as $p) {
+        $src = '/assets.php?type=photo&path=' . urlencode($p['path']);
+        $alt = htmlspecialchars($p['alt']);
+        $html .= '<img src="' . $src . '" alt="' . $alt . '" class="clickable-image">';
+    }
+    $html .= '</div>';
+    return $html;
+}
 ?>
 
 <main class="page-container">
@@ -13,6 +64,7 @@ include __DIR__ . '/includes/header.php';
         <p>In early October of 2024, Jacob moved to Philadelphia, looking for new life and a fresh start. On October 7, he found himself praying using the words of Percy Mayfield, &ldquo;Please send me someone to&nbsp;love.&rdquo;</p>
         <p>Two months prior, I had also moved to Philly from the small town of Steubenville, Ohio, feeling called to leave behind the last 7 years of familiar comforts, like weekly tap dancing at a local studio and hosting monthly brunches with friends after church. I felt compelled and spoken to by the Lord through the words of Aly Aleigha, &ldquo;Into the unexplored enclave, little bird, take&nbsp;flight.&rdquo;</p>
         <p>I knew that starting a new life in a new city meant finding a new community. And I knew that I could find community through church, and also through my favorite hobby&nbsp;&mdash; dancing. I started visiting different parishes and searching for West Coast Swing, Salsa, and Lindy Hop dance socials, and soon was invited to attend a Blues and Fusion event on October 18th in Old&nbsp;City.</p>
+        <?php echo renderCarousel($storyPhotos['a_prayer_and_dance'] ?? []); ?>
     </section>
 
     <section class="story-section">
@@ -23,18 +75,7 @@ include __DIR__ . '/includes/header.php';
         <p>He came over, we chatted a bit more, and then said our goodbyes. After I turned and walked out, he made note of my name from the interest form. The next morning, I saw I had a friend request from Jacob Stephens (sent at 2am the night&nbsp;before).</p>
         <p>A week later, I ran into Jacob again&nbsp;&mdash; this time at a Lindy Hop social at Cherry St Harbor. We danced several songs over the evening before I ran off to welcome friends from out of town, who had come to celebrate my birthday. Jacob intentionally asked for one last song before I left, so that he could be my last dance on my&nbsp;birthday.</p>
         
-        <div class="photo-carousel">
-            <div class="carousel-container">
-                <img src="/assets.php?type=photo&path=meeting/2024-11-15_Fusion_dance_at_Concierge_Ballroom.jpg" alt="Fusion dance at Concierge Ballroom" class="carousel-image clickable-image active">
-                <img src="/assets.php?type=photo&path=meeting/2024-11-17_Rittenhop_Dip_Landscape.jpg" alt="Jacob and Melissa dancing" class="carousel-image clickable-image">
-            </div>
-            <button class="carousel-btn carousel-prev" aria-label="Previous image">‹</button>
-            <button class="carousel-btn carousel-next" aria-label="Next image">›</button>
-            <div class="carousel-indicators">
-                <span class="indicator active" data-slide="0"></span>
-                <span class="indicator" data-slide="1"></span>
-            </div>
-        </div>
+        <?php echo renderCarousel($storyPhotos['the_sidewalk'] ?? []); ?>
     </section>
 
     <section class="story-section">
@@ -43,12 +84,14 @@ include __DIR__ . '/includes/header.php';
         <p>Jacob&rsquo;s ears pricked&nbsp;&mdash; he had been feeling drawn to explore the Catholic Church and join a formation class to learn more. At this time I still hadn&rsquo;t settled on a parish community for myself, but had been to St. Agatha St. James a couple of times and thought the church was beautiful and the community faithful. I invited him to join me sometime, hoping I could snag him for the Church and maybe also&nbsp;myself&hellip;</p>
         <p>The next day, Jacob invited me to join him and a couple other dance friends in seeing live theater&nbsp;&mdash; <em>The Obama Musical</em> (which, if you&rsquo;re wondering, was not very good but <em>was</em> entertaining, if at times a bit of a fever dream). Afterwards we got tacos, and somehow ended up on the topic of Pope John Paul II&rsquo;s Theology of the Body while he drove me&nbsp;home.</p>
         <p>It was at this point that I really started wondering, &ldquo;Who is this man, and where did he come from? How do I make sure I sound as interesting to him as he does to&nbsp;me?&rdquo;</p>
+        <?php echo renderCarousel($storyPhotos['tacos_and_theology'] ?? []); ?>
     </section>
 
     <section class="story-section">
         <h2>The Balcony</h2>
         <p>Through November, we texted with some regularity, carpooled to dance events, and even cooked in my kitchen together for a dance group&rsquo;s Friendsgiving dinner. I told him I was going to see <em>Hamilton</em> (much better than <em>The Obama Musical</em>) with friends from church, and from my seat sent him a picture of my view of the stage to tease him about not being there. Apparently that grainy photo from my cheap Android and his growing desire to leave an impression on me were enough for him to find me in the balcony at intermission with a ticket he bought last minute. As the lights flickered and Act II started, I frantically texted my future maid-of-honor, asking for confirmation of if I was living in a Hallmark&nbsp;movie.</p>
         <p>One Sunday, Jacob joined me for Mass, and I noticed him get emotional before I went up to receive Communion. He was recalling his prayer from October 7, and there in the church next to me felt with certainty that God was answering it. Knowing that he could not yet receive the Eucharist as he was still in formation, I pulled up an Act of Spiritual Communion for him. He read it, and the tears started flowing. He later shared that he was deeply moved by the parts of the prayer mentioning <em>a contrite heart</em> and <em>the poor dwelling my heart offers You</em>. He felt the ache of his old self, and a beckoning towards a newness of life. I myself was grateful for this encounter I could tell he was having with Christ, and wondered how this new relationship in my life would play out.</p>
+        <?php echo renderCarousel($storyPhotos['the_balcony'] ?? []); ?>
     </section>
 
     <section class="story-section">
@@ -57,6 +100,7 @@ include __DIR__ . '/includes/header.php';
         <p class="story-footnote"><em>Note: I like sausage. But the back-to-back dishes were more about the convenience than any preoccupation Jacob assumed I had with the ground&nbsp;pork.</em></p>
         <p>We went on two more dates, I daringly wrote him half of a poem for his half birthday, and then he went radio silent for three days. So when he finally responded by showing up unannounced on my doorstep with two chicken maroosh sandwiches, a massive tub of hummus, and two kinds of baklava, my brain short-circuited. I apologized for my inability to sit and have dinner with him as I was just about to run out for the evening. But later that night we reconnected, walked through the first snow of the year, and after some prodding&nbsp;&mdash; I drew out his intentions. He envisioned a long journey ahead for&nbsp;us.</p>
         <p class="story-accent">With wonder and joy, I accepted his invitation.</p>
+        <?php echo renderCarousel($storyPhotos['the_first_snow'] ?? []); ?>
     </section>
 
     <section class="story-section">
@@ -67,18 +111,7 @@ include __DIR__ . '/includes/header.php';
         <p>In late January, temperatures were frigid, and I asked Jacob if he could give me rides to work so I could escape the long walk to the bus stop while it was so cold out. Daily rides soon became the norm, even after temperatures came back&nbsp;up.</p>
         <p>In early March, I brought Jacob to Steubenville&nbsp;&mdash; the town where I had spent my whole college and post-college life up to my move to Philly. After attending a praise and worship event at my alma mater, we went to dinner at Pastaio, the only &ldquo;fancy restaurant&rdquo; in the area (which is actually really good&nbsp;&mdash; they made it onto an episode of &ldquo;America&rsquo;s Best Restaurants&rdquo;&nbsp;&mdash; check it out if you ever find yourself about 45 minutes west of Pittsburgh). With plates of pasta between us, I told him I loved him. He had been waiting to tell me the same.</p>
         
-        <div class="photo-carousel carousel-landscape">
-            <div class="carousel-container">
-                <img src="/assets.php?type=photo&path=dating/2025-01-16_Mel_and_Jacob_2_dip_bw.jpg" alt="Jacob and Melissa" class="carousel-image clickable-image active">
-                <img src="/assets.php?type=photo&path=dating/2025-03-04_Mardi_Gras.JPG" alt="Mardi Gras" class="carousel-image clickable-image">
-            </div>
-            <button class="carousel-btn carousel-prev" aria-label="Previous image">‹</button>
-            <button class="carousel-btn carousel-next" aria-label="Next image">›</button>
-            <div class="carousel-indicators">
-                <span class="indicator active" data-slide="0"></span>
-                <span class="indicator" data-slide="1"></span>
-            </div>
-        </div>
+        <?php echo renderCarousel($storyPhotos['pastaio'] ?? [], true); ?>
     </section>
 
     <section class="story-section">
@@ -86,11 +119,13 @@ include __DIR__ . '/includes/header.php';
         <p>A week after Easter, on Divine Mercy Sunday, April 27th, 2025, Jacob was received into full communion with the Catholic Church at St. Agatha St. James&nbsp;&mdash; confirmed, and receiving the Eucharist for the first&nbsp;time.</p>
         <p>Some of Jacob&rsquo;s early-on sleuthing led to him discovering that, a week before we met at the fusion dance on October 18th, we were in the same room together dancing lindy hop to Chelsea Reed and the Fairweather Band, although our paths never crossed that night. On May 3rd, Chelsea Reed returned to Philadelphia for another show. We made sure to see each other this time.</p>
         <p>Over these months, we also faced challenges beyond our control, and during which all we could do was wait and pray for a clear path forward for our relationship. By June, the wait became unbearable, and we decided to pray a very intentional novena for the future of our relationship. On June 13, only the second day of our nine-day novena, we received the answer to our prayers. Assured of God&rsquo;s will for our future, we began to envision a new and richer life together in more detail than we had previously allowed&nbsp;ourselves.</p>
+        <?php echo renderCarousel($storyPhotos['the_novena'] ?? []); ?>
     </section>
 
     <section class="story-section">
         <h2>The Blessing</h2>
         <p>In early September, Jacob excused himself from my company one evening, claiming he was &ldquo;busy.&rdquo; He drove an hour out to the suburbs to meet my parents for dinner and ask for my hand. My parents joyfully gave their blessing, and upon leaving the restaurant, they noticed a rainbow in the sky, and thought of the Biblical symbolism of promise and&nbsp;covenant.</p>
+        <?php echo renderCarousel($storyPhotos['the_blessing'] ?? []); ?>
     </section>
 
     <section class="story-section">
@@ -100,18 +135,7 @@ include __DIR__ . '/includes/header.php';
         <p class="story-accent">I said yes<br>
         <small style="font-size: 18px;">...and six hours later we were back on a plane to&nbsp;Philadelphia.</small></p>
         
-        <div class="photo-carousel carousel-landscape">
-            <div class="carousel-container">
-                <img src="/assets.php?type=photo&path=proposal/PeytoLakeBanff_Proposal_One_Knee_wide.jpg" alt="Proposal on one knee" class="carousel-image clickable-image active">
-                <img src="/assets.php?type=photo&path=proposal/PeytoLakeBanff_Proposal_Closeup_Smile.jpg" alt="Proposal closeup" class="carousel-image clickable-image">
-            </div>
-            <button class="carousel-btn carousel-prev" aria-label="Previous image">‹</button>
-            <button class="carousel-btn carousel-next" aria-label="Next image">›</button>
-            <div class="carousel-indicators">
-                <span class="indicator active" data-slide="0"></span>
-                <span class="indicator" data-slide="1"></span>
-            </div>
-        </div>
+        <?php echo renderCarousel($storyPhotos['proposal'] ?? [], true); ?>
         
         <div class="story-media">
             <iframe src="https://www.youtube.com/embed/iEbqiWzH800" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
@@ -125,18 +149,7 @@ include __DIR__ . '/includes/header.php';
             <iframe src="https://www.youtube.com/embed/dko2cded45E" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
         </div>
         
-        <div class="photo-carousel carousel-landscape">
-            <div class="carousel-container">
-                <img src="/assets.php?type=photo&path=blessing/Landscape_JM_at_Altar.jpg" alt="Jacob and Melissa at altar" class="carousel-image clickable-image active">
-                <img src="/assets.php?type=photo&path=blessing/JM_With_Parents_at_Scannichios.jpg" alt="Jacob and Melissa with parents at Scannichio's" class="carousel-image clickable-image">
-            </div>
-            <button class="carousel-btn carousel-prev" aria-label="Previous image">‹</button>
-            <button class="carousel-btn carousel-next" aria-label="Next image">›</button>
-            <div class="carousel-indicators">
-                <span class="indicator active" data-slide="0"></span>
-                <span class="indicator" data-slide="1"></span>
-            </div>
-        </div>
+        <?php echo renderCarousel($storyPhotos['blessing'] ?? [], true); ?>
 
         <p>Afterward, our families shared a meal together, and we celebrated this turning point in our lives&nbsp;&mdash; turning to a new adventure and embracing a new, joined life&nbsp;together.</p>
     </section>
@@ -144,10 +157,7 @@ include __DIR__ . '/includes/header.php';
     <section class="story-section">
         <h2>Divine Mercy&rsquo;s Design</h2>
         <p>Our Nuptial Mass will be on April 11, 2026 at St. Agatha St. James Parish in Philadelphia. The reception will be at Bala Golf&nbsp;Club.</p>
-        <div class="story-media-block">
-            <img src="/assets.php?type=photo&path=wedding/Church_Interior_Mass_Kneeling_Ordination.jpg" alt="Church interior" class="clickable-image">
-            <img src="/assets.php?type=photo&path=reception/Bala-Golf-Club-outdoor-view.jpg" alt="Bala Golf Club outdoor view" class="clickable-image">
-        </div>
+        <?php echo renderBlockImages($storyPhotos['divine_mercy'] ?? []); ?>
         <p style="margin-top: 2rem;"><em>It&rsquo;s been quite the journey of faith and hope. God has been present every step of the way. We still love dancing and being very involved in our parish community, and are excited to be preparing for our sacramental wedding. Jacob entered the Catholic Church in fullness on Divine Mercy Sunday, 2025, and our wedding date is set for the eve of Divine Mercy Sunday, 2026. God has made us new and continues to make us new and give us new life and new hearts, and we see His beauty and His hand in our Easter Octave wedding&nbsp;date.</em></p>
     </section>
 </main>
