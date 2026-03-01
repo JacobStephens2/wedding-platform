@@ -62,11 +62,25 @@ if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upd
     try {
         $pdo = getDbConnection();
         $mailingGroup = trim($_POST['mailing_group'] ?? '');
-        $attending = $_POST['attending'] ?? '';
+        $ceremonyAttending = $_POST['ceremony_attending'] ?? '';
+        $receptionAttending = $_POST['reception_attending'] ?? '';
         $hasPlusOne = isset($_POST['has_plus_one']) && $_POST['has_plus_one'] === '1' ? 1 : 0;
+        
+        // Derive overall attending from event-specific fields
+        $ca = $ceremonyAttending !== '' ? $ceremonyAttending : null;
+        $ra = $receptionAttending !== '' ? $receptionAttending : null;
+        if ($ca === 'yes' || $ra === 'yes') {
+            $attending = 'yes';
+        } elseif ($ca === 'no' && $ra === 'no') {
+            $attending = 'no';
+        } else {
+            $attending = null;
+        }
+        
         $stmt = $pdo->prepare("
             UPDATE guests 
-            SET first_name = ?, last_name = ?, group_name = ?, mailing_group = ?, attending = ?, has_plus_one = ?
+            SET first_name = ?, last_name = ?, group_name = ?, mailing_group = ?,
+                attending = ?, ceremony_attending = ?, reception_attending = ?, has_plus_one = ?
             WHERE id = ?
         ");
         $stmt->execute([
@@ -74,7 +88,9 @@ if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upd
             trim($_POST['last_name'] ?? ''),
             trim($_POST['group_name'] ?? ''),
             $mailingGroup !== '' ? (int)$mailingGroup : null,
-            $attending !== '' ? $attending : null,
+            $attending,
+            $ca,
+            $ra,
             $hasPlusOne,
             (int)$_POST['guest_id'],
         ]);
@@ -178,7 +194,7 @@ if ($authenticated && isset($_GET['rsvp'])) {
 
 // Fetch all guests if authenticated
 $guests = [];
-$stats = ['total' => 0, 'attending' => 0, 'declined' => 0, 'pending' => 0];
+$stats = ['total' => 0, 'attending' => 0, 'declined' => 0, 'pending' => 0, 'ceremony' => 0, 'reception' => 0];
 if ($authenticated) {
     try {
         $pdo = getDbConnection();
@@ -239,7 +255,15 @@ if ($authenticated) {
                 (
                     COALESCE(SUM(CASE WHEN attending IS NULL THEN 1 ELSE 0 END), 0)
                     + COALESCE(SUM(CASE WHEN has_plus_one = 1 AND plus_one_attending IS NULL THEN 1 ELSE 0 END), 0)
-                ) as pending
+                ) as pending,
+                (
+                    COALESCE(SUM(CASE WHEN ceremony_attending = 'yes' THEN 1 ELSE 0 END), 0)
+                    + COALESCE(SUM(CASE WHEN has_plus_one = 1 AND plus_one_ceremony_attending = 'yes' THEN 1 ELSE 0 END), 0)
+                ) as ceremony,
+                (
+                    COALESCE(SUM(CASE WHEN reception_attending = 'yes' THEN 1 ELSE 0 END), 0)
+                    + COALESCE(SUM(CASE WHEN has_plus_one = 1 AND plus_one_reception_attending = 'yes' THEN 1 ELSE 0 END), 0)
+                ) as reception
             FROM guests
         ");
         $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
@@ -572,17 +596,41 @@ $page_title = "Manage Guests - Jacob & Melissa";
             border-color: #dc3545;
             background: rgba(220, 53, 69, 0.02);
         }
-        .ar-member-header {
+        .ar-member-name {
+            font-size: 1.15rem;
+            color: var(--color-dark);
+            display: block;
+            margin-bottom: 0.6rem;
+        }
+        .ar-event-rows {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .ar-event-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .ar-event-label {
+            font-family: 'Crimson Text', serif;
+            font-size: 1rem;
+            color: var(--color-dark);
+        }
+        .ar-event-sublabel {
+            font-size: 0.85rem;
+            color: #888;
+        }
+        .ar-plus-one-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
             gap: 0.75rem;
             margin-bottom: 0.75rem;
-        }
-        .ar-member-name {
-            font-size: 1.15rem;
-            color: var(--color-dark);
         }
         .ar-attending-toggle {
             display: flex;
@@ -601,7 +649,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
             transition: all 0.2s;
             color: #666;
         }
-        .ar-attending-toggle button:first-child {
+        .ar-attending-toggle button:not(:last-child) {
             border-right: 1px solid #ccc;
         }
         .ar-attending-toggle button.ar-active-yes {
@@ -832,22 +880,31 @@ $page_title = "Manage Guests - Jacob & Melissa";
                         }
                     }
                     
+                    function arEventToggleHtml(btnClass, currentVal) {
+                        return '<div class="ar-attending-toggle">'
+                             + '<button type="button" class="' + btnClass + (currentVal === 'yes' ? ' ar-active-yes' : '') + '" data-value="yes">Attending</button>'
+                             + '<button type="button" class="' + btnClass + (currentVal === 'no' ? ' ar-active-no' : '') + '" data-value="no">Not Attending</button>'
+                             + '</div>';
+                    }
+                    
                     function renderGroupForm() {
-                        let html = '';
+                        var html = '';
                         groupMembers.forEach(function(member) {
-                            const name = member.first_name + (member.last_name ? ' ' + member.last_name : '');
-                            const curAttending = member.attending;
-                            const curDietary = member.dietary || '';
+                            var name = member.first_name + (member.last_name ? ' ' + member.last_name : '');
+                            var curCeremony = member.ceremony_attending;
+                            var curReception = member.reception_attending;
+                            var curDietary = member.dietary || '';
                             
-                            html += '<div class="admin-rsvp-member-card' 
-                                 + (curAttending === 'yes' ? ' ar-attending' : '') 
-                                 + (curAttending === 'no' ? ' ar-declined' : '') 
-                                 + '" data-member-id="' + member.id + '">'
-                                 + '<div class="ar-member-header">'
+                            html += '<div class="admin-rsvp-member-card" data-member-id="' + member.id + '">'
                                  + '<span class="ar-member-name">' + escapeHtml(name) + '</span>'
-                                 + '<div class="ar-attending-toggle">'
-                                 + '<button type="button" class="ar-btn-attending' + (curAttending === 'yes' ? ' ar-active-yes' : '') + '" data-value="yes">Attending</button>'
-                                 + '<button type="button" class="ar-btn-attending' + (curAttending === 'no' ? ' ar-active-no' : '') + '" data-value="no">Not Attending</button>'
+                                 + '<div class="ar-event-rows">'
+                                 + '<div class="ar-event-row">'
+                                 + '<span class="ar-event-label">Ceremony <span class="ar-event-sublabel">(St. Agatha St. James)</span></span>'
+                                 + arEventToggleHtml('ar-btn-ceremony', curCeremony)
+                                 + '</div>'
+                                 + '<div class="ar-event-row">'
+                                 + '<span class="ar-event-label">Reception <span class="ar-event-sublabel">(Bala Golf Club)</span></span>'
+                                 + arEventToggleHtml('ar-btn-reception', curReception)
                                  + '</div>'
                                  + '</div>'
                                  + '<div class="ar-member-dietary">'
@@ -857,27 +914,34 @@ $page_title = "Manage Guests - Jacob & Melissa";
                                  + '</div>';
                             
                             if (parseInt(member.has_plus_one)) {
-                                const poName = member.plus_one_name || '';
-                                const poAttending = member.plus_one_attending;
-                                const poDietary = member.plus_one_dietary || '';
-                                const bringing = poAttending === 'yes';
-                                const notBringing = poAttending === 'no';
+                                var poName = member.plus_one_name || '';
+                                var poCeremony = member.plus_one_ceremony_attending;
+                                var poReception = member.plus_one_reception_attending;
+                                var poDietary = member.plus_one_dietary || '';
+                                var notBringing = poCeremony === 'no' && poReception === 'no';
                                 
-                                html += '<div class="admin-rsvp-member-card ar-plus-one-card'
-                                     + (bringing ? ' ar-attending' : '')
-                                     + (notBringing ? ' ar-declined' : '')
-                                     + '" data-plus-one-for="' + member.id + '">'
-                                     + '<div class="ar-member-header">'
+                                html += '<div class="admin-rsvp-member-card ar-plus-one-card" data-plus-one-for="' + member.id + '">'
+                                     + '<div class="ar-plus-one-header">'
                                      + '<span class="ar-member-name ar-plus-one-label">Guest of ' + escapeHtml(member.first_name) + '</span>'
                                      + '<div class="ar-attending-toggle">'
-                                     + '<button type="button" class="ar-btn-po-attending' + (bringing ? ' ar-active-yes' : '') + '" data-value="yes">Bringing</button>'
-                                     + '<button type="button" class="ar-btn-po-attending' + (notBringing ? ' ar-active-no' : '') + '" data-value="no">Not Bringing</button>'
+                                     + '<button type="button" class="ar-btn-po-toggle' + (!notBringing ? ' ar-active-yes' : '') + '" data-value="bringing">Bringing</button>'
+                                     + '<button type="button" class="ar-btn-po-toggle' + (notBringing ? ' ar-active-no' : '') + '" data-value="not-bringing">Not Bringing</button>'
                                      + '</div>'
                                      + '</div>'
-                                     + '<div class="ar-plus-one-details' + (bringing ? '' : ' ar-hidden') + '">'
+                                     + '<div class="ar-plus-one-details' + (notBringing ? ' ar-hidden' : '') + '">'
                                      + '<div class="ar-plus-one-name-group">'
                                      + '<label>Guest\'s Full Name</label>'
                                      + '<input type="text" data-po-name-for="' + member.id + '" placeholder="Enter guest\'s full name..." value="' + escapeHtml(poName) + '">'
+                                     + '</div>'
+                                     + '<div class="ar-event-rows">'
+                                     + '<div class="ar-event-row">'
+                                     + '<span class="ar-event-label">Ceremony <span class="ar-event-sublabel">(St. Agatha St. James)</span></span>'
+                                     + arEventToggleHtml('ar-btn-po-ceremony', poCeremony)
+                                     + '</div>'
+                                     + '<div class="ar-event-row">'
+                                     + '<span class="ar-event-label">Reception <span class="ar-event-sublabel">(Bala Golf Club)</span></span>'
+                                     + arEventToggleHtml('ar-btn-po-reception', poReception)
+                                     + '</div>'
                                      + '</div>'
                                      + '<div class="ar-member-dietary">'
                                      + '<label>Dietary restrictions or allergies</label>'
@@ -890,7 +954,6 @@ $page_title = "Manage Guests - Jacob & Melissa";
                         
                         groupContainer.innerHTML = html;
                         
-                        // Pre-fill email, message, and song if available
                         for (var i = 0; i < groupMembers.length; i++) {
                             if (groupMembers[i].email) {
                                 document.getElementById('ar-email').value = groupMembers[i].email;
@@ -914,26 +977,21 @@ $page_title = "Manage Guests - Jacob & Melissa";
                     }
                     
                     function attachToggleHandlers() {
-                        groupContainer.querySelectorAll('.ar-btn-attending').forEach(function(btn) {
+                        groupContainer.querySelectorAll('.ar-btn-ceremony, .ar-btn-reception, .ar-btn-po-ceremony, .ar-btn-po-reception').forEach(function(btn) {
                             btn.addEventListener('click', function() {
-                                var card = this.closest('.admin-rsvp-member-card');
                                 var toggle = this.closest('.ar-attending-toggle');
                                 toggle.querySelectorAll('button').forEach(function(b) {
                                     b.classList.remove('ar-active-yes', 'ar-active-no');
                                 });
-                                if (this.dataset.value === 'yes') {
-                                    this.classList.add('ar-active-yes');
-                                    card.classList.add('ar-attending');
-                                    card.classList.remove('ar-declined');
-                                } else {
-                                    this.classList.add('ar-active-no');
-                                    card.classList.add('ar-declined');
-                                    card.classList.remove('ar-attending');
-                                }
+                                this.classList.add(this.dataset.value === 'yes' ? 'ar-active-yes' : 'ar-active-no');
+                                var card = this.closest('.admin-rsvp-member-card');
+                                var anyYes = card.querySelectorAll('.ar-active-yes').length > 0;
+                                card.classList.toggle('ar-attending', anyYes);
+                                card.classList.toggle('ar-declined', !anyYes && card.querySelectorAll('.ar-active-no').length > 0);
                             });
                         });
                         
-                        groupContainer.querySelectorAll('.ar-btn-po-attending').forEach(function(btn) {
+                        groupContainer.querySelectorAll('.ar-btn-po-toggle').forEach(function(btn) {
                             btn.addEventListener('click', function() {
                                 var card = this.closest('.ar-plus-one-card');
                                 var toggle = this.closest('.ar-attending-toggle');
@@ -941,15 +999,14 @@ $page_title = "Manage Guests - Jacob & Melissa";
                                 toggle.querySelectorAll('button').forEach(function(b) {
                                     b.classList.remove('ar-active-yes', 'ar-active-no');
                                 });
-                                if (this.dataset.value === 'yes') {
+                                if (this.dataset.value === 'bringing') {
                                     this.classList.add('ar-active-yes');
-                                    card.classList.add('ar-attending');
-                                    card.classList.remove('ar-declined');
                                     if (details) details.classList.remove('ar-hidden');
+                                    card.querySelectorAll('.ar-btn-po-ceremony.ar-active-no, .ar-btn-po-reception.ar-active-no').forEach(function(b) {
+                                        b.classList.remove('ar-active-no');
+                                    });
                                 } else {
                                     this.classList.add('ar-active-no');
-                                    card.classList.add('ar-declined');
-                                    card.classList.remove('ar-attending');
                                     if (details) details.classList.add('ar-hidden');
                                 }
                             });
@@ -969,27 +1026,33 @@ $page_title = "Manage Guests - Jacob & Melissa";
                         
                         groupContainer.querySelectorAll('.admin-rsvp-member-card:not(.ar-plus-one-card)').forEach(function(card) {
                             var memberId = parseInt(card.dataset.memberId);
-                            var activeBtn = card.querySelector('.ar-btn-attending.ar-active-yes, .ar-btn-attending.ar-active-no');
-                            var attending = activeBtn ? activeBtn.dataset.value : '';
+                            var ceremonyBtn = card.querySelector('.ar-btn-ceremony.ar-active-yes, .ar-btn-ceremony.ar-active-no');
+                            var receptionBtn = card.querySelector('.ar-btn-reception.ar-active-yes, .ar-btn-reception.ar-active-no');
+                            var ceremonyAttending = ceremonyBtn ? ceremonyBtn.dataset.value : '';
+                            var receptionAttending = receptionBtn ? receptionBtn.dataset.value : '';
                             var dietaryInput = card.querySelector('[data-dietary-for="' + memberId + '"]');
                             var dietary = dietaryInput ? dietaryInput.value.trim() : '';
                             
-                            if (attending) hasResponse = true;
+                            if (ceremonyAttending || receptionAttending) hasResponse = true;
                             
                             var entry = {
                                 id: memberId,
-                                attending: attending,
+                                ceremony_attending: ceremonyAttending,
+                                reception_attending: receptionAttending,
                                 dietary: dietary
                             };
                             
                             var poCard = groupContainer.querySelector('.ar-plus-one-card[data-plus-one-for="' + memberId + '"]');
                             if (poCard) {
-                                var poActiveBtn = poCard.querySelector('.ar-btn-po-attending.ar-active-yes, .ar-btn-po-attending.ar-active-no');
-                                var poAttending = poActiveBtn ? poActiveBtn.dataset.value : '';
+                                var poToggleBtn = poCard.querySelector('.ar-btn-po-toggle.ar-active-no');
+                                var notBringing = !!poToggleBtn;
+                                var poCeremonyBtn = poCard.querySelector('.ar-btn-po-ceremony.ar-active-yes, .ar-btn-po-ceremony.ar-active-no');
+                                var poReceptionBtn = poCard.querySelector('.ar-btn-po-reception.ar-active-yes, .ar-btn-po-reception.ar-active-no');
                                 var poNameInput = poCard.querySelector('[data-po-name-for="' + memberId + '"]');
                                 var poDietaryInput = poCard.querySelector('[data-po-dietary-for="' + memberId + '"]');
                                 
-                                entry.plus_one_attending = poAttending;
+                                entry.plus_one_ceremony_attending = notBringing ? 'no' : (poCeremonyBtn ? poCeremonyBtn.dataset.value : '');
+                                entry.plus_one_reception_attending = notBringing ? 'no' : (poReceptionBtn ? poReceptionBtn.dataset.value : '');
                                 entry.plus_one_name = poNameInput ? poNameInput.value.trim() : '';
                                 entry.plus_one_dietary = poDietaryInput ? poDietaryInput.value.trim() : '';
                             }
@@ -998,7 +1061,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
                         });
                         
                         if (!hasResponse) {
-                            errorDiv.textContent = 'Please indicate attendance for at least one guest.';
+                            errorDiv.textContent = 'Please indicate ceremony or reception attendance for at least one guest.';
                             errorDiv.style.display = 'block';
                             return;
                         }
@@ -1051,7 +1114,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
                     </div>
                     <div class="stat-item stat-attending">
                         <span class="stat-number"><?php echo $stats['attending']; ?></span>
-                        <span class="stat-label">Attending</span>
+                        <span class="stat-label">Attending Any</span>
                     </div>
                     <div class="stat-item stat-declined">
                         <span class="stat-number"><?php echo $stats['declined']; ?></span>
@@ -1060,6 +1123,14 @@ $page_title = "Manage Guests - Jacob & Melissa";
                     <div class="stat-item stat-pending">
                         <span class="stat-number"><?php echo $stats['pending']; ?></span>
                         <span class="stat-label">Pending</span>
+                    </div>
+                    <div class="stat-item" style="border-left: 2px solid #eee; padding-left: 2rem;">
+                        <span class="stat-number" style="color: var(--color-green);"><?php echo $stats['ceremony']; ?></span>
+                        <span class="stat-label">Ceremony</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" style="color: var(--color-green);"><?php echo $stats['reception']; ?></span>
+                        <span class="stat-label">Reception</span>
                     </div>
                 </div>
                 
@@ -1102,11 +1173,19 @@ $page_title = "Manage Guests - Jacob & Melissa";
                             </div>
                             <?php if ($editGuest): ?>
                             <div class="form-group">
-                                <label for="attending">RSVP Status</label>
-                                <select id="attending" name="attending">
-                                    <option value="" <?php echo ($editGuest['attending'] === null) ? 'selected' : ''; ?>>Pending</option>
-                                    <option value="yes" <?php echo ($editGuest['attending'] === 'yes') ? 'selected' : ''; ?>>Attending</option>
-                                    <option value="no" <?php echo ($editGuest['attending'] === 'no') ? 'selected' : ''; ?>>Declined</option>
+                                <label for="ceremony_attending">Ceremony</label>
+                                <select id="ceremony_attending" name="ceremony_attending">
+                                    <option value="" <?php echo ($editGuest['ceremony_attending'] === null) ? 'selected' : ''; ?>>Pending</option>
+                                    <option value="yes" <?php echo ($editGuest['ceremony_attending'] === 'yes') ? 'selected' : ''; ?>>Attending</option>
+                                    <option value="no" <?php echo ($editGuest['ceremony_attending'] === 'no') ? 'selected' : ''; ?>>Declined</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="reception_attending">Reception</label>
+                                <select id="reception_attending" name="reception_attending">
+                                    <option value="" <?php echo ($editGuest['reception_attending'] === null) ? 'selected' : ''; ?>>Pending</option>
+                                    <option value="yes" <?php echo ($editGuest['reception_attending'] === 'yes') ? 'selected' : ''; ?>>Attending</option>
+                                    <option value="no" <?php echo ($editGuest['reception_attending'] === 'no') ? 'selected' : ''; ?>>Declined</option>
                                 </select>
                             </div>
                             <?php endif; ?>

@@ -50,6 +50,10 @@ Bala Golf Club
 
 By the message field, ask if the filler has a request for a song which would get them on the dance floor.
 
+The user should be able to RSVP for both the ceremony and the reception separately, in case they can attend one but not the other. The guest management area should indicate total guests attending the ceremony and reception and also allow admins to manually mark users' RSVPs for ceremony and reception separately.
+
+All RSVPs that existed prior to the ceremony/reception split were assumed to apply to both events (migrated via `private/sql/add_ceremony_reception_columns.sql`).
+
 ### Invite Lookup
 Like the way The Knot does it, such as at https://www.theknot.com/us/madison-scott-and-hunter-fellows-2026-06-06-9633b0cd-0fc4-4916-aa1d-f3a46eb648db/rsvp, the user should have to look up their name in the RSVP form to complete the RSVP for themselves.
 

@@ -166,17 +166,33 @@ include __DIR__ . '/includes/header.php';
         border-color: #dc3545;
         background: rgba(220, 53, 69, 0.02);
     }
-    .group-member-header {
+    .group-member-name {
+        font-size: 1.15rem;
+        color: var(--color-dark);
+        display: block;
+        margin-bottom: 0.75rem;
+    }
+    .event-rsvp-rows {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+        margin-bottom: 0.75rem;
+    }
+    .event-rsvp-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
         flex-wrap: wrap;
-        gap: 0.75rem;
-        margin-bottom: 0.75rem;
+        gap: 0.5rem;
     }
-    .group-member-name {
-        font-size: 1.15rem;
+    .event-label {
+        font-family: 'Crimson Text', serif;
+        font-size: 1rem;
         color: var(--color-dark);
+    }
+    .event-sublabel {
+        font-size: 0.85rem;
+        color: #888;
     }
     .attending-toggle {
         display: flex;
@@ -191,11 +207,11 @@ include __DIR__ . '/includes/header.php';
         background: white;
         cursor: pointer;
         font-family: 'Cinzel', serif;
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         transition: all 0.2s;
         color: #666;
     }
-    .attending-toggle button:first-child {
+    .attending-toggle button:not(:last-child) {
         border-right: 1px solid #ccc;
     }
     .attending-toggle button.active-yes {
@@ -205,6 +221,14 @@ include __DIR__ . '/includes/header.php';
     .attending-toggle button.active-no {
         background: #dc3545;
         color: white;
+    }
+    .plus-one-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
     }
     .group-member-dietary {
         margin-top: 0.5rem;
@@ -422,18 +446,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 rsvpGroupDesc.textContent = 'Please indicate whether you will be attending.';
             }
             
+            function eventToggleHtml(btnClass, currentVal) {
+                return '<div class="attending-toggle">'
+                     + '<button type="button" class="' + btnClass + (currentVal === 'yes' ? ' active-yes' : '') + '" data-value="yes">Attending</button>'
+                     + '<button type="button" class="' + btnClass + (currentVal === 'no' ? ' active-no' : '') + '" data-value="no">Not Attending</button>'
+                     + '</div>';
+            }
+            
             let html = '';
             groupMembers.forEach(function(member) {
                 const memberName = member.first_name + (member.last_name ? ' ' + member.last_name : '');
-                const currentAttending = member.attending;
                 const currentDietary = member.dietary || '';
+                const curCeremony = member.ceremony_attending;
+                const curReception = member.reception_attending;
                 
                 html += '<div class="group-member-card" data-member-id="' + member.id + '">'
-                     + '<div class="group-member-header">'
                      + '<span class="group-member-name">' + escapeHtml(memberName) + '</span>'
-                     + '<div class="attending-toggle">'
-                     + '<button type="button" class="btn-attending' + (currentAttending === 'yes' ? ' active-yes' : '') + '" data-value="yes">Attending</button>'
-                     + '<button type="button" class="btn-attending' + (currentAttending === 'no' ? ' active-no' : '') + '" data-value="no">Not Attending</button>'
+                     + '<div class="event-rsvp-rows">'
+                     + '<div class="event-rsvp-row">'
+                     + '<span class="event-label">Ceremony <span class="event-sublabel">(St. Agatha St. James)</span></span>'
+                     + eventToggleHtml('btn-ceremony', curCeremony)
+                     + '</div>'
+                     + '<div class="event-rsvp-row">'
+                     + '<span class="event-label">Reception <span class="event-sublabel">(Bala Golf Club)</span></span>'
+                     + eventToggleHtml('btn-reception', curReception)
                      + '</div>'
                      + '</div>'
                      + '<div class="group-member-dietary">'
@@ -442,26 +478,37 @@ document.addEventListener('DOMContentLoaded', function() {
                      + '</div>'
                      + '</div>';
                 
-                // Plus one card
                 if (parseInt(member.has_plus_one)) {
                     const poName = member.plus_one_name || '';
-                    const poAttending = member.plus_one_attending;
+                    const poCeremony = member.plus_one_ceremony_attending;
+                    const poReception = member.plus_one_reception_attending;
                     const poDietary = member.plus_one_dietary || '';
-                    const bringingChecked = poAttending === 'yes' ? true : false;
-                    const notBringingChecked = poAttending === 'no' ? true : false;
+                    const hasAnyResponse = poCeremony !== null || poReception !== null;
+                    const notBringing = poCeremony === 'no' && poReception === 'no';
+                    const showDetails = !hasAnyResponse || !notBringing;
                     
                     html += '<div class="group-member-card plus-one-card" data-plus-one-for="' + member.id + '">'
-                         + '<div class="group-member-header">'
+                         + '<div class="plus-one-header">'
                          + '<span class="group-member-name plus-one-label">Guest of ' + escapeHtml(member.first_name) + '</span>'
                          + '<div class="attending-toggle">'
-                         + '<button type="button" class="btn-plus-one-attending' + (bringingChecked ? ' active-yes' : '') + '" data-value="yes">Bringing</button>'
-                         + '<button type="button" class="btn-plus-one-attending' + (notBringingChecked ? ' active-no' : '') + '" data-value="no">Not Bringing</button>'
+                         + '<button type="button" class="btn-po-toggle' + (!notBringing ? ' active-yes' : '') + '" data-value="bringing">Bringing</button>'
+                         + '<button type="button" class="btn-po-toggle' + (notBringing ? ' active-no' : '') + '" data-value="not-bringing">Not Bringing</button>'
                          + '</div>'
                          + '</div>'
-                         + '<div class="plus-one-details' + (bringingChecked ? '' : ' hidden') + '">'
+                         + '<div class="plus-one-details' + (notBringing ? ' hidden' : '') + '">'
                          + '<div class="plus-one-name-group">'
                          + '<label for="plus-one-name-' + member.id + '">Guest\'s Full Name</label>'
                          + '<input type="text" id="plus-one-name-' + member.id + '" placeholder="Enter your guest\'s full name..." value="' + escapeHtml(poName) + '">'
+                         + '</div>'
+                         + '<div class="event-rsvp-rows">'
+                         + '<div class="event-rsvp-row">'
+                         + '<span class="event-label">Ceremony <span class="event-sublabel">(St. Agatha St. James)</span></span>'
+                         + eventToggleHtml('btn-po-ceremony', poCeremony)
+                         + '</div>'
+                         + '<div class="event-rsvp-row">'
+                         + '<span class="event-label">Reception <span class="event-sublabel">(Bala Golf Club)</span></span>'
+                         + eventToggleHtml('btn-po-reception', poReception)
+                         + '</div>'
                          + '</div>'
                          + '<div class="group-member-dietary">'
                          + '<label for="plus-one-dietary-' + member.id + '">Dietary restrictions or allergies</label>'
@@ -482,7 +529,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
             
-            // Pre-fill message and song if available
             for (let m of groupMembers) {
                 if (m.message) {
                     document.getElementById('rsvp-message').value = m.message;
@@ -496,53 +542,42 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
             
-            // Attach attending toggle handlers
-            groupMembersList.querySelectorAll('.btn-attending').forEach(function(btn) {
+            // Attach event toggle handlers (ceremony/reception for main guests)
+            groupMembersList.querySelectorAll('.btn-ceremony, .btn-reception, .btn-po-ceremony, .btn-po-reception').forEach(function(btn) {
                 btn.addEventListener('click', function() {
-                    const card = this.closest('.group-member-card');
                     const toggle = this.closest('.attending-toggle');
-                    
-                    // Clear active states
                     toggle.querySelectorAll('button').forEach(function(b) {
                         b.classList.remove('active-yes', 'active-no');
                     });
+                    this.classList.add(this.dataset.value === 'yes' ? 'active-yes' : 'active-no');
                     
-                    // Set active
-                    const value = this.dataset.value;
-                    if (value === 'yes') {
-                        this.classList.add('active-yes');
-                        card.classList.add('attending');
-                        card.classList.remove('declined');
-                    } else {
-                        this.classList.add('active-no');
-                        card.classList.add('declined');
-                        card.classList.remove('attending');
-                    }
+                    // Update card border state based on any attendance
+                    const card = this.closest('.group-member-card');
+                    const anyYes = card.querySelectorAll('.active-yes').length > 0;
+                    const allNo = card.querySelectorAll('.active-no').length > 0 && card.querySelectorAll('.active-yes').length === 0;
+                    card.classList.toggle('attending', anyYes);
+                    card.classList.toggle('declined', allNo && !anyYes);
                 });
             });
             
-            // Attach plus-one toggle handlers
-            groupMembersList.querySelectorAll('.btn-plus-one-attending').forEach(function(btn) {
+            // Attach plus-one bringing/not-bringing toggle
+            groupMembersList.querySelectorAll('.btn-po-toggle').forEach(function(btn) {
                 btn.addEventListener('click', function() {
                     const card = this.closest('.plus-one-card');
                     const toggle = this.closest('.attending-toggle');
                     const details = card.querySelector('.plus-one-details');
-                    
-                    // Clear active states
                     toggle.querySelectorAll('button').forEach(function(b) {
                         b.classList.remove('active-yes', 'active-no');
                     });
-                    
-                    const value = this.dataset.value;
-                    if (value === 'yes') {
+                    if (this.dataset.value === 'bringing') {
                         this.classList.add('active-yes');
-                        card.classList.add('attending');
-                        card.classList.remove('declined');
                         if (details) details.classList.remove('hidden');
+                        // Clear any forced 'no' on event toggles when switching back to bringing
+                        card.querySelectorAll('.btn-po-ceremony.active-no, .btn-po-reception.active-no').forEach(function(b) {
+                            b.classList.remove('active-no');
+                        });
                     } else {
                         this.classList.add('active-no');
-                        card.classList.add('declined');
-                        card.classList.remove('attending');
                         if (details) details.classList.add('hidden');
                     }
                 });
@@ -578,27 +613,33 @@ document.addEventListener('DOMContentLoaded', function() {
         
         groupMembersList.querySelectorAll('.group-member-card:not(.plus-one-card)').forEach(function(card) {
             const memberId = parseInt(card.dataset.memberId);
-            const activeBtn = card.querySelector('.btn-attending.active-yes, .btn-attending.active-no');
-            const attending = activeBtn ? activeBtn.dataset.value : '';
+            const ceremonyBtn = card.querySelector('.btn-ceremony.active-yes, .btn-ceremony.active-no');
+            const receptionBtn = card.querySelector('.btn-reception.active-yes, .btn-reception.active-no');
+            const ceremonyAttending = ceremonyBtn ? ceremonyBtn.dataset.value : '';
+            const receptionAttending = receptionBtn ? receptionBtn.dataset.value : '';
             const dietary = card.querySelector('input[type="text"]').value.trim();
             
-            if (attending) hasResponse = true;
+            if (ceremonyAttending || receptionAttending) hasResponse = true;
             
             const entry = {
                 id: memberId,
-                attending: attending,
+                ceremony_attending: ceremonyAttending,
+                reception_attending: receptionAttending,
                 dietary: dietary
             };
             
             // Check for plus-one card
             const plusOneCard = groupMembersList.querySelector('.plus-one-card[data-plus-one-for="' + memberId + '"]');
             if (plusOneCard) {
-                const poActiveBtn = plusOneCard.querySelector('.btn-plus-one-attending.active-yes, .btn-plus-one-attending.active-no');
-                const poAttending = poActiveBtn ? poActiveBtn.dataset.value : '';
+                const poToggleBtn = plusOneCard.querySelector('.btn-po-toggle.active-no');
+                const notBringing = !!poToggleBtn;
+                const poCeremonyBtn = plusOneCard.querySelector('.btn-po-ceremony.active-yes, .btn-po-ceremony.active-no');
+                const poReceptionBtn = plusOneCard.querySelector('.btn-po-reception.active-yes, .btn-po-reception.active-no');
                 const poName = (plusOneCard.querySelector('input[id^="plus-one-name-"]') || {}).value || '';
                 const poDietary = (plusOneCard.querySelector('input[id^="plus-one-dietary-"]') || {}).value || '';
                 
-                entry.plus_one_attending = poAttending;
+                entry.plus_one_ceremony_attending = notBringing ? 'no' : (poCeremonyBtn ? poCeremonyBtn.dataset.value : '');
+                entry.plus_one_reception_attending = notBringing ? 'no' : (poReceptionBtn ? poReceptionBtn.dataset.value : '');
                 entry.plus_one_name = poName.trim();
                 entry.plus_one_dietary = poDietary.trim();
             }
@@ -607,7 +648,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         if (!hasResponse) {
-            showRsvpError('Please indicate attendance for at least one guest.');
+            showRsvpError('Please indicate attendance for at least one guest for the ceremony or reception.');
             return;
         }
         
@@ -634,26 +675,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 stepSuccess.style.display = 'block';
                 
                 // Build summary
+                function eventSummaryLabel(ceremony, reception) {
+                    var events = [];
+                    if (ceremony === 'yes') events.push('Ceremony');
+                    if (reception === 'yes') events.push('Reception');
+                    return events.length > 0 ? ('✓ ' + events.join(' & ')) : '✗ Not Attending';
+                }
+                
                 let summaryHtml = '<h3>Your RSVP Summary</h3>';
                 guestData.forEach(function(gd) {
                     const member = groupMembers.find(function(m) { return m.id === gd.id || m.id == gd.id; });
-                    if (member && gd.attending) {
+                    if (member && (gd.ceremony_attending || gd.reception_attending)) {
                         const name = member.first_name + (member.last_name ? ' ' + member.last_name : '');
                         summaryHtml += '<div class="rsvp-summary-item">'
                             + '<span>' + escapeHtml(name) + '</span>'
-                            + '<span>' + (gd.attending === 'yes' ? '✓ Attending' : '✗ Not Attending') + '</span>'
+                            + '<span>' + eventSummaryLabel(gd.ceremony_attending, gd.reception_attending) + '</span>'
                             + '</div>';
                         
-                        // Plus one summary
-                        if (gd.plus_one_attending === 'yes' && gd.plus_one_name) {
+                        if (gd.plus_one_ceremony_attending || gd.plus_one_reception_attending) {
+                            const poLabel = gd.plus_one_name || ('Guest of ' + member.first_name);
+                            const poCeremony = gd.plus_one_ceremony_attending;
+                            const poReception = gd.plus_one_reception_attending;
                             summaryHtml += '<div class="rsvp-summary-item">'
-                                + '<span>' + escapeHtml(gd.plus_one_name) + ' (guest)</span>'
-                                + '<span>✓ Attending</span>'
-                                + '</div>';
-                        } else if (gd.plus_one_attending === 'no') {
-                            summaryHtml += '<div class="rsvp-summary-item">'
-                                + '<span>Guest of ' + escapeHtml(member.first_name) + '</span>'
-                                + '<span>✗ Not Bringing</span>'
+                                + '<span>' + escapeHtml(poLabel) + ' (guest)</span>'
+                                + '<span>' + eventSummaryLabel(poCeremony, poReception) + '</span>'
                                 + '</div>';
                         }
                     }

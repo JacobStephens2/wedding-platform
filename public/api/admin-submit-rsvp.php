@@ -7,8 +7,8 @@
  * Body (JSON):
  * {
  *   "guests": [
- *     { "id": 1, "attending": "yes", "dietary": "" },
- *     { "id": 2, "attending": "no", "dietary": "" }
+ *     { "id": 1, "ceremony_attending": "yes", "reception_attending": "yes", "dietary": "" },
+ *     { "id": 2, "ceremony_attending": "no", "reception_attending": "yes", "dietary": "" }
  *   ],
  *   "message": "...",
  *   "song_request": "..."
@@ -42,7 +42,7 @@ $songRequest = trim($input['song_request'] ?? '');
 
 $hasResponse = false;
 foreach ($guestRsvps as $gr) {
-    if (!empty($gr['attending'])) {
+    if (!empty($gr['ceremony_attending']) || !empty($gr['reception_attending'])) {
         $hasResponse = true;
         break;
     }
@@ -63,6 +63,8 @@ try {
     $stmt = $pdo->prepare("
         UPDATE guests 
         SET attending = :attending,
+            ceremony_attending = :ceremony_attending,
+            reception_attending = :reception_attending,
             dietary = :dietary,
             email = :email,
             song_request = :song_request,
@@ -70,6 +72,8 @@ try {
             rsvp_submitted_at = :rsvp_submitted_at,
             plus_one_name = :plus_one_name,
             plus_one_attending = :plus_one_attending,
+            plus_one_ceremony_attending = :plus_one_ceremony_attending,
+            plus_one_reception_attending = :plus_one_reception_attending,
             plus_one_dietary = :plus_one_dietary
         WHERE id = :id
     ");
@@ -80,25 +84,37 @@ try {
     
     foreach ($guestRsvps as $gr) {
         $guestId = intval($gr['id'] ?? 0);
-        $attendingValue = trim($gr['attending'] ?? '');
+        $ceremonyAttending = trim($gr['ceremony_attending'] ?? '');
+        $receptionAttending = trim($gr['reception_attending'] ?? '');
         $dietary = trim($gr['dietary'] ?? '');
         
         if (!$guestId) continue;
-        if ($attendingValue === '') continue;
+        if ($ceremonyAttending === '' && $receptionAttending === '') continue;
         
-        $attending = ($attendingValue === 'yes') ? 'yes' : 'no';
+        $ceremonyAttending = ($ceremonyAttending === 'yes') ? 'yes' : ($ceremonyAttending === 'no' ? 'no' : null);
+        $receptionAttending = ($receptionAttending === 'yes') ? 'yes' : ($receptionAttending === 'no' ? 'no' : null);
+        $attending = ($ceremonyAttending === 'yes' || $receptionAttending === 'yes') ? 'yes' : 'no';
         
         $nameStmt = $pdo->prepare("SELECT first_name, last_name FROM guests WHERE id = ?");
         $nameStmt->execute([$guestId]);
         $guestInfo = $nameStmt->fetch(PDO::FETCH_ASSOC);
         
         $plusOneName = trim($gr['plus_one_name'] ?? '');
-        $plusOneAttending = trim($gr['plus_one_attending'] ?? '');
+        $plusOneCeremonyAttending = trim($gr['plus_one_ceremony_attending'] ?? '');
+        $plusOneReceptionAttending = trim($gr['plus_one_reception_attending'] ?? '');
         $plusOneDietary = trim($gr['plus_one_dietary'] ?? '');
+        
+        $plusOneCeremonyAttending = ($plusOneCeremonyAttending === 'yes') ? 'yes' : ($plusOneCeremonyAttending === 'no' ? 'no' : null);
+        $plusOneReceptionAttending = ($plusOneReceptionAttending === 'yes') ? 'yes' : ($plusOneReceptionAttending === 'no' ? 'no' : null);
+        $plusOneAttending = ($plusOneCeremonyAttending === 'yes' || $plusOneReceptionAttending === 'yes') ? 'yes' : (($plusOneCeremonyAttending === 'no' && $plusOneReceptionAttending === 'no') ? 'no' : null);
         
         if ($guestInfo) {
             $fullName = trim($guestInfo['first_name'] . ' ' . $guestInfo['last_name']);
-            $guestNames[] = $fullName . ' (' . ($attending === 'yes' ? 'Attending' : 'Not Attending') . ')';
+            $eventSummary = [];
+            if ($ceremonyAttending === 'yes') $eventSummary[] = 'Ceremony';
+            if ($receptionAttending === 'yes') $eventSummary[] = 'Reception';
+            $attendingLabel = !empty($eventSummary) ? implode(' & ', $eventSummary) : 'Not Attending';
+            $guestNames[] = $fullName . ' (' . $attendingLabel . ')';
             
             if ($attending === 'yes') {
                 $attendingCount++;
@@ -108,7 +124,10 @@ try {
             
             if ($plusOneAttending === 'yes') {
                 $poLabel = !empty($plusOneName) ? $plusOneName : 'Guest of ' . $guestInfo['first_name'];
-                $guestNames[] = $poLabel . ' (Attending - plus one)';
+                $poEventSummary = [];
+                if ($plusOneCeremonyAttending === 'yes') $poEventSummary[] = 'Ceremony';
+                if ($plusOneReceptionAttending === 'yes') $poEventSummary[] = 'Reception';
+                $guestNames[] = $poLabel . ' (' . implode(' & ', $poEventSummary) . ' - plus one)';
                 $attendingCount++;
             } elseif ($plusOneAttending === 'no') {
                 $decliningCount++;
@@ -117,13 +136,17 @@ try {
         
         $stmt->execute([
             ':attending' => $attending,
+            ':ceremony_attending' => $ceremonyAttending,
+            ':reception_attending' => $receptionAttending,
             ':dietary' => !empty($dietary) ? $dietary : null,
             ':email' => !empty($email) ? $email : null,
             ':song_request' => !empty($songRequest) ? $songRequest : null,
             ':message' => !empty($message) ? $message : null,
             ':rsvp_submitted_at' => $now,
             ':plus_one_name' => !empty($plusOneName) ? $plusOneName : null,
-            ':plus_one_attending' => ($plusOneAttending === 'yes' || $plusOneAttending === 'no') ? $plusOneAttending : null,
+            ':plus_one_attending' => $plusOneAttending,
+            ':plus_one_ceremony_attending' => $plusOneCeremonyAttending,
+            ':plus_one_reception_attending' => $plusOneReceptionAttending,
             ':plus_one_dietary' => !empty($plusOneDietary) ? $plusOneDietary : null,
             ':id' => $guestId,
         ]);

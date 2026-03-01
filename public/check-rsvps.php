@@ -51,8 +51,9 @@ if ($authenticated) {
         $pdo = getDbConnection();
         
         $stmt = $pdo->query("
-            SELECT id, first_name, last_name, mailing_group, group_name, attending, dietary, song_request, message, email, rsvp_submitted_at,
-                   has_plus_one, plus_one_name, plus_one_attending, plus_one_dietary
+            SELECT id, first_name, last_name, mailing_group, group_name, attending, ceremony_attending, reception_attending,
+                   dietary, song_request, message, email, rsvp_submitted_at,
+                   has_plus_one, plus_one_name, plus_one_attending, plus_one_ceremony_attending, plus_one_reception_attending, plus_one_dietary
             FROM guests
             WHERE rsvp_submitted_at IS NOT NULL
             ORDER BY rsvp_submitted_at DESC
@@ -64,7 +65,9 @@ if ($authenticated) {
                 COUNT(*) as total,
                 SUM(CASE WHEN attending = 'yes' THEN 1 ELSE 0 END) as attending,
                 SUM(CASE WHEN attending = 'no' THEN 1 ELSE 0 END) as declined,
-                SUM(CASE WHEN attending IS NULL THEN 1 ELSE 0 END) as pending
+                SUM(CASE WHEN attending IS NULL THEN 1 ELSE 0 END) as pending,
+                SUM(CASE WHEN ceremony_attending = 'yes' THEN 1 ELSE 0 END) as ceremony,
+                SUM(CASE WHEN reception_attending = 'yes' THEN 1 ELSE 0 END) as reception
             FROM guests
         ");
         $guestStats = $statsStmt->fetch(PDO::FETCH_ASSOC);
@@ -231,7 +234,7 @@ $page_title = "Check RSVPs - Jacob & Melissa";
                     </div>
                     <div class="stat-item">
                         <div class="stat-number" style="color: #2d5016;"><?php echo $guestStats['attending']; ?></div>
-                        <div class="stat-label">Attending</div>
+                        <div class="stat-label">Attending Any</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-number" style="color: #8b0000;"><?php echo $guestStats['declined']; ?></div>
@@ -241,15 +244,34 @@ $page_title = "Check RSVPs - Jacob & Melissa";
                         <div class="stat-number" style="color: var(--color-lavender);"><?php echo $guestStats['pending']; ?></div>
                         <div class="stat-label">Pending</div>
                     </div>
+                    <div class="stat-item" style="border-left: 2px solid #ddd; padding-left: 1.5rem;">
+                        <div class="stat-number" style="color: #2d5016;"><?php echo $guestStats['ceremony']; ?></div>
+                        <div class="stat-label">Ceremony</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" style="color: #2d5016;"><?php echo $guestStats['reception']; ?></div>
+                        <div class="stat-label">Reception</div>
+                    </div>
                 </div>
                 
                 <?php if (!empty($guestRsvps)): ?>
                     <table class="rsvp-table">
+                        <?php
+                        function eventBadge($ceremony, $reception) {
+                            $parts = [];
+                            if ($ceremony === 'yes') $parts[] = 'Ceremony';
+                            if ($reception === 'yes') $parts[] = 'Reception';
+                            if (!empty($parts)) return implode(' &amp; ', $parts);
+                            if ($ceremony === 'no' && $reception === 'no') return 'None';
+                            return '—';
+                        }
+                        ?>
                         <thead>
                             <tr>
                                 <th>Name</th>
                                 <th>Group</th>
-                                <th>Attending</th>
+                                <th>Ceremony</th>
+                                <th>Reception</th>
                                 <th>Dietary</th>
                                 <th>Song Request</th>
                                 <th>Message</th>
@@ -262,8 +284,11 @@ $page_title = "Check RSVPs - Jacob & Melissa";
                                 <tr>
                                     <td><?php echo htmlspecialchars($gr['first_name'] . ' ' . $gr['last_name']); ?></td>
                                     <td><?php echo htmlspecialchars($gr['group_name']); ?></td>
-                                    <td class="<?php echo $gr['attending'] === 'yes' ? 'attending-yes' : 'attending-no'; ?>">
-                                        <?php echo $gr['attending'] === 'yes' ? 'Yes' : 'No'; ?>
+                                    <td class="<?php echo $gr['ceremony_attending'] === 'yes' ? 'attending-yes' : ($gr['ceremony_attending'] === 'no' ? 'attending-no' : ''); ?>">
+                                        <?php echo $gr['ceremony_attending'] === 'yes' ? 'Yes' : ($gr['ceremony_attending'] === 'no' ? 'No' : '—'); ?>
+                                    </td>
+                                    <td class="<?php echo $gr['reception_attending'] === 'yes' ? 'attending-yes' : ($gr['reception_attending'] === 'no' ? 'attending-no' : ''); ?>">
+                                        <?php echo $gr['reception_attending'] === 'yes' ? 'Yes' : ($gr['reception_attending'] === 'no' ? 'No' : '—'); ?>
                                     </td>
                                     <td><?php echo htmlspecialchars($gr['dietary'] ?? ''); ?></td>
                                     <td><?php echo htmlspecialchars($gr['song_request'] ?? ''); ?></td>
@@ -271,12 +296,15 @@ $page_title = "Check RSVPs - Jacob & Melissa";
                                     <td><?php echo htmlspecialchars($gr['email'] ?? ''); ?></td>
                                     <td><?php echo date('M j, Y g:i A', strtotime($gr['rsvp_submitted_at'])); ?></td>
                                 </tr>
-                                <?php if ($gr['has_plus_one'] && $gr['plus_one_attending']): ?>
+                                <?php if ($gr['has_plus_one'] && ($gr['plus_one_ceremony_attending'] || $gr['plus_one_reception_attending'])): ?>
                                 <tr class="plus-one-row">
                                     <td><?php echo htmlspecialchars($gr['plus_one_name'] ?? 'Guest of ' . $gr['first_name']); ?> (plus one)</td>
                                     <td></td>
-                                    <td class="<?php echo $gr['plus_one_attending'] === 'yes' ? 'attending-yes' : 'attending-no'; ?>">
-                                        <?php echo $gr['plus_one_attending'] === 'yes' ? 'Yes' : 'No'; ?>
+                                    <td class="<?php echo $gr['plus_one_ceremony_attending'] === 'yes' ? 'attending-yes' : ($gr['plus_one_ceremony_attending'] === 'no' ? 'attending-no' : ''); ?>">
+                                        <?php echo $gr['plus_one_ceremony_attending'] === 'yes' ? 'Yes' : ($gr['plus_one_ceremony_attending'] === 'no' ? 'No' : '—'); ?>
+                                    </td>
+                                    <td class="<?php echo $gr['plus_one_reception_attending'] === 'yes' ? 'attending-yes' : ($gr['plus_one_reception_attending'] === 'no' ? 'attending-no' : ''); ?>">
+                                        <?php echo $gr['plus_one_reception_attending'] === 'yes' ? 'Yes' : ($gr['plus_one_reception_attending'] === 'no' ? 'No' : '—'); ?>
                                     </td>
                                     <td><?php echo htmlspecialchars($gr['plus_one_dietary'] ?? ''); ?></td>
                                     <td colspan="4"></td>
