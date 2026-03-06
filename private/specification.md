@@ -223,6 +223,8 @@ The area at the top of the guest management page should include plus ones in the
 
 The guest count totals should include total declined by reception and declined by ceremony.
 
+Typing a guest's name into the Search name input should filter the table as the user types into the input.
+
 ### Giving a guest a plus one
 Admins should be able to give guests a plus one. If a guest has a plus one, then when they look themself up in the invite lookup of the RSVP page, they should see their name as well as a blank name field for their plus one. They should be able to indicate whether or not they are bringing a plus one.
 
