@@ -116,7 +116,7 @@ include __DIR__ . '/includes/header.php';
                 <div class="honeymoon-fund-image">
                     <img src="/images/honeymoon-fund.jpg" alt="Honeymoon Fund">
                 </div>
-                <p>We would be honored if you would like to contribute to our honeymoon fund as a wedding gift.</p>
+                <p>We're honeymooning in Puerto Rico! We would be honored if you would like to contribute to our honeymoon fund as a wedding gift.</p>
                 
                 <div class="honeymoon-fund-info-container">
                     <div class="honeymoon-fund-payment-methods">
