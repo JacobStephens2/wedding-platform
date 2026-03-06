@@ -1126,7 +1126,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
                     </div>
                     <div class="stat-item stat-declined">
                         <span class="stat-number"><?php echo $stats['declined']; ?></span>
-                        <span class="stat-label">Declined</span>
+                        <span class="stat-label">Declined All</span>
                     </div>
                     <div class="stat-item stat-pending">
                         <span class="stat-number"><?php echo $stats['pending']; ?></span>
@@ -1217,7 +1217,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
                 
                 <!-- Search/Filter -->
                 <form method="GET" action="/admin-guests" class="filters-bar">
-                    <input type="text" name="search" placeholder="Search name..." 
+                    <input type="text" name="search" id="guest-search-input" placeholder="Search name..."
                            value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>">
                     <input type="number" name="group_filter" placeholder="Group #" min="0" style="width: 100px;"
                            value="<?php echo htmlspecialchars($_GET['group_filter'] ?? ''); ?>">
@@ -1307,5 +1307,36 @@ $page_title = "Manage Guests - Jacob & Melissa";
             </div>
         <?php endif; ?>
     </main>
+<script>
+(function() {
+    var searchInput = document.getElementById('guest-search-input');
+    if (!searchInput) return;
+    var table = document.querySelector('.guests-table');
+    if (!table) return;
+    var rows = table.querySelectorAll('tbody tr');
+    var countLabel = document.querySelector('.guest-count-label');
+
+    searchInput.addEventListener('input', function() {
+        var query = searchInput.value.toLowerCase().trim();
+        var visible = 0;
+        rows.forEach(function(row) {
+            if (row.querySelector('td[colspan]')) {
+                // "No guests found" row — hide during filtering
+                row.style.display = query ? 'none' : '';
+                return;
+            }
+            var cells = row.querySelectorAll('td');
+            var firstName = cells[0] ? cells[0].textContent.toLowerCase() : '';
+            var lastName = cells[1] ? cells[1].textContent.toLowerCase() : '';
+            var match = !query || firstName.indexOf(query) !== -1 || lastName.indexOf(query) !== -1;
+            row.style.display = match ? '' : 'none';
+            if (match) visible++;
+        });
+        if (countLabel) {
+            countLabel.textContent = 'Showing ' + visible + ' guest' + (visible !== 1 ? 's' : '');
+        }
+    });
+})();
+</script>
 </body>
 </html>
