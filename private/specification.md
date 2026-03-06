@@ -223,8 +223,11 @@ The area at the top of the guest management page should include plus ones in the
 
 The guest count totals should include total declined by reception and declined by ceremony.
 
+The guest count totals area should include a "Total if all Pending Say Yes" to let us know what our current maximum yes is in light of the declines we've received so far.
+
 Typing a guest's name into the Search name input should filter the table as the user types into the input.
 
+### Allergy and Song Request Views
 There should be a way in the manage guests area to easily pull up a view that shows all the dietary restrictions (if any) that have been entered into RSVPs.
 
 There should be a way in the manage guests area to easily view the songs requested. Only one song per RSVP group should show, otherwise many repeats will display.
