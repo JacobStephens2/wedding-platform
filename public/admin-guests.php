@@ -194,7 +194,7 @@ if ($authenticated && isset($_GET['rsvp'])) {
 
 // Fetch all guests if authenticated
 $guests = [];
-$stats = ['total' => 0, 'attending' => 0, 'declined' => 0, 'pending' => 0, 'ceremony' => 0, 'reception' => 0];
+$stats = ['total' => 0, 'attending' => 0, 'declined' => 0, 'pending' => 0, 'ceremony' => 0, 'reception' => 0, 'ceremony_declined' => 0, 'reception_declined' => 0];
 if ($authenticated) {
     try {
         $pdo = getDbConnection();
@@ -263,7 +263,15 @@ if ($authenticated) {
                 (
                     COALESCE(SUM(CASE WHEN reception_attending = 'yes' THEN 1 ELSE 0 END), 0)
                     + COALESCE(SUM(CASE WHEN has_plus_one = 1 AND plus_one_reception_attending = 'yes' THEN 1 ELSE 0 END), 0)
-                ) as reception
+                ) as reception,
+                (
+                    COALESCE(SUM(CASE WHEN ceremony_attending = 'no' THEN 1 ELSE 0 END), 0)
+                    + COALESCE(SUM(CASE WHEN has_plus_one = 1 AND plus_one_ceremony_attending = 'no' THEN 1 ELSE 0 END), 0)
+                ) as ceremony_declined,
+                (
+                    COALESCE(SUM(CASE WHEN reception_attending = 'no' THEN 1 ELSE 0 END), 0)
+                    + COALESCE(SUM(CASE WHEN has_plus_one = 1 AND plus_one_reception_attending = 'no' THEN 1 ELSE 0 END), 0)
+                ) as reception_declined
             FROM guests
         ");
         $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
@@ -1129,8 +1137,16 @@ $page_title = "Manage Guests - Jacob & Melissa";
                         <span class="stat-label">Ceremony</span>
                     </div>
                     <div class="stat-item">
+                        <span class="stat-number" style="color: #dc3545;"><?php echo $stats['ceremony_declined']; ?></span>
+                        <span class="stat-label">Declined Ceremony</span>
+                    </div>
+                    <div class="stat-item">
                         <span class="stat-number" style="color: var(--color-green);"><?php echo $stats['reception']; ?></span>
                         <span class="stat-label">Reception</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" style="color: #dc3545;"><?php echo $stats['reception_declined']; ?></span>
+                        <span class="stat-label">Declined Reception</span>
                     </div>
                 </div>
                 

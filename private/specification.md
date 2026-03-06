@@ -1,6 +1,9 @@
 # Overview
 This is the specification for the wedding website of Jacob Stephens and Melissa Longua.
 
+## Honeymoon
+Our honeymoon is in Puerto Rico, and the website should indicate this.
+
 # URL of home page: https://wedding.stephens.page
 The home page should be accessible at https://wedding.stephens.page.
 
@@ -217,6 +220,8 @@ The header columns of the guest management page (/admin-guests) should stay stic
 The headers of the guest table should be clickable to sort the table by the field of the column header clicked.
 
 The area at the top of the guest management page should include plus ones in the total count of invites. This will help us know how many invites we have extended and whether we need to hold off or not on extending more invitations.
+
+The guest count totals should include total declined by reception and declined by ceremony.
 
 ### Giving a guest a plus one
 Admins should be able to give guests a plus one. If a guest has a plus one, then when they look themself up in the invite lookup of the RSVP page, they should see their name as well as a blank name field for their plus one. They should be able to indicate whether or not they are bringing a plus one.
