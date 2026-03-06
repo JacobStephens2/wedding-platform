@@ -1132,6 +1132,10 @@ $page_title = "Manage Guests - Jacob & Melissa";
                         <span class="stat-number"><?php echo $stats['pending']; ?></span>
                         <span class="stat-label">Pending</span>
                     </div>
+                    <div class="stat-item">
+                        <span class="stat-number"><?php echo $stats['total'] - $stats['declined']; ?></span>
+                        <span class="stat-label">Max if Pending Say Yes</span>
+                    </div>
                     <div class="stat-item" style="border-left: 2px solid #eee; padding-left: 2rem;">
                         <span class="stat-number" style="color: var(--color-green);"><?php echo $stats['ceremony']; ?></span>
                         <span class="stat-label">Ceremony</span>
