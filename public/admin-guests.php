@@ -1366,7 +1366,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
                 </script>
 
                 <!-- Guests Table -->
-                <span class="guest-count-label">Showing <?php echo count($guests); ?> guest<?php echo count($guests) !== 1 ? 's' : ''; ?></span>
+                <span id="guests-table" class="guest-count-label">Showing <?php echo count($guests); ?> guest<?php echo count($guests) !== 1 ? 's' : ''; ?></span>
                 <?php
                 function getSortUrl($field, $currentSort, $currentOrder) {
                     $params = $_GET;
@@ -1376,7 +1376,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
                         $params['sort'] = $field;
                         $params['order'] = 'ASC';
                     }
-                    return '/admin-guests?' . http_build_query($params);
+                    return '/admin-guests?' . http_build_query($params) . '#guests-table';
                 }
                 function getSortIndicator($field, $currentSort, $currentOrder) {
                     if ($currentSort !== $field) return '';
