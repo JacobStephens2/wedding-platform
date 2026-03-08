@@ -233,6 +233,8 @@ The guest count totals area should include a "Total if all Pending Say Yes" to l
 
 In the container which shows the RSVP counts by ceremony and reception, the admin should be able to click on one of these numbers to display those guests in the table below.
 
+There should be a "Rehearsal" total as well.
+
 ### Allergy and Song Request Views
 There should be a way in the manage guests area to easily pull up a view that shows all the dietary restrictions (if any) that have been entered into RSVPs.
 
