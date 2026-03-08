@@ -224,6 +224,8 @@ Typing a guest's name into the Search name input should filter the table as the 
 
 If a guest has a plus one, the plus one should appear as a row in the guest table with the same Group # that they are part of. This will make it easier for us to see a complete list of all the names of people who are attending the reception for example, which will be useful for creating seating charts.
 
+One column in the guests table should show if the guest is invited to the rehearsal.
+
 ### RSVP Summary Stats
 The area at the top of the guest management page should include plus ones in the total count of invites. This will help us know how many invites we have extended and whether we need to hold off or not on extending more invitations.
 
@@ -232,6 +234,8 @@ The guest count totals should include total declined by reception and declined b
 The guest count totals area should include a "Total if all Pending Say Yes" to let us know what our current maximum yes is in light of the declines we've received so far.
 
 In the container which shows the RSVP counts by ceremony and reception, the admin should be able to click on one of these numbers to display those guests in the table below.
+
+Admins should also be able to click the numbers in the first summary stats container to filter to those groups.
 
 There should be a "Rehearsal" total as well.
 

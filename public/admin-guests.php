@@ -233,7 +233,7 @@ if ($authenticated) {
         $sort = $_GET['sort'] ?? 'mailing_group';
         $order = $_GET['order'] ?? 'ASC';
         
-        $allowedSorts = ['first_name', 'last_name', 'mailing_group', 'group_name', 'has_plus_one', 'attending'];
+        $allowedSorts = ['first_name', 'last_name', 'mailing_group', 'group_name', 'has_plus_one', 'rehearsal_invited', 'attending'];
         if (!in_array($sort, $allowedSorts)) {
             $sort = 'mailing_group';
         }
@@ -254,9 +254,21 @@ if ($authenticated) {
             $params[] = (int)$groupFilter;
         }
 
-        $allowedStatusFilters = ['ceremony_yes', 'ceremony_no', 'reception_yes', 'reception_no', 'rehearsal'];
+        $allowedStatusFilters = ['attending', 'declined', 'pending', 'not_declined', 'ceremony_yes', 'ceremony_no', 'reception_yes', 'reception_no', 'rehearsal'];
         if ($statusFilter !== '' && in_array($statusFilter, $allowedStatusFilters)) {
             switch ($statusFilter) {
+                case 'attending':
+                    $where[] = "g.attending = 'yes'";
+                    break;
+                case 'declined':
+                    $where[] = "g.attending = 'no'";
+                    break;
+                case 'pending':
+                    $where[] = "g.attending IS NULL";
+                    break;
+                case 'not_declined':
+                    $where[] = "(g.attending IS NULL OR g.attending = 'yes')";
+                    break;
                 case 'ceremony_yes':
                     $where[] = "g.ceremony_attending = 'yes'";
                     break;
@@ -305,6 +317,18 @@ if ($authenticated) {
                 $includeRow = true;
                 if ($statusFilter !== '' && in_array($statusFilter, $allowedStatusFilters)) {
                     switch ($statusFilter) {
+                        case 'attending':
+                            $includeRow = ($guest['plus_one_attending'] ?? '') === 'yes';
+                            break;
+                        case 'declined':
+                            $includeRow = ($guest['plus_one_attending'] ?? '') === 'no';
+                            break;
+                        case 'pending':
+                            $includeRow = ($guest['plus_one_attending'] ?? null) === null;
+                            break;
+                        case 'not_declined':
+                            $includeRow = ($guest['plus_one_attending'] ?? null) !== 'no';
+                            break;
                         case 'ceremony_yes':
                             $includeRow = ($guest['plus_one_ceremony_attending'] ?? '') === 'yes';
                             break;
@@ -340,6 +364,7 @@ if ($authenticated) {
                         'state' => $guest['state'],
                         'zip' => $guest['zip'],
                         'country' => $guest['country'],
+                        'rehearsal_invited' => $guest['rehearsal_invited'],
                         'is_plus_one' => true,
                     ];
                 }
@@ -1222,24 +1247,34 @@ $page_title = "Manage Guests - Jacob & Melissa";
                 <!-- Stats -->
                 <div class="stats-bar">
                     <div class="stat-item">
-                        <span class="stat-number"><?php echo $stats['total']; ?></span>
-                        <span class="stat-label">Total Invites (incl. +1s)</span>
+                        <a href="/admin-guests" class="stat-link">
+                            <span class="stat-number"><?php echo $stats['total']; ?></span>
+                            <span class="stat-label">Total Invites (incl. +1s)</span>
+                        </a>
                     </div>
                     <div class="stat-item stat-attending">
-                        <span class="stat-number"><?php echo $stats['attending']; ?></span>
-                        <span class="stat-label">Attending Any</span>
+                        <a href="/admin-guests?status_filter=attending" class="stat-link">
+                            <span class="stat-number"><?php echo $stats['attending']; ?></span>
+                            <span class="stat-label">Attending Any</span>
+                        </a>
                     </div>
                     <div class="stat-item stat-declined">
-                        <span class="stat-number"><?php echo $stats['declined']; ?></span>
-                        <span class="stat-label">Declined All</span>
+                        <a href="/admin-guests?status_filter=declined" class="stat-link">
+                            <span class="stat-number"><?php echo $stats['declined']; ?></span>
+                            <span class="stat-label">Declined All</span>
+                        </a>
                     </div>
                     <div class="stat-item stat-pending">
-                        <span class="stat-number"><?php echo $stats['pending']; ?></span>
-                        <span class="stat-label">Pending</span>
+                        <a href="/admin-guests?status_filter=pending" class="stat-link">
+                            <span class="stat-number"><?php echo $stats['pending']; ?></span>
+                            <span class="stat-label">Pending</span>
+                        </a>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-number"><?php echo $stats['total'] - $stats['declined']; ?></span>
-                        <span class="stat-label">Max if Pending Say Yes</span>
+                        <a href="/admin-guests?status_filter=not_declined" class="stat-link">
+                            <span class="stat-number"><?php echo $stats['total'] - $stats['declined']; ?></span>
+                            <span class="stat-label">Max if Pending Say Yes</span>
+                        </a>
                     </div>
                 </div>
                 <div class="stats-bar" style="margin-top: -1rem;">
@@ -1535,6 +1570,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
                                 <th><a href="<?php echo getSortUrl('group_name', $sort, $order); ?>">Group Name<?php echo getSortIndicator('group_name', $sort, $order); ?></a></th>
                                 <th>Address</th>
                                 <th><a href="<?php echo getSortUrl('has_plus_one', $sort, $order); ?>">+1<?php echo getSortIndicator('has_plus_one', $sort, $order); ?></a></th>
+                                <th><a href="<?php echo getSortUrl('rehearsal_invited', $sort, $order); ?>">Rehearsal<?php echo getSortIndicator('rehearsal_invited', $sort, $order); ?></a></th>
                                 <th><a href="<?php echo getSortUrl('attending', $sort, $order); ?>">RSVP Status<?php echo getSortIndicator('attending', $sort, $order); ?></a></th>
                                 <th>Actions</th>
                             </tr>
@@ -1570,6 +1606,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
                                         echo $fullAddr ?: '—';
                                     ?></td>
                                     <td><?php echo $guest['has_plus_one'] ? '✓' : ''; ?></td>
+                                    <td><?php echo !empty($guest['rehearsal_invited']) ? '✓' : ''; ?></td>
                                     <td>
                                         <?php if ($guest['attending'] === 'yes'): ?>
                                             <span class="rsvp-badge rsvp-attending">Attending</span>
