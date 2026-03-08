@@ -219,7 +219,7 @@ if ($authenticated && isset($_GET['rsvp'])) {
 
 // Fetch all guests if authenticated
 $guests = [];
-$stats = ['total' => 0, 'attending' => 0, 'declined' => 0, 'pending' => 0, 'ceremony' => 0, 'reception' => 0, 'ceremony_declined' => 0, 'reception_declined' => 0];
+$stats = ['total' => 0, 'attending' => 0, 'declined' => 0, 'pending' => 0, 'ceremony' => 0, 'reception' => 0, 'ceremony_declined' => 0, 'reception_declined' => 0, 'rehearsal' => 0];
 if ($authenticated) {
     try {
         $pdo = getDbConnection();
@@ -254,7 +254,7 @@ if ($authenticated) {
             $params[] = (int)$groupFilter;
         }
 
-        $allowedStatusFilters = ['ceremony_yes', 'ceremony_no', 'reception_yes', 'reception_no'];
+        $allowedStatusFilters = ['ceremony_yes', 'ceremony_no', 'reception_yes', 'reception_no', 'rehearsal'];
         if ($statusFilter !== '' && in_array($statusFilter, $allowedStatusFilters)) {
             switch ($statusFilter) {
                 case 'ceremony_yes':
@@ -268,6 +268,9 @@ if ($authenticated) {
                     break;
                 case 'reception_no':
                     $where[] = "g.reception_attending = 'no'";
+                    break;
+                case 'rehearsal':
+                    $where[] = "g.rehearsal_invited = 1";
                     break;
             }
         }
@@ -313,6 +316,9 @@ if ($authenticated) {
                             break;
                         case 'reception_no':
                             $includeRow = ($guest['plus_one_reception_attending'] ?? '') === 'no';
+                            break;
+                        case 'rehearsal':
+                            $includeRow = !empty($guest['rehearsal_invited']);
                             break;
                     }
                 }
@@ -374,7 +380,10 @@ if ($authenticated) {
                 (
                     COALESCE(SUM(CASE WHEN reception_attending = 'no' THEN 1 ELSE 0 END), 0)
                     + COALESCE(SUM(CASE WHEN has_plus_one = 1 AND plus_one_reception_attending = 'no' THEN 1 ELSE 0 END), 0)
-                ) as reception_declined
+                ) as reception_declined,
+                (
+                    COALESCE(SUM(CASE WHEN rehearsal_invited = 1 THEN 1 ELSE 0 END), 0)
+                ) as rehearsal
             FROM guests
         ");
         $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
@@ -1256,6 +1265,12 @@ $page_title = "Manage Guests - Jacob & Melissa";
                         <a href="/admin-guests?status_filter=reception_no" class="stat-link">
                             <span class="stat-number" style="color: #dc3545;"><?php echo $stats['reception_declined']; ?></span>
                             <span class="stat-label">Declined Reception</span>
+                        </a>
+                    </div>
+                    <div class="stat-item">
+                        <a href="/admin-guests?status_filter=rehearsal" class="stat-link">
+                            <span class="stat-number"><?php echo $stats['rehearsal']; ?></span>
+                            <span class="stat-label">Rehearsal</span>
                         </a>
                     </div>
                     <?php if ($statusFilter !== ''): ?>
