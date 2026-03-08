@@ -239,12 +239,16 @@ There should be a way in the manage guests area to easily pull up a view that sh
 There should be a way in the manage guests area to easily view the songs requested. Only one song per RSVP group should show, otherwise many repeats will display.
 
 ### Editing a Guest
+When editing a guest, the admin should be able to edit the mailing address for the guest group, and the admin should be able to edit a phone number for the guest.
 
 #### Giving a guest a plus one
 Admins should be able to give guests a plus one. If a guest has a plus one, then when they look themself up in the invite lookup of the RSVP page, they should see their name as well as a blank name field for their plus one. They should be able to indicate whether or not they are bringing a plus one.
 
 #### Entering an RSVP from the admin area
 We are receiving RSVP cards by mail, and we want to input those RSVPs into the system to keep track of our guest count. There should be a way to input RSVPs from the admin area. This admin RSVP input should have optional email address input.
+
+#### Rehearsal Invite and Export
+When editing a guest, the admin should be able to mark a guest as invited to the rehearsal. Correspondingly, there should be a button called "Export Rehearsal Contacts", which exports a CSV with contact information about the guests who are invited to the rehearsal. This will help send invitations to rehearsal guests.
 
 ## Manage House Fund
 In the admin area there should be a manage house fund page which allows the user to manage the house fund (CRUD operations on entries).

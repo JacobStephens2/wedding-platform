@@ -33,22 +33,52 @@ if (isset($_GET['logout'])) {
     exit;
 }
 
+// Handle rehearsal contacts CSV export
+if ($authenticated && isset($_GET['export_rehearsal'])) {
+    try {
+        $pdo = getDbConnection();
+        $stmt = $pdo->query("
+            SELECT g.first_name, g.last_name, g.group_name, g.phone, g.email,
+                   ma.address_1, ma.address_2, ma.city, ma.state, ma.zip, ma.country
+            FROM guests g
+            LEFT JOIN mailing_addresses ma ON g.mailing_group = ma.mailing_group
+            WHERE g.rehearsal_invited = 1
+            ORDER BY g.group_name, g.last_name, g.first_name
+        ");
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="rehearsal-contacts.csv"');
+        $out = fopen('php://output', 'w');
+        fputcsv($out, ['First Name', 'Last Name', 'Group', 'Phone', 'Email', 'Address 1', 'Address 2', 'City', 'State', 'Zip', 'Country']);
+        foreach ($rows as $row) {
+            fputcsv($out, $row);
+        }
+        fclose($out);
+        exit;
+    } catch (Exception $e) {
+        $error = 'Error exporting rehearsal contacts: ' . htmlspecialchars($e->getMessage());
+    }
+}
+
 // Handle add guest
 if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_guest'])) {
     try {
         $pdo = getDbConnection();
         $stmt = $pdo->prepare("
-            INSERT INTO guests (first_name, last_name, group_name, mailing_group, has_plus_one)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO guests (first_name, last_name, group_name, mailing_group, has_plus_one, rehearsal_invited)
+            VALUES (?, ?, ?, ?, ?, ?)
         ");
         $mailingGroup = trim($_POST['mailing_group'] ?? '');
         $hasPlusOne = isset($_POST['has_plus_one']) && $_POST['has_plus_one'] === '1' ? 1 : 0;
+        $rehearsalInvited = isset($_POST['rehearsal_invited']) && $_POST['rehearsal_invited'] === '1' ? 1 : 0;
         $stmt->execute([
             trim($_POST['first_name'] ?? ''),
             trim($_POST['last_name'] ?? ''),
             trim($_POST['group_name'] ?? ''),
             $mailingGroup !== '' ? (int)$mailingGroup : null,
             $hasPlusOne,
+            $rehearsalInvited,
         ]);
         header('Location: /admin-guests?added=1');
         exit;
@@ -77,10 +107,14 @@ if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upd
             $attending = null;
         }
         
+        $phone = trim($_POST['phone'] ?? '');
+        $rehearsalInvited = isset($_POST['rehearsal_invited']) && $_POST['rehearsal_invited'] === '1' ? 1 : 0;
+
         $stmt = $pdo->prepare("
-            UPDATE guests 
+            UPDATE guests
             SET first_name = ?, last_name = ?, group_name = ?, mailing_group = ?,
-                attending = ?, ceremony_attending = ?, reception_attending = ?, has_plus_one = ?
+                attending = ?, ceremony_attending = ?, reception_attending = ?, has_plus_one = ?,
+                phone = ?, rehearsal_invited = ?
             WHERE id = ?
         ");
         $stmt->execute([
@@ -92,8 +126,42 @@ if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upd
             $ca,
             $ra,
             $hasPlusOne,
+            $phone !== '' ? $phone : null,
+            $rehearsalInvited,
             (int)$_POST['guest_id'],
         ]);
+
+        // Update mailing address if a mailing group is set
+        if ($mailingGroup !== '') {
+            $mg = (int)$mailingGroup;
+            $addr1 = trim($_POST['address_1'] ?? '');
+            $addr2 = trim($_POST['address_2'] ?? '');
+            $city = trim($_POST['city'] ?? '');
+            $state = trim($_POST['state'] ?? '');
+            $zip = trim($_POST['zip'] ?? '');
+            $country = trim($_POST['country'] ?? '');
+
+            $stmt = $pdo->prepare("
+                INSERT INTO mailing_addresses (mailing_group, address_1, address_2, city, state, zip, country)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                    address_1 = VALUES(address_1),
+                    address_2 = VALUES(address_2),
+                    city = VALUES(city),
+                    state = VALUES(state),
+                    zip = VALUES(zip),
+                    country = VALUES(country)
+            ");
+            $stmt->execute([
+                $mg,
+                $addr1 !== '' ? $addr1 : null,
+                $addr2 !== '' ? $addr2 : null,
+                $city !== '' ? $city : null,
+                $state !== '' ? $state : null,
+                $zip !== '' ? $zip : null,
+                $country !== '' ? $country : null,
+            ]);
+        }
         header('Location: /admin-guests?updated=1');
         exit;
     } catch (Exception $e) {
@@ -117,12 +185,20 @@ if ($authenticated && isset($_GET['delete'])) {
 
 // Fetch guest for editing
 $editGuest = null;
+$editAddress = null;
 if ($authenticated && isset($_GET['edit'])) {
     try {
         $pdo = getDbConnection();
         $stmt = $pdo->prepare("SELECT * FROM guests WHERE id = ?");
         $stmt->execute([(int)$_GET['edit']]);
         $editGuest = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Fetch mailing address for the guest's group
+        if ($editGuest && !empty($editGuest['mailing_group'])) {
+            $stmt = $pdo->prepare("SELECT * FROM mailing_addresses WHERE mailing_group = ?");
+            $stmt->execute([(int)$editGuest['mailing_group']]);
+            $editAddress = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
     } catch (Exception $e) {
         $error = 'Error loading guest: ' . htmlspecialchars($e->getMessage());
     }
@@ -1226,7 +1302,18 @@ $page_title = "Manage Guests - Jacob & Melissa";
                                        style="width:auto; margin:0;">
                                 <label for="has_plus_one" style="margin:0; cursor:pointer;">Plus One</label>
                             </div>
+                            <div class="form-group" style="display:flex; align-items:center; gap:0.5rem; min-width:140px; padding-top:1.8rem;">
+                                <input type="checkbox" id="rehearsal_invited" name="rehearsal_invited" value="1"
+                                       <?php echo (!empty($editGuest['rehearsal_invited'])) ? 'checked' : ''; ?>
+                                       style="width:auto; margin:0;">
+                                <label for="rehearsal_invited" style="margin:0; cursor:pointer;">Rehearsal</label>
+                            </div>
                             <?php if ($editGuest): ?>
+                            <div class="form-group">
+                                <label for="phone">Phone</label>
+                                <input type="tel" id="phone" name="phone"
+                                       value="<?php echo htmlspecialchars($editGuest['phone'] ?? ''); ?>">
+                            </div>
                             <div class="form-group">
                                 <label for="ceremony_attending">Ceremony</label>
                                 <select id="ceremony_attending" name="ceremony_attending">
@@ -1245,6 +1332,43 @@ $page_title = "Manage Guests - Jacob & Melissa";
                             </div>
                             <?php endif; ?>
                         </div>
+                        <?php if ($editGuest): ?>
+                        <h3 style="margin: 1rem 0 0.5rem; font-size: 1rem; color: #555;">Mailing Address (Group #<?php echo htmlspecialchars($editGuest['mailing_group'] ?? 'N/A'); ?>)</h3>
+                        <div class="form-row">
+                            <div class="form-group" style="flex: 2;">
+                                <label for="address_1">Address Line 1</label>
+                                <input type="text" id="address_1" name="address_1"
+                                       value="<?php echo htmlspecialchars($editAddress['address_1'] ?? ''); ?>">
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="address_2">Address Line 2</label>
+                                <input type="text" id="address_2" name="address_2"
+                                       value="<?php echo htmlspecialchars($editAddress['address_2'] ?? ''); ?>">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="city">City</label>
+                                <input type="text" id="city" name="city"
+                                       value="<?php echo htmlspecialchars($editAddress['city'] ?? ''); ?>">
+                            </div>
+                            <div class="form-group">
+                                <label for="state">State</label>
+                                <input type="text" id="state" name="state"
+                                       value="<?php echo htmlspecialchars($editAddress['state'] ?? ''); ?>">
+                            </div>
+                            <div class="form-group">
+                                <label for="zip">Zip</label>
+                                <input type="text" id="zip" name="zip"
+                                       value="<?php echo htmlspecialchars($editAddress['zip'] ?? ''); ?>">
+                            </div>
+                            <div class="form-group">
+                                <label for="country">Country</label>
+                                <input type="text" id="country" name="country"
+                                       value="<?php echo htmlspecialchars($editAddress['country'] ?? ''); ?>">
+                            </div>
+                        </div>
+                        <?php endif; ?>
                         <div class="form-actions">
                             <button type="submit" class="btn"><?php echo $editGuest ? 'Update Guest' : 'Add Guest'; ?></button>
                             <?php if ($editGuest): ?>
@@ -1364,6 +1488,9 @@ $page_title = "Manage Guests - Jacob & Melissa";
                     this.textContent = visible ? 'View Song Requests' : 'Hide Song Requests';
                 });
                 </script>
+
+                <!-- Export Rehearsal Contacts -->
+                <a href="/admin-guests?export_rehearsal=1" class="btn-filter" style="margin-bottom: 1rem; display: inline-block; text-decoration: none;">Export Rehearsal Contacts</a>
 
                 <!-- Guests Table -->
                 <span id="guests-table" class="guest-count-label">Showing <?php echo count($guests); ?> guest<?php echo count($guests) !== 1 ? 's' : ''; ?></span>
