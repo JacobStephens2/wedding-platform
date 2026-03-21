@@ -760,14 +760,16 @@ $page_title = "Seating Chart - Jacob & Melissa";
                 <!-- Export bar -->
                 <div class="export-bar">
                     <span class="export-bar-label">Export:</span>
-                    <button class="export-btn" onclick="exportVisual()" title="Download floor plan as image">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
-                        Floor Plan Image
-                    </button>
-                    <label style="display:flex; align-items:center; gap:0.35rem; font-size:0.85rem; color:#555; cursor:pointer;">
-                        <input type="checkbox" id="export-include-names" style="width:auto; margin:0;">
-                        Include guest names
-                    </label>
+                    <div style="display:flex; flex-direction:column; align-items:flex-start; gap:0.25rem;">
+                        <button class="export-btn" onclick="exportVisual()" title="Download floor plan as image">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+                            Floor Plan Image
+                        </button>
+                        <label style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; color:#555; cursor:pointer; padding-left:0.25rem;" onclick="event.stopPropagation();">
+                            <input type="checkbox" id="export-include-names" style="width:auto; margin:0;">
+                            with guest names
+                        </label>
+                    </div>
                     <a class="export-btn" href="/admin-seating?export=csv" title="Download spreadsheet">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
                         CSV Spreadsheet
