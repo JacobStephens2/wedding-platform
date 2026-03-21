@@ -123,13 +123,14 @@ if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add
     try {
         $pdo = getDbConnection();
         $stmt = $pdo->prepare("
-            INSERT INTO guests (first_name, last_name, group_name, mailing_group, has_plus_one, rehearsal_invited, is_child)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO guests (first_name, last_name, group_name, mailing_group, has_plus_one, rehearsal_invited, is_child, is_infant)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $mailingGroup = trim($_POST['mailing_group'] ?? '');
         $hasPlusOne = isset($_POST['has_plus_one']) && $_POST['has_plus_one'] === '1' ? 1 : 0;
         $rehearsalInvited = isset($_POST['rehearsal_invited']) && $_POST['rehearsal_invited'] === '1' ? 1 : 0;
         $isChild = isset($_POST['is_child']) && $_POST['is_child'] === '1' ? 1 : 0;
+        $isInfant = isset($_POST['is_infant']) && $_POST['is_infant'] === '1' ? 1 : 0;
         $groupName = trim($_POST['group_name'] ?? '');
         $mailingGroupVal = $mailingGroup !== '' ? (int)$mailingGroup : null;
         $stmt->execute([
@@ -140,17 +141,20 @@ if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add
             $hasPlusOne,
             $rehearsalInvited,
             $isChild,
+            $isInfant,
         ]);
 
         // Insert extra guests in the same group
         $extraFirstNames = $_POST['extra_first_names'] ?? [];
         $extraLastNames = $_POST['extra_last_names'] ?? [];
         $extraIsChild = $_POST['extra_is_child'] ?? [];
+        $extraIsInfant = $_POST['extra_is_infant'] ?? [];
         foreach ($extraFirstNames as $i => $firstName) {
             $extraFirst = trim($firstName ?? '');
             if ($extraFirst === '') continue;
             $extraLast = trim($extraLastNames[$i] ?? '');
             $extraChildVal = !empty($extraIsChild[$i]) ? 1 : 0;
+            $extraInfantVal = !empty($extraIsInfant[$i]) ? 1 : 0;
             $stmt->execute([
                 $extraFirst,
                 $extraLast,
@@ -159,6 +163,7 @@ if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add
                 0,
                 0,
                 $extraChildVal,
+                $extraInfantVal,
             ]);
         }
 
@@ -194,13 +199,16 @@ if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upd
         $plusOneRehearsalInvited = isset($_POST['plus_one_rehearsal_invited']) && $_POST['plus_one_rehearsal_invited'] === '1' ? 1 : 0;
         $isChild = isset($_POST['is_child']) && $_POST['is_child'] === '1' ? 1 : 0;
         $plusOneIsChild = isset($_POST['plus_one_is_child']) && $_POST['plus_one_is_child'] === '1' ? 1 : 0;
+        $isInfant = isset($_POST['is_infant']) && $_POST['is_infant'] === '1' ? 1 : 0;
+        $plusOneIsInfant = isset($_POST['plus_one_is_infant']) && $_POST['plus_one_is_infant'] === '1' ? 1 : 0;
 
         $stmt = $pdo->prepare("
             UPDATE guests
             SET first_name = ?, last_name = ?, group_name = ?, mailing_group = ?,
                 attending = ?, ceremony_attending = ?, reception_attending = ?, has_plus_one = ?,
                 phone = ?, rehearsal_invited = ?, plus_one_rehearsal_invited = ?,
-                is_child = ?, plus_one_is_child = ?
+                is_child = ?, plus_one_is_child = ?,
+                is_infant = ?, plus_one_is_infant = ?
             WHERE id = ?
         ");
         $stmt->execute([
@@ -217,6 +225,8 @@ if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upd
             $plusOneRehearsalInvited,
             $isChild,
             $plusOneIsChild,
+            $isInfant,
+            $plusOneIsInfant,
             (int)$_POST['guest_id'],
         ]);
 
@@ -308,7 +318,7 @@ if ($authenticated && isset($_GET['rsvp'])) {
 
 // Fetch all guests if authenticated
 $guests = [];
-$stats = ['total' => 0, 'attending' => 0, 'declined' => 0, 'pending' => 0, 'ceremony' => 0, 'reception' => 0, 'ceremony_declined' => 0, 'reception_declined' => 0, 'rehearsal' => 0, 'reception_children' => 0, 'pending_children' => 0];
+$stats = ['total' => 0, 'attending' => 0, 'declined' => 0, 'pending' => 0, 'ceremony' => 0, 'reception' => 0, 'ceremony_declined' => 0, 'reception_declined' => 0, 'rehearsal' => 0, 'reception_children' => 0, 'pending_children' => 0, 'reception_infants' => 0, 'pending_infants' => 0];
 if ($authenticated) {
     try {
         $pdo = getDbConnection();
@@ -455,6 +465,7 @@ if ($authenticated) {
                         'country' => $guest['country'],
                         'rehearsal_invited' => $guest['plus_one_rehearsal_invited'],
                         'is_child' => $guest['plus_one_is_child'],
+                        'is_infant' => $guest['plus_one_is_infant'],
                         'is_plus_one' => true,
                     ];
                 }
@@ -507,7 +518,15 @@ if ($authenticated) {
                 (
                     COALESCE(SUM(CASE WHEN attending IS NULL AND is_child = 1 THEN 1 ELSE 0 END), 0)
                     + COALESCE(SUM(CASE WHEN has_plus_one = 1 AND plus_one_attending IS NULL AND plus_one_is_child = 1 THEN 1 ELSE 0 END), 0)
-                ) as pending_children
+                ) as pending_children,
+                (
+                    COALESCE(SUM(CASE WHEN reception_attending = 'yes' AND is_infant = 1 THEN 1 ELSE 0 END), 0)
+                    + COALESCE(SUM(CASE WHEN has_plus_one = 1 AND plus_one_reception_attending = 'yes' AND plus_one_is_infant = 1 THEN 1 ELSE 0 END), 0)
+                ) as reception_infants,
+                (
+                    COALESCE(SUM(CASE WHEN attending IS NULL AND is_infant = 1 THEN 1 ELSE 0 END), 0)
+                    + COALESCE(SUM(CASE WHEN has_plus_one = 1 AND plus_one_attending IS NULL AND plus_one_is_infant = 1 THEN 1 ELSE 0 END), 0)
+                ) as pending_infants
             FROM guests
         ");
         $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
@@ -1384,10 +1403,11 @@ $page_title = "Manage Guests - Jacob & Melissa";
                             <span class="stat-label">Max Reception if Pending Say Yes</span>
                         </a>
                         <?php
-                            $maxAdults = ($stats['reception'] - $stats['reception_children']) + ($stats['pending'] - $stats['pending_children']);
+                            $maxAdults = ($stats['reception'] - $stats['reception_children'] - $stats['reception_infants']) + ($stats['pending'] - $stats['pending_children'] - $stats['pending_infants']);
                             $maxChildren = $stats['reception_children'] + $stats['pending_children'];
+                            $maxInfants = $stats['reception_infants'] + $stats['pending_infants'];
                         ?>
-                        <span class="stat-label" style="font-size: 0.75rem; color: #999;"><?php echo $maxAdults; ?> adults, <?php echo $maxChildren; ?> children</span>
+                        <span class="stat-label" style="font-size: 0.75rem; color: #999;"><?php echo $maxAdults; ?> adults, <?php echo $maxChildren; ?> children, <?php echo $maxInfants; ?> infants</span>
                     </div>
                 </div>
                 <div class="stats-bar" style="margin-top: -1rem;">
@@ -1410,12 +1430,16 @@ $page_title = "Manage Guests - Jacob & Melissa";
                         </a>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-number" style="color: var(--color-green); font-size: 1.4rem;"><?php echo $stats['reception'] - $stats['reception_children']; ?></span>
+                        <span class="stat-number" style="color: var(--color-green); font-size: 1.4rem;"><?php echo $stats['reception'] - $stats['reception_children'] - $stats['reception_infants']; ?></span>
                         <span class="stat-label">Adults</span>
                     </div>
                     <div class="stat-item">
                         <span class="stat-number" style="color: var(--color-green); font-size: 1.4rem;"><?php echo $stats['reception_children']; ?></span>
                         <span class="stat-label">Children</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" style="color: var(--color-green); font-size: 1.4rem;"><?php echo $stats['reception_infants']; ?></span>
+                        <span class="stat-label">Infants</span>
                     </div>
                     <div class="stat-item">
                         <a href="/admin-guests?status_filter=reception_no" class="stat-link">
@@ -1508,6 +1532,12 @@ $page_title = "Manage Guests - Jacob & Melissa";
                                        style="width:auto; margin:0;">
                                 <label for="is_child" style="margin:0; cursor:pointer;">Child</label>
                             </div>
+                            <div class="form-group" style="display:flex; align-items:center; gap:0.5rem; min-width:100px; padding-top:1.8rem;">
+                                <input type="checkbox" id="is_infant" name="is_infant" value="1"
+                                       <?php echo (!empty($editGuest['is_infant'])) ? 'checked' : ''; ?>
+                                       style="width:auto; margin:0;">
+                                <label for="is_infant" style="margin:0; cursor:pointer;">Infant</label>
+                            </div>
                             <?php if ($editGuest && !empty($editGuest['has_plus_one'])): ?>
                             <div class="form-group" style="display:flex; align-items:center; gap:0.5rem; min-width:160px; padding-top:1.8rem;">
                                 <input type="checkbox" id="plus_one_rehearsal_invited" name="plus_one_rehearsal_invited" value="1"
@@ -1520,6 +1550,12 @@ $page_title = "Manage Guests - Jacob & Melissa";
                                        <?php echo (!empty($editGuest['plus_one_is_child'])) ? 'checked' : ''; ?>
                                        style="width:auto; margin:0;">
                                 <label for="plus_one_is_child" style="margin:0; cursor:pointer;">+1 Child</label>
+                            </div>
+                            <div class="form-group" style="display:flex; align-items:center; gap:0.5rem; min-width:120px; padding-top:1.8rem;">
+                                <input type="checkbox" id="plus_one_is_infant" name="plus_one_is_infant" value="1"
+                                       <?php echo (!empty($editGuest['plus_one_is_infant'])) ? 'checked' : ''; ?>
+                                       style="width:auto; margin:0;">
+                                <label for="plus_one_is_infant" style="margin:0; cursor:pointer;">+1 Infant</label>
                             </div>
                             <?php endif; ?>
                             <?php if ($editGuest): ?>
@@ -1876,7 +1912,10 @@ $page_title = "Manage Guests - Jacob & Melissa";
                                     ?></td>
                                     <td><?php echo $guest['has_plus_one'] ? '✓' : ''; ?></td>
                                     <td><?php echo !empty($guest['rehearsal_invited']) ? '✓' : ''; ?></td>
-                                    <td><?php echo !empty($guest['is_child']) ? '✓' : ''; ?></td>
+                                        <td><?php
+                                        if (!empty($guest['is_infant'])) echo 'Infant';
+                                        elseif (!empty($guest['is_child'])) echo '✓';
+                                    ?></td>
                                     <td>
                                         <?php if ($guest['attending'] === 'yes'): ?>
                                             <span class="rsvp-badge rsvp-attending">Attending</span>
@@ -2019,6 +2058,11 @@ $page_title = "Manage Guests - Jacob & Melissa";
                 '<input type="hidden" name="extra_is_child[' + idx + ']" value="0">' +
                 '<input type="checkbox" id="extra_is_child_' + count + '" name="extra_is_child[' + idx + ']" value="1" style="width:auto; margin:0;">' +
                 '<label for="extra_is_child_' + count + '" style="margin:0; cursor:pointer;">Child</label>' +
+            '</div>' +
+            '<div class="form-group" style="display:flex; align-items:center; gap:0.5rem; padding-top:1.8rem;">' +
+                '<input type="hidden" name="extra_is_infant[' + idx + ']" value="0">' +
+                '<input type="checkbox" id="extra_is_infant_' + count + '" name="extra_is_infant[' + idx + ']" value="1" style="width:auto; margin:0;">' +
+                '<label for="extra_is_infant_' + count + '" style="margin:0; cursor:pointer;">Infant</label>' +
             '</div>' +
             '<div class="form-group" style="padding-bottom:0.25rem;">' +
                 '<button type="button" class="btn-secondary remove-extra-guest" style="color:#8b0000;">Remove</button>' +
