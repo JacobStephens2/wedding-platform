@@ -72,14 +72,37 @@ if ($authenticated) {
         
         $statsStmt = $pdo->query("
             SELECT
-                COUNT(*) as total,
-                SUM(CASE WHEN attending = 'yes' THEN 1 ELSE 0 END) as attending,
-                SUM(CASE WHEN attending = 'no' THEN 1 ELSE 0 END) as declined,
-                SUM(CASE WHEN attending IS NULL THEN 1 ELSE 0 END) as pending,
-                SUM(CASE WHEN ceremony_attending = 'yes' THEN 1 ELSE 0 END) as ceremony,
-                SUM(CASE WHEN reception_attending = 'yes' THEN 1 ELSE 0 END) as reception,
-                SUM(CASE WHEN reception_attending = 'yes' AND is_child = 1 THEN 1 ELSE 0 END) as reception_children,
-                SUM(CASE WHEN reception_attending = 'yes' AND is_infant = 1 THEN 1 ELSE 0 END) as reception_infants
+                (
+                    COUNT(*) + COALESCE(SUM(CASE WHEN has_plus_one = 1 THEN 1 ELSE 0 END), 0)
+                ) as total,
+                (
+                    COALESCE(SUM(CASE WHEN attending = 'yes' THEN 1 ELSE 0 END), 0)
+                    + COALESCE(SUM(CASE WHEN has_plus_one = 1 AND plus_one_attending = 'yes' THEN 1 ELSE 0 END), 0)
+                ) as attending,
+                (
+                    COALESCE(SUM(CASE WHEN attending = 'no' THEN 1 ELSE 0 END), 0)
+                    + COALESCE(SUM(CASE WHEN has_plus_one = 1 AND plus_one_attending = 'no' THEN 1 ELSE 0 END), 0)
+                ) as declined,
+                (
+                    COALESCE(SUM(CASE WHEN attending IS NULL THEN 1 ELSE 0 END), 0)
+                    + COALESCE(SUM(CASE WHEN has_plus_one = 1 AND plus_one_attending IS NULL THEN 1 ELSE 0 END), 0)
+                ) as pending,
+                (
+                    COALESCE(SUM(CASE WHEN ceremony_attending = 'yes' THEN 1 ELSE 0 END), 0)
+                    + COALESCE(SUM(CASE WHEN has_plus_one = 1 AND plus_one_ceremony_attending = 'yes' THEN 1 ELSE 0 END), 0)
+                ) as ceremony,
+                (
+                    COALESCE(SUM(CASE WHEN reception_attending = 'yes' THEN 1 ELSE 0 END), 0)
+                    + COALESCE(SUM(CASE WHEN has_plus_one = 1 AND plus_one_reception_attending = 'yes' THEN 1 ELSE 0 END), 0)
+                ) as reception,
+                (
+                    COALESCE(SUM(CASE WHEN reception_attending = 'yes' AND is_child = 1 THEN 1 ELSE 0 END), 0)
+                    + COALESCE(SUM(CASE WHEN has_plus_one = 1 AND plus_one_reception_attending = 'yes' AND plus_one_is_child = 1 THEN 1 ELSE 0 END), 0)
+                ) as reception_children,
+                (
+                    COALESCE(SUM(CASE WHEN reception_attending = 'yes' AND is_infant = 1 THEN 1 ELSE 0 END), 0)
+                    + COALESCE(SUM(CASE WHEN has_plus_one = 1 AND plus_one_reception_attending = 'yes' AND plus_one_is_infant = 1 THEN 1 ELSE 0 END), 0)
+                ) as reception_infants
             FROM guests
         ");
         $guestStats = $statsStmt->fetch(PDO::FETCH_ASSOC);
