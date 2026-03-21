@@ -201,6 +201,7 @@ if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upd
         $plusOneIsChild = isset($_POST['plus_one_is_child']) && $_POST['plus_one_is_child'] === '1' ? 1 : 0;
         $isInfant = isset($_POST['is_infant']) && $_POST['is_infant'] === '1' ? 1 : 0;
         $plusOneIsInfant = isset($_POST['plus_one_is_infant']) && $_POST['plus_one_is_infant'] === '1' ? 1 : 0;
+        $notes = trim($_POST['notes'] ?? '');
 
         $stmt = $pdo->prepare("
             UPDATE guests
@@ -208,7 +209,8 @@ if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upd
                 attending = ?, ceremony_attending = ?, reception_attending = ?, has_plus_one = ?,
                 phone = ?, rehearsal_invited = ?, plus_one_rehearsal_invited = ?,
                 is_child = ?, plus_one_is_child = ?,
-                is_infant = ?, plus_one_is_infant = ?
+                is_infant = ?, plus_one_is_infant = ?,
+                notes = ?
             WHERE id = ?
         ");
         $stmt->execute([
@@ -227,6 +229,7 @@ if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upd
             $plusOneIsChild,
             $isInfant,
             $plusOneIsInfant,
+            $notes !== '' ? $notes : null,
             (int)$_POST['guest_id'],
         ]);
 
@@ -1581,6 +1584,10 @@ $page_title = "Manage Guests - Jacob & Melissa";
                                 </select>
                             </div>
                             <?php endif; ?>
+                            <div class="form-group" style="flex-basis:100%;">
+                                <label for="notes">Admin Notes</label>
+                                <textarea id="notes" name="notes" rows="2" style="width:100%; padding:0.5rem; border:1px solid #ccc; border-radius:4px; font-family:'Crimson Text',serif; font-size:1rem;"><?php echo htmlspecialchars($editGuest['notes'] ?? ''); ?></textarea>
+                            </div>
                         </div>
                         <?php if ($editGuest): ?>
                         <h3 style="margin: 1rem 0 0.5rem; font-size: 1rem; color: #555;">Mailing Address (Group #<?php echo htmlspecialchars($editGuest['mailing_group'] ?? 'N/A'); ?>)</h3>
@@ -1924,6 +1931,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
                                         <?php else: ?>
                                             <span class="rsvp-badge rsvp-pending">Pending</span>
                                         <?php endif; ?>
+                                        <?php if (!empty($guest['notes'])): ?><span title="<?php echo htmlspecialchars($guest['notes']); ?>" style="cursor:help; margin-left:0.3rem;">📝</span><?php endif; ?>
                                     </td>
                                     <td>
                                         <?php if (!$isPlusOne): ?>
