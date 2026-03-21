@@ -284,6 +284,37 @@ if ($authenticated && isset($_GET['delete'])) {
     }
 }
 
+// Handle bulk action
+if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_action'])) {
+    try {
+        $action = $_POST['bulk_action'];
+        $guestIdsRaw = $_POST['guest_ids'] ?? '';
+        $guestIds = array_filter(array_map('intval', explode(',', $guestIdsRaw)));
+
+        if (!empty($guestIds)) {
+            $allowedActions = [
+                'mark_rehearsal' => ['rehearsal_invited', 1],
+                'unmark_rehearsal' => ['rehearsal_invited', 0],
+                'mark_child' => ['is_child', 1],
+                'unmark_child' => ['is_child', 0],
+            ];
+
+            if (isset($allowedActions[$action])) {
+                $pdo = getDbConnection();
+                [$column, $value] = $allowedActions[$action];
+                $placeholders = implode(',', array_fill(0, count($guestIds), '?'));
+                $stmt = $pdo->prepare("UPDATE guests SET $column = ? WHERE id IN ($placeholders)");
+                $stmt->execute(array_merge([$value], $guestIds));
+            }
+        }
+
+        header('Location: /admin-guests?updated=1');
+        exit;
+    } catch (Exception $e) {
+        $error = 'Error performing bulk action: ' . htmlspecialchars($e->getMessage());
+    }
+}
+
 
 // Fetch guest for editing
 $editGuest = null;
@@ -541,6 +572,16 @@ if ($authenticated) {
         // Get existing groups for "Add guest to group" feature
         $groupsStmt = $pdo->query("SELECT DISTINCT mailing_group, group_name FROM guests WHERE mailing_group IS NOT NULL ORDER BY mailing_group ASC");
         $existingGroups = $groupsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Get RSVP submissions over time
+        $timelineStmt = $pdo->query("
+            SELECT DATE(rsvp_submitted_at) as rsvp_date, COUNT(*) as count
+            FROM guests
+            WHERE rsvp_submitted_at IS NOT NULL
+            GROUP BY DATE(rsvp_submitted_at)
+            ORDER BY rsvp_date ASC
+        ");
+        $rsvpTimeline = $timelineStmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
         $error = 'Error loading guests: ' . htmlspecialchars($e->getMessage());
     }
@@ -822,6 +863,54 @@ $page_title = "Manage Guests - Jacob & Melissa";
             color: #666;
             margin-bottom: 1rem;
             display: block;
+        }
+
+        .bulk-action-bar {
+            display: none;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+            padding: 0.75rem 1.5rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid var(--color-green);
+        }
+        .bulk-action-bar.visible {
+            display: flex;
+        }
+        .bulk-selected-count {
+            font-family: 'Crimson Text', serif;
+            font-size: 1rem;
+            color: var(--color-dark);
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+        .bulk-action-bar button {
+            padding: 0.4rem 0.85rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Cinzel', serif;
+            font-size: 0.8rem;
+            transition: background 0.2s, border-color 0.2s;
+            background: white;
+            color: var(--color-dark);
+        }
+        .bulk-action-bar button:hover {
+            background: var(--color-green);
+            color: white;
+            border-color: var(--color-green);
+        }
+        .guests-table th.bulk-check-col,
+        .guests-table td.bulk-check-col {
+            width: 2rem;
+            text-align: center;
+            padding: 0.6rem 0.5rem;
+        }
+        .guests-table th.bulk-check-col {
+            padding: 0.75rem 0.5rem;
         }
         
         .action-links .rsvp-link {
@@ -1853,8 +1942,105 @@ $page_title = "Manage Guests - Jacob & Melissa";
                 });
                 </script>
 
+                <!-- RSVP Timeline View -->
+                <button type="button" id="timeline-toggle" class="btn-filter" style="margin-bottom: 1rem;">View RSVP Timeline</button>
+                <div id="timeline-panel" style="display: none; margin-bottom: 1.5rem; background: #f9f9f6; border: 1px solid #ddd; border-radius: 8px; padding: 1rem;">
+                    <h3 style="margin: 0 0 0.75rem;">RSVP Timeline</h3>
+                    <?php
+                    $totalGuests = (int)($stats['total'] ?? 0);
+                    $totalResponded = 0;
+                    foreach ($rsvpTimeline as $day) {
+                        $totalResponded += (int)$day['count'];
+                    }
+                    $responsePct = $totalGuests > 0 ? round(($totalResponded / $totalGuests) * 100, 1) : 0;
+                    ?>
+                    <div style="display: flex; gap: 1.5rem; margin-bottom: 1rem; padding: 0.75rem; background: white; border-radius: 6px; border: 1px solid #ddd;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 1.4rem; font-weight: bold; color: var(--color-green);"><?php echo $totalResponded; ?> of <?php echo $totalGuests; ?></div>
+                            <div style="font-size: 0.8rem; color: #666;">Guests Responded (<?php echo $responsePct; ?>%)</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 1.4rem; font-weight: bold; color: var(--color-green);"><?php echo count($rsvpTimeline); ?></div>
+                            <div style="font-size: 0.8rem; color: #666;">Days with Responses</div>
+                        </div>
+                    </div>
+                    <?php if (empty($rsvpTimeline)): ?>
+                        <p style="color: #666;">No RSVP responses have been submitted yet.</p>
+                    <?php else:
+                        $maxDayCount = max(array_column($rsvpTimeline, 'count'));
+                    ?>
+                        <div style="overflow-x: auto;">
+                            <div style="min-width: <?php echo max(count($rsvpTimeline) * 60, 300); ?>px; padding: 0 0.5rem;">
+                                <div style="display: flex; align-items: flex-end; gap: 4px; height: 200px; border-bottom: 2px solid #ccc;">
+                                    <?php foreach ($rsvpTimeline as $day):
+                                        $pct = ((int)$day['count'] / $maxDayCount) * 100;
+                                    ?>
+                                    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; min-width: 50px; height: 100%;">
+                                        <span style="font-size: 0.8rem; font-weight: bold; margin-bottom: 2px;"><?php echo (int)$day['count']; ?></span>
+                                        <div style="width: 80%; background: var(--color-green); border-radius: 4px 4px 0 0; height: <?php echo max($pct, 2); ?>%;" title="<?php echo htmlspecialchars($day['rsvp_date']) . ': ' . (int)$day['count']; ?> responses"></div>
+                                    </div>
+                                    <?php endforeach; ?>
+                                </div>
+                                <div style="display: flex; gap: 4px;">
+                                    <?php foreach ($rsvpTimeline as $day):
+                                        $dateObj = new DateTime($day['rsvp_date']);
+                                        $formatted = $dateObj->format('n/j');
+                                    ?>
+                                    <div style="flex: 1; min-width: 50px; text-align: center;">
+                                        <span style="font-size: 0.7rem; display: inline-block; margin-top: 4px; writing-mode: vertical-lr; transform: rotate(180deg); max-height: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<?php echo htmlspecialchars($day['rsvp_date']); ?>"><?php echo $formatted; ?></span>
+                                    </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        </div>
+                        <?php
+                        // Show cumulative running total
+                        $cumulative = 0;
+                        ?>
+                        <div style="margin-top: 1rem; padding: 0.75rem; background: white; border-radius: 6px; border: 1px solid #ddd;">
+                            <div style="font-size: 0.85rem; font-weight: bold; margin-bottom: 0.5rem;">Cumulative Responses</div>
+                            <div style="display: flex; align-items: flex-end; gap: 4px; height: 120px; border-bottom: 2px solid #ccc;">
+                                <?php foreach ($rsvpTimeline as $day):
+                                    $cumulative += (int)$day['count'];
+                                    $cumPct = $totalGuests > 0 ? ($cumulative / $totalGuests) * 100 : 0;
+                                ?>
+                                <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; min-width: 50px; height: 100%;">
+                                    <span style="font-size: 0.7rem; font-weight: bold; margin-bottom: 2px;"><?php echo $cumulative; ?></span>
+                                    <div style="width: 80%; background: var(--color-gold); border-radius: 4px 4px 0 0; height: <?php echo max($cumPct, 2); ?>%;" title="<?php echo htmlspecialchars($day['rsvp_date']) . ': ' . $cumulative . ' total (' . round($cumPct, 1) . '%)'; ?>"></div>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <div style="display: flex; gap: 4px;">
+                                <?php foreach ($rsvpTimeline as $day):
+                                    $dateObj2 = new DateTime($day['rsvp_date']);
+                                    $formatted2 = $dateObj2->format('n/j');
+                                ?>
+                                <div style="flex: 1; min-width: 50px; text-align: center;">
+                                    <span style="font-size: 0.7rem; display: inline-block; margin-top: 4px; writing-mode: vertical-lr; transform: rotate(180deg); max-height: 60px;" title="<?php echo htmlspecialchars($day['rsvp_date']); ?>"><?php echo $formatted2; ?></span>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                <script>
+                document.getElementById('timeline-toggle').addEventListener('click', function() {
+                    var panel = document.getElementById('timeline-panel');
+                    var visible = panel.style.display !== 'none';
+                    panel.style.display = visible ? 'none' : 'block';
+                    this.textContent = visible ? 'View RSVP Timeline' : 'Hide RSVP Timeline';
+                });
+                </script>
+
                 <!-- Guests Table -->
                 <span id="guests-table" class="guest-count-label">Showing <?php echo count($guests); ?> guest<?php echo count($guests) !== 1 ? 's' : ''; ?></span>
+                <div id="bulk-action-bar" class="bulk-action-bar">
+                    <span class="bulk-selected-count"><span id="bulk-count">0</span> selected</span>
+                    <button type="button" data-action="mark_rehearsal">Mark Rehearsal</button>
+                    <button type="button" data-action="unmark_rehearsal">Unmark Rehearsal</button>
+                    <button type="button" data-action="mark_child">Mark Child</button>
+                    <button type="button" data-action="unmark_child">Unmark Child</button>
+                </div>
                 <?php
                 function getSortUrl($field, $currentSort, $currentOrder) {
                     $params = $_GET;
@@ -1875,6 +2061,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
                     <table class="guests-table">
                         <thead>
                             <tr>
+                                <th class="bulk-check-col"><input type="checkbox" id="bulk-select-all" title="Select all"></th>
                                 <th><a href="<?php echo getSortUrl('first_name', $sort, $order); ?>">First Name<?php echo getSortIndicator('first_name', $sort, $order); ?></a></th>
                                 <th><a href="<?php echo getSortUrl('last_name', $sort, $order); ?>">Last Name<?php echo getSortIndicator('last_name', $sort, $order); ?></a></th>
                                 <th><a href="<?php echo getSortUrl('mailing_group', $sort, $order); ?>">Group #<?php echo getSortIndicator('mailing_group', $sort, $order); ?></a></th>
@@ -1896,6 +2083,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
                                 if (!$isPlusOne) $lastGroup = $guest['mailing_group'];
                             ?>
                                 <tr class="<?php echo $isGroupStart ? 'group-start' : ''; ?><?php echo $isPlusOne ? ' plus-one-row' : ''; ?>" data-group-name="<?php echo htmlspecialchars($guest['group_name']); ?>">
+                                    <td class="bulk-check-col"><?php if (!$isPlusOne): ?><input type="checkbox" class="bulk-guest-check" value="<?php echo $guest['id']; ?>"><?php endif; ?></td>
                                     <td><?php echo htmlspecialchars($guest['first_name']); ?></td>
                                     <td><?php echo htmlspecialchars($guest['last_name']); ?></td>
                                     <td><?php echo $guest['mailing_group'] !== null ? htmlspecialchars($guest['mailing_group']) : '—'; ?></td>
@@ -1946,7 +2134,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
                                 </tr>
                             <?php endforeach; ?>
                             <?php if (empty($guests)): ?>
-                                <tr><td colspan="10" style="text-align:center; padding:2rem; color:#666;">No guests found.</td></tr>
+                                <tr><td colspan="11" style="text-align:center; padding:2rem; color:#666;">No guests found.</td></tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
@@ -1973,8 +2161,8 @@ $page_title = "Manage Guests - Jacob & Melissa";
                 return;
             }
             var cells = row.querySelectorAll('td');
-            var firstName = cells[0] ? cells[0].textContent.toLowerCase() : '';
-            var lastName = cells[1] ? cells[1].textContent.toLowerCase() : '';
+            var firstName = cells[1] ? cells[1].textContent.toLowerCase() : '';
+            var lastName = cells[2] ? cells[2].textContent.toLowerCase() : '';
             var match = !query || firstName.indexOf(query) !== -1 || lastName.indexOf(query) !== -1;
             row.style.display = match ? '' : 'none';
             if (match) visible++;
@@ -2081,6 +2269,89 @@ $page_title = "Manage Guests - Jacob & Melissa";
             container.removeChild(row);
             updateSubmitText();
         });
+    });
+})();
+
+// Bulk operations
+(function() {
+    var selectAll = document.getElementById('bulk-select-all');
+    var bar = document.getElementById('bulk-action-bar');
+    var countSpan = document.getElementById('bulk-count');
+    if (!selectAll || !bar) return;
+
+    function getCheckboxes() {
+        return document.querySelectorAll('.bulk-guest-check');
+    }
+
+    function getChecked() {
+        return document.querySelectorAll('.bulk-guest-check:checked');
+    }
+
+    function updateBar() {
+        var checked = getChecked();
+        var count = checked.length;
+        countSpan.textContent = count;
+        if (count > 0) {
+            bar.classList.add('visible');
+        } else {
+            bar.classList.remove('visible');
+        }
+        // Update select-all state
+        var all = getCheckboxes();
+        var visibleBoxes = [];
+        all.forEach(function(cb) {
+            if (cb.closest('tr').style.display !== 'none') visibleBoxes.push(cb);
+        });
+        var visibleChecked = visibleBoxes.filter(function(cb) { return cb.checked; });
+        selectAll.checked = visibleBoxes.length > 0 && visibleChecked.length === visibleBoxes.length;
+        selectAll.indeterminate = visibleChecked.length > 0 && visibleChecked.length < visibleBoxes.length;
+    }
+
+    selectAll.addEventListener('change', function() {
+        var checked = this.checked;
+        getCheckboxes().forEach(function(cb) {
+            if (cb.closest('tr').style.display !== 'none') {
+                cb.checked = checked;
+            }
+        });
+        updateBar();
+    });
+
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('bulk-guest-check')) {
+            updateBar();
+        }
+    });
+
+    bar.addEventListener('click', function(e) {
+        var btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        var action = btn.dataset.action;
+        var checked = getChecked();
+        if (checked.length === 0) return;
+
+        var ids = [];
+        checked.forEach(function(cb) { ids.push(cb.value); });
+
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/admin-guests';
+        form.style.display = 'none';
+
+        var actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'bulk_action';
+        actionInput.value = action;
+        form.appendChild(actionInput);
+
+        var idsInput = document.createElement('input');
+        idsInput.type = 'hidden';
+        idsInput.name = 'guest_ids';
+        idsInput.value = ids.join(',');
+        form.appendChild(idsInput);
+
+        document.body.appendChild(form);
+        form.submit();
     });
 })();
 </script>
