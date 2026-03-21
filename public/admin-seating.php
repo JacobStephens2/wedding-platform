@@ -1580,19 +1580,11 @@ $page_title = "Seating Chart - Jacob & Melissa";
                 ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
                 ctx.fillText(t.guests.length + '/' + t.capacity, cx, cy + 14);
 
-                // Table name below circle
-                ctx.fillStyle = '#555';
-                ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-                const nameLines = wrapText(t.name, 100);
-                nameLines.forEach((line, i) => {
-                    ctx.fillText(line, cx, cy + tableR + 14 + i * 12);
-                });
-
-                // Guest names around the table
+                // Guest names around the table (rendered first so table name goes below)
+                const nameR = tableR + (includeNames ? 50 : 0);
                 if (includeNames && t.guests.length > 0) {
                     ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
                     ctx.fillStyle = '#333';
-                    const nameR = tableR + 22;
                     const count = t.guests.length;
                     const startAngle = -Math.PI / 2;
                     t.guests.forEach((g, i) => {
@@ -1609,6 +1601,15 @@ $page_title = "Seating Chart - Jacob & Melissa";
                     });
                     ctx.textAlign = 'center';
                 }
+
+                // Table name below circle (and below guest names if shown)
+                ctx.fillStyle = '#555';
+                ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                const nameLabelY = includeNames ? cy + nameR + 14 : cy + tableR + 14;
+                const nameLines = wrapText(t.name, 100);
+                nameLines.forEach((line, i) => {
+                    ctx.fillText(line, cx, nameLabelY + i * 12);
+                });
             }
         });
 
