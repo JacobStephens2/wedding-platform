@@ -782,6 +782,10 @@ $page_title = "Seating Chart - Jacob & Melissa";
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                         Copy for Email
                     </button>
+                    <button class="export-btn" onclick="openPrintView()" title="Print-friendly seating chart">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                        Print View
+                    </button>
                 </div>
 
                 <!-- Floor Plan -->
@@ -1392,6 +1396,91 @@ $page_title = "Seating Chart - Jacob & Melissa";
                 document.getElementById('copy-btn').textContent = 'Copy to Clipboard';
             }, 2000);
         });
+    }
+
+    // ---- Print view export ----
+    function openPrintView() {
+        const d = exportData;
+        let totalGuests = 0;
+        d.tables.forEach(t => totalGuests += t.guests.length);
+
+        let tablesHtml = '';
+        d.tables.forEach(t => {
+            let guestsHtml = '';
+            t.guests.forEach(g => {
+                let line = '<li>' + escHtml(g.name);
+                if (g.dietary) line += ' <span class="dietary">[' + escHtml(g.dietary) + ']</span>';
+                line += '</li>';
+                guestsHtml += line;
+            });
+            tablesHtml += '<div class="table-card">'
+                + '<h2>Table ' + t.number + ' &mdash; ' + escHtml(t.name)
+                + ' <span class="cap">(' + t.guests.length + '/' + t.capacity + ')</span></h2>'
+                + '<ol>' + guestsHtml + '</ol>'
+                + '</div>';
+        });
+
+        let unseatedHtml = '';
+        if (d.unseated.length > 0) {
+            let items = '';
+            d.unseated.forEach(name => { items += '<li>' + escHtml(name) + '</li>'; });
+            unseatedHtml = '<div class="unseated-section">'
+                + '<h2>Unseated Guests (' + d.unseated.length + ')</h2>'
+                + '<ul>' + items + '</ul>'
+                + '</div>';
+        }
+
+        const html = '<!DOCTYPE html><html><head><meta charset="utf-8">'
+            + '<title>Seating Chart — Jacob &amp; Melissa</title>'
+            + '<style>'
+            + '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }'
+            + 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;'
+            + '  color: #222; padding: 1.5rem; line-height: 1.4; }'
+            + 'h1 { text-align: center; font-size: 1.5rem; margin-bottom: 0.25rem; }'
+            + '.subtitle { text-align: center; font-size: 0.9rem; color: #666; margin-bottom: 1.25rem; }'
+            + '.grid { columns: 3; column-gap: 1.25rem; }'
+            + '.table-card { break-inside: avoid; border: 1px solid #ccc; border-radius: 6px;'
+            + '  padding: 0.6rem 0.75rem; margin-bottom: 1rem; }'
+            + '.table-card h2 { font-size: 0.95rem; margin-bottom: 0.35rem; border-bottom: 1px solid #e0e0e0; padding-bottom: 0.3rem; }'
+            + '.table-card h2 .cap { font-weight: normal; color: #888; font-size: 0.85rem; }'
+            + '.table-card ol { padding-left: 1.4rem; font-size: 0.85rem; }'
+            + '.table-card li { margin-bottom: 0.1rem; }'
+            + '.dietary { color: #b45309; font-size: 0.78rem; }'
+            + '.unseated-section { margin-top: 1.5rem; border-top: 2px solid #999; padding-top: 0.75rem; }'
+            + '.unseated-section h2 { font-size: 1rem; margin-bottom: 0.4rem; }'
+            + '.unseated-section ul { padding-left: 1.4rem; font-size: 0.85rem; columns: 3; }'
+            + '.unseated-section li { margin-bottom: 0.1rem; }'
+            + '@media print {'
+            + '  body { padding: 0.5cm; font-size: 10pt; }'
+            + '  h1 { font-size: 14pt; }'
+            + '  .subtitle { font-size: 9pt; }'
+            + '  .grid { columns: 3; column-gap: 0.8cm; }'
+            + '  .table-card { border-color: #999; padding: 0.4cm 0.5cm; margin-bottom: 0.5cm; }'
+            + '  .table-card h2 { font-size: 10pt; }'
+            + '  .table-card ol { font-size: 9pt; }'
+            + '  .dietary { font-size: 8pt; }'
+            + '  .unseated-section ul { columns: 3; font-size: 9pt; }'
+            + '}'
+            + '@media (max-width: 800px) { .grid { columns: 2; } .unseated-section ul { columns: 2; } }'
+            + '@media (max-width: 500px) { .grid { columns: 1; } .unseated-section ul { columns: 1; } }'
+            + '</style>'
+            + '</head><body>'
+            + '<h1>Seating Chart &mdash; Jacob &amp; Melissa</h1>'
+            + '<div class="subtitle">' + totalGuests + ' guests across ' + d.tables.length + ' tables</div>'
+            + '<div class="grid">' + tablesHtml + '</div>'
+            + unseatedHtml
+            + '<script>setTimeout(function(){ window.print(); }, 400);<\/script>'
+            + '</body></html>';
+
+        const w = window.open('', '_blank');
+        w.document.write(html);
+        w.document.close();
+    }
+
+    function escHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     }
 
     // Close modal on overlay click or Escape
