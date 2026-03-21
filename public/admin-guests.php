@@ -1506,7 +1506,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
                             </div>
                             <div class="form-group">
                                 <label for="mailing_group">Mailing Group #</label>
-                                <input type="number" id="mailing_group" name="mailing_group" min="0"
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" id="mailing_group" name="mailing_group"
                                        value="<?php echo htmlspecialchars($editGuest ? ($editGuest['mailing_group'] ?? '') : ($nextGroupNumber ?? '')); ?>">
                             </div>
                             <?php if (!$editGuest): ?>
@@ -1653,7 +1653,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
                 <form method="GET" action="/admin-guests" class="filters-bar">
                     <input type="text" name="search" id="guest-search-input" placeholder="Search name..."
                            value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>">
-                    <input type="number" name="group_filter" placeholder="Group #" min="0" style="width: 100px;"
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" name="group_filter" placeholder="Group #" style="width: 100px;"
                            value="<?php echo htmlspecialchars($_GET['group_filter'] ?? ''); ?>">
                     <button type="submit" class="btn-filter">Search</button>
                     <a href="/admin-guests" class="btn-clear">Clear</a>
