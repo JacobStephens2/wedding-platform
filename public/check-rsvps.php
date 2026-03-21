@@ -78,7 +78,8 @@ if ($authenticated) {
                 SUM(CASE WHEN attending IS NULL THEN 1 ELSE 0 END) as pending,
                 SUM(CASE WHEN ceremony_attending = 'yes' THEN 1 ELSE 0 END) as ceremony,
                 SUM(CASE WHEN reception_attending = 'yes' THEN 1 ELSE 0 END) as reception,
-                SUM(CASE WHEN reception_attending = 'yes' AND is_child = 1 THEN 1 ELSE 0 END) as reception_children
+                SUM(CASE WHEN reception_attending = 'yes' AND is_child = 1 THEN 1 ELSE 0 END) as reception_children,
+                SUM(CASE WHEN reception_attending = 'yes' AND is_infant = 1 THEN 1 ELSE 0 END) as reception_infants
             FROM guests
         ");
         $guestStats = $statsStmt->fetch(PDO::FETCH_ASSOC);
@@ -279,12 +280,16 @@ $page_title = "Check RSVPs - Jacob & Melissa";
                         <div class="stat-label">Reception</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-number" style="color: #2d5016; font-size: 1.4rem;"><?php echo $guestStats['reception'] - $guestStats['reception_children']; ?></div>
+                        <div class="stat-number" style="color: #2d5016; font-size: 1.4rem;"><?php echo $guestStats['reception'] - $guestStats['reception_children'] - $guestStats['reception_infants']; ?></div>
                         <div class="stat-label">Adults</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-number" style="color: #2d5016; font-size: 1.4rem;"><?php echo $guestStats['reception_children']; ?></div>
                         <div class="stat-label">Children</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" style="color: #2d5016; font-size: 1.4rem;"><?php echo $guestStats['reception_infants']; ?></div>
+                        <div class="stat-label">Infants</div>
                     </div>
                 </div>
                 
