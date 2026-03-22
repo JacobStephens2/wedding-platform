@@ -400,7 +400,9 @@ $page_title = "Seating Chart - Jacob & Melissa";
             border-radius: 6px;
             width: 90px;
             height: 40px;
+            background: var(--color-gold);
         }
+        .fp-table.sweetheart.over-capacity { background: #b44; }
 
         .fp-edit-hint {
             color: var(--color-text-muted);
@@ -806,7 +808,9 @@ $page_title = "Seating Chart - Jacob & Melissa";
             border: 1px solid var(--color-border);
             border-radius: 8px;
             margin-bottom: 2rem;
+            animation: gridFadeIn 0.15s ease-in;
         }
+        @keyframes gridFadeIn { from { opacity: 0.3; } to { opacity: 1; } }
         .grid-spreadsheet {
             border-collapse: collapse;
             min-width: 100%;
