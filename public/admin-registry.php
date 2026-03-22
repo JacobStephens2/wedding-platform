@@ -280,6 +280,7 @@ $page_title = "Manage Registry - Jacob & Melissa";
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($page_title); ?></title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <?php include __DIR__ . '/includes/theme_init.php'; ?>
     <link rel="stylesheet" href="/css/style.css?v=<?php 
         $cssPath = __DIR__ . '/../css/style.css';
         echo file_exists($cssPath) ? filemtime($cssPath) : time(); 
@@ -319,10 +320,10 @@ $page_title = "Manage Registry - Jacob & Melissa";
             color: var(--color-green);
         }
         .add-item-form {
-            background-color: white;
+            background-color: var(--color-surface);
             padding: 2rem;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 10px var(--color-shadow);
             margin-bottom: 2rem;
         }
         .add-item-form h2 {
@@ -330,10 +331,10 @@ $page_title = "Manage Registry - Jacob & Melissa";
             margin-bottom: 1.5rem;
         }
         .items-list {
-            background-color: white;
+            background-color: var(--color-surface);
             padding: 2rem;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 10px var(--color-shadow);
         }
         .items-list h2 {
             color: var(--color-green);
@@ -346,18 +347,18 @@ $page_title = "Manage Registry - Jacob & Melissa";
             margin-top: 1.5rem;
         }
         .item-card {
-            border: 1px solid #ddd;
+            border: 1px solid var(--color-border);
             border-radius: 8px;
             padding: 1.5rem;
             margin-bottom: 1rem;
             display: flex;
             gap: 1.5rem;
-            background-color: white;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            background-color: var(--color-surface);
+            box-shadow: 0 2px 10px var(--color-shadow);
         }
         .item-card.purchased {
             opacity: 0.6;
-            background-color: #f5f5f5;
+            background-color: var(--color-light);
         }
         .item-image {
             width: 150px;
@@ -384,14 +385,14 @@ $page_title = "Manage Registry - Jacob & Melissa";
             }
             .items-list-grid .item-card:hover {
                 transform: translateY(-5px);
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                box-shadow: 0 4px 20px var(--color-shadow-hover);
             }
             .items-list-grid .item-image {
                 width: 100%;
                 height: 250px;
                 object-fit: contain;
                 border-radius: 0;
-                background-color: #f5f5f5;
+                background-color: var(--color-light);
                 padding: 1rem;
             }
             .items-list-grid .item-content {
@@ -412,7 +413,7 @@ $page_title = "Manage Registry - Jacob & Melissa";
             margin-bottom: 0.5rem;
         }
         .item-description {
-            color: #666;
+            color: var(--color-text-secondary);
             margin-bottom: 0.5rem;
             text-transform: none;
             font-family: 'Crimson Text', serif;
@@ -441,7 +442,7 @@ $page_title = "Manage Registry - Jacob & Melissa";
         }
         .item-meta {
             font-size: 0.9rem;
-            color: #999;
+            color: var(--color-text-muted);
             margin-bottom: 1rem;
         }
         .item-actions {
@@ -522,15 +523,15 @@ $page_title = "Manage Registry - Jacob & Melissa";
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1.5rem;
             margin-bottom: 2rem;
-            background-color: white;
+            background-color: var(--color-surface);
             padding: 1.5rem;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 10px var(--color-shadow);
         }
         .stat-card {
             text-align: center;
             padding: 1rem;
-            border-right: 1px solid #eee;
+            border-right: 1px solid var(--color-border);
         }
         .stat-card:last-child {
             border-right: none;
@@ -538,7 +539,7 @@ $page_title = "Manage Registry - Jacob & Melissa";
         @media (max-width: 600px) {
             .stat-card {
                 border-right: none;
-                border-bottom: 1px solid #eee;
+                border-bottom: 1px solid var(--color-border);
             }
             .stat-card:last-child {
                 border-bottom: none;
@@ -553,15 +554,15 @@ $page_title = "Manage Registry - Jacob & Melissa";
         }
         .stat-label {
             display: block;
-            color: #666;
+            color: var(--color-text-secondary);
             font-family: 'Crimson Text', serif;
             font-size: 1.1rem;
         }
         .price-band-table-container {
-            background-color: white;
+            background-color: var(--color-surface);
             padding: 1.5rem;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 10px var(--color-shadow);
             margin-bottom: 2rem;
         }
         .price-band-header {
@@ -616,20 +617,20 @@ $page_title = "Manage Registry - Jacob & Melissa";
         .price-band-note {
             margin: 0 0 1rem 0;
             font-size: 0.95rem;
-            color: #666;
+            color: var(--color-text-secondary);
             font-family: 'Crimson Text', serif;
             line-height: 1.5;
         }
         .price-band-table {
             width: 100%;
             border-collapse: collapse;
-            background-color: white;
+            background-color: var(--color-surface);
         }
         .price-band-table th,
         .price-band-table td {
             padding: 0.85rem 1rem;
             text-align: left;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 1px solid var(--color-border);
             vertical-align: top;
         }
         .price-band-table th {
@@ -639,7 +640,7 @@ $page_title = "Manage Registry - Jacob & Melissa";
             font-weight: 400;
         }
         .price-band-table tbody tr:hover {
-            background-color: #f5f5f5;
+            background-color: var(--color-light);
         }
         .price-band-status {
             font-weight: bold;
@@ -677,7 +678,7 @@ $page_title = "Manage Registry - Jacob & Melissa";
         }
         .reorder-hint {
             font-size: 0.9rem;
-            color: #666;
+            color: var(--color-text-secondary);
             margin: 0;
             font-family: 'Crimson Text', serif;
         }
@@ -693,19 +694,19 @@ $page_title = "Manage Registry - Jacob & Melissa";
             align-items: center;
             gap: 0.5rem;
             padding: 0.75rem 1.5rem;
-            background-color: #f8f9fa;
-            border-bottom: 1px solid #eee;
+            background-color: var(--color-surface-alt);
+            border-bottom: 1px solid var(--color-border);
             font-size: 0.85rem;
         }
         .item-position label {
-            color: #666;
+            color: var(--color-text-secondary);
             font-family: 'Crimson Text', serif;
             margin: 0;
         }
         .position-input {
             width: 4rem;
             padding: 0.25rem 0.4rem;
-            border: 1px solid #ccc;
+            border: 1px solid var(--color-border);
             border-radius: 4px;
             text-align: center;
             font-size: 0.9rem;
@@ -717,7 +718,7 @@ $page_title = "Manage Registry - Jacob & Melissa";
         }
         .position-input.changed {
             border-color: var(--color-gold);
-            background-color: #fff9e6;
+            background-color: var(--color-registry-prompt-bg);
         }
     </style>
 </head>
@@ -936,7 +937,7 @@ $page_title = "Manage Registry - Jacob & Melissa";
                                         <td><?php echo htmlspecialchars($band['label']); ?></td>
                                         <td>
                                             <?php echo (int) $current; ?>
-                                            <span style="color:#666; font-family:'Crimson Text', serif;">
+                                            <span style="color:var(--color-text-secondary); font-family:'Crimson Text', serif;">
                                                 (<?php echo (int) ($bandCounts[$band['key']]['available'] ?? 0); ?> avail / <?php echo (int) ($bandCounts[$band['key']]['purchased'] ?? 0); ?> purchased)
                                             </span>
                                         </td>
@@ -949,7 +950,7 @@ $page_title = "Manage Registry - Jacob & Melissa";
                                     <td>No price</td>
                                     <td>
                                         <?php echo (int) $noPriceCounts['total']; ?>
-                                        <span style="color:#666; font-family:'Crimson Text', serif;">
+                                        <span style="color:var(--color-text-secondary); font-family:'Crimson Text', serif;">
                                             (<?php echo (int) $noPriceCounts['available']; ?> avail / <?php echo (int) $noPriceCounts['purchased']; ?> purchased)
                                         </span>
                                     </td>
@@ -993,7 +994,7 @@ $page_title = "Manage Registry - Jacob & Melissa";
                                 <option value="1" <?php echo (!$editItem || ($editItem && $editItem['published'])) ? 'selected' : ''; ?>>Published</option>
                                 <option value="0" <?php echo ($editItem && !$editItem['published']) ? 'selected' : ''; ?>>Unpublished</option>
                             </select>
-                            <small style="display: block; margin-top: 0.5rem; color: #666;">Published items appear on the public registry page. Unpublished items are only visible in the admin area.</small>
+                            <small style="display: block; margin-top: 0.5rem; color: var(--color-text-secondary);">Published items appear on the public registry page. Unpublished items are only visible in the admin area.</small>
                         </div>
                         <div class="form-actions">
                             <button type="submit" class="btn" id="submit-btn"><?php echo $editItem ? 'Update Item' : 'Add Item'; ?></button>

@@ -141,12 +141,12 @@ include __DIR__ . '/includes/header.php';
     .rsvp-not-found {
         margin-top: 1.5rem;
         padding: 1.25rem;
-        background: #fff3cd;
-        border: 1px solid #ffc107;
+        background: var(--color-registry-prompt-bg);
+        border: 1px solid var(--color-gold);
         border-radius: 6px;
     }
     .rsvp-not-found p {
-        color: #856404;
+        color: var(--color-dark);
         font-family: 'Crimson Text', serif;
         margin: 0;
         font-size: 1.05rem;
@@ -157,11 +157,11 @@ include __DIR__ . '/includes/header.php';
         margin-bottom: 1.5rem;
     }
     .group-member-card {
-        border: 1px solid #ddd;
+        border: 1px solid var(--color-border);
         border-radius: 8px;
         padding: 1.25rem;
         margin-bottom: 1rem;
-        background: white;
+        background: var(--color-surface);
         transition: border-color 0.2s;
     }
     .group-member-card.attending {
@@ -198,27 +198,27 @@ include __DIR__ . '/includes/header.php';
     }
     .event-sublabel {
         font-size: 0.85rem;
-        color: #888;
+        color: var(--color-text-muted);
     }
     .attending-toggle {
         display: flex;
         gap: 0;
         border-radius: 6px;
         overflow: hidden;
-        border: 1px solid #ccc;
+        border: 1px solid var(--color-border);
     }
     .attending-toggle button {
         padding: 0.4rem 1rem;
         border: none;
-        background: white;
+        background: var(--color-surface);
         cursor: pointer;
         font-family: 'Cinzel', serif;
         font-size: 0.8rem;
         transition: all 0.2s;
-        color: #666;
+        color: var(--color-text-secondary);
     }
     .attending-toggle button:not(:last-child) {
-        border-right: 1px solid #ccc;
+        border-right: 1px solid var(--color-border);
     }
     .attending-toggle button.active-yes {
         background: var(--color-green);
@@ -242,17 +242,19 @@ include __DIR__ . '/includes/header.php';
     .group-member-dietary label {
         font-family: 'Crimson Text', serif;
         font-size: 0.95rem;
-        color: #666;
+        color: var(--color-text-secondary);
         display: block;
         margin-bottom: 0.25rem;
     }
     .group-member-dietary input {
         width: 100%;
         padding: 0.5rem 0.75rem;
-        border: 1px solid #ccc;
+        border: 1px solid var(--color-border);
         border-radius: 4px;
         font-family: 'Crimson Text', serif;
         font-size: 1rem;
+        background-color: var(--color-surface);
+        color: var(--color-dark);
     }
     .group-member-dietary input:focus {
         border-color: var(--color-green);
@@ -291,7 +293,7 @@ include __DIR__ . '/includes/header.php';
     }
     .rsvp-summary-item {
         padding: 0.5rem 0;
-        border-bottom: 1px solid #eee;
+        border-bottom: 1px solid var(--color-border);
         display: flex;
         justify-content: space-between;
     }
@@ -301,7 +303,7 @@ include __DIR__ . '/includes/header.php';
     .rsvp-summary-note {
         margin-top: 1.25rem;
         font-size: 0.95rem;
-        color: #888;
+        color: var(--color-text-muted);
         font-style: italic;
     }
     

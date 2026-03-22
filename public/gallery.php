@@ -56,14 +56,14 @@ try {
     .gallery-item {
         border-radius: 8px;
         overflow: hidden;
-        background: white;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        background: var(--color-surface);
+        box-shadow: 0 2px 10px var(--color-shadow);
         transition: transform 0.25s ease, box-shadow 0.25s ease;
     }
 
     .gallery-item:hover {
         transform: translateY(-4px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 8px 24px var(--color-shadow-hover);
     }
 
     .gallery-image {

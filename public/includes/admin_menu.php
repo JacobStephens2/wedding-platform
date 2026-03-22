@@ -21,9 +21,32 @@ if (isAdminAuthenticated()):
                 <li><a href="/admin-honeymoon-fund">Manage Honeymoon Fund</a></li>
                 <li><a href="/admin-gallery">Manage Gallery</a></li>
                 <li><a href="/admin?logout=1">Logout</a></li>
+                <li>
+                    <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode" style="color: white;">
+                        <span class="icon-moon">&#9789;</span>
+                        <span class="icon-sun">&#9788;</span>
+                    </button>
+                </li>
             </ul>
         </div>
     </nav>
+    <script>
+        (function() {
+            var toggles = document.querySelectorAll('.theme-toggle');
+            toggles.forEach(function(toggle) {
+                toggle.addEventListener('click', function() {
+                    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                    if (isDark) {
+                        document.documentElement.removeAttribute('data-theme');
+                        localStorage.setItem('theme', 'light');
+                    } else {
+                        document.documentElement.setAttribute('data-theme', 'dark');
+                        localStorage.setItem('theme', 'dark');
+                    }
+                });
+            });
+        })();
+    </script>
     <style>
         .admin-menu-nav {
             background-color: var(--color-green);
