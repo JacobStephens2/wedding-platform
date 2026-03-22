@@ -2236,6 +2236,9 @@ $page_title = "Seating Chart - Jacob & Melissa";
 
     // Delegate click on grid guest cells
     document.getElementById('grid-view-container').addEventListener('click', function(e) {
+        // Ignore clicks on the select itself or its options
+        if (e.target.closest('.grid-move-select')) return;
+
         const cell = e.target.closest('.grid-cell-guest');
         if (!cell) return;
 
