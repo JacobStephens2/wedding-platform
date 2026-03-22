@@ -30,6 +30,9 @@ RewriteRule ^$ index.php [L]
     Deny from all
 </FilesMatch>
 
+# APK downloads
+AddType application/vnd.android.package-archive .apk
+
 # Set default charset
 AddDefaultCharset UTF-8
 
