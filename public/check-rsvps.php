@@ -120,9 +120,10 @@ $page_title = "Check RSVPs - Jacob & Melissa";
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($page_title); ?></title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="stylesheet" href="/css/style.css?v=<?php 
+    <?php include __DIR__ . '/includes/theme_init.php'; ?>
+    <link rel="stylesheet" href="/css/style.css?v=<?php
         $cssPath = __DIR__ . '/../css/style.css';
-        echo file_exists($cssPath) ? filemtime($cssPath) : time(); 
+        echo file_exists($cssPath) ? filemtime($cssPath) : time();
     ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -132,9 +133,9 @@ $page_title = "Check RSVPs - Jacob & Melissa";
             max-width: 1200px;
             margin: 2rem auto;
             padding: 2rem;
-            background-color: white;
+            background-color: var(--color-surface);
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 10px var(--color-shadow);
         }
         .rsvp-table {
             width: 100%;
@@ -145,7 +146,7 @@ $page_title = "Check RSVPs - Jacob & Melissa";
         .rsvp-table td {
             padding: 0.75rem;
             text-align: left;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 1px solid var(--color-border);
         }
         .rsvp-table th {
             background-color: var(--color-green);
@@ -168,7 +169,7 @@ $page_title = "Check RSVPs - Jacob & Melissa";
             opacity: 0.7;
         }
         .rsvp-table tr:hover {
-            background-color: #f5f5f5;
+            background-color: var(--color-light);
         }
         .rsvp-table .attending-yes {
             color: #2d5016;
@@ -225,12 +226,12 @@ $page_title = "Check RSVPs - Jacob & Melissa";
         }
         .plus-one-row td {
             padding-left: 2rem;
-            color: #666;
+            color: var(--color-text-secondary);
             font-style: italic;
         }
         .manage-link {
             font-family: 'Crimson Text', serif;
-            color: #666;
+            color: var(--color-text-secondary);
             margin-bottom: 1.5rem;
         }
         .manage-link a {
@@ -283,7 +284,7 @@ $page_title = "Check RSVPs - Jacob & Melissa";
                         <div class="stat-label">Total Guests</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-number" style="color: #2d5016;"><?php echo $guestStats['attending']; ?></div>
+                        <div class="stat-number" style="color: var(--color-green);"><?php echo $guestStats['attending']; ?></div>
                         <div class="stat-label">Attending Any</div>
                     </div>
                     <div class="stat-item">
@@ -294,24 +295,24 @@ $page_title = "Check RSVPs - Jacob & Melissa";
                         <div class="stat-number" style="color: var(--color-lavender);"><?php echo $guestStats['pending']; ?></div>
                         <div class="stat-label">Pending</div>
                     </div>
-                    <div class="stat-item" style="border-left: 2px solid #ddd; padding-left: 1.5rem;">
-                        <div class="stat-number" style="color: #2d5016;"><?php echo $guestStats['ceremony']; ?></div>
+                    <div class="stat-item" style="border-left: 2px solid var(--color-border); padding-left: 1.5rem;">
+                        <div class="stat-number" style="color: var(--color-green);"><?php echo $guestStats['ceremony']; ?></div>
                         <div class="stat-label">Ceremony</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-number" style="color: #2d5016;"><?php echo $guestStats['reception']; ?></div>
+                        <div class="stat-number" style="color: var(--color-green);"><?php echo $guestStats['reception']; ?></div>
                         <div class="stat-label">Reception</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-number" style="color: #2d5016; font-size: 1.4rem;"><?php echo $guestStats['reception'] - $guestStats['reception_children'] - $guestStats['reception_infants']; ?></div>
+                        <div class="stat-number" style="color: var(--color-green); font-size: 1.4rem;"><?php echo $guestStats['reception'] - $guestStats['reception_children'] - $guestStats['reception_infants']; ?></div>
                         <div class="stat-label">Adults</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-number" style="color: #2d5016; font-size: 1.4rem;"><?php echo $guestStats['reception_children']; ?></div>
+                        <div class="stat-number" style="color: var(--color-green); font-size: 1.4rem;"><?php echo $guestStats['reception_children']; ?></div>
                         <div class="stat-label">Children</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-number" style="color: #2d5016; font-size: 1.4rem;"><?php echo $guestStats['reception_infants']; ?></div>
+                        <div class="stat-number" style="color: var(--color-green); font-size: 1.4rem;"><?php echo $guestStats['reception_infants']; ?></div>
                         <div class="stat-label">Infants</div>
                     </div>
                 </div>
@@ -390,7 +391,7 @@ $page_title = "Check RSVPs - Jacob & Melissa";
                         </tbody>
                     </table>
                 <?php else: ?>
-                    <p style="color: #666; font-family: 'Crimson Text', serif;">No RSVPs yet.</p>
+                    <p style="color: var(--color-text-secondary); font-family: 'Crimson Text', serif;">No RSVPs yet.</p>
                 <?php endif; ?>
             </div>
         <?php endif; ?>

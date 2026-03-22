@@ -241,6 +241,7 @@ $page_title = "Manage Gallery - Jacob & Melissa";
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($page_title); ?></title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <?php include __DIR__ . '/includes/theme_init.php'; ?>
     <link rel="stylesheet" href="/css/style.css?v=<?php
         $cssPath = __DIR__ . '/css/style.css';
         echo file_exists($cssPath) ? filemtime($cssPath) : time();
@@ -280,10 +281,10 @@ $page_title = "Manage Gallery - Jacob & Melissa";
             color: var(--color-green);
         }
         .photo-form {
-            background: white;
+            background: var(--color-surface);
             padding: 2rem;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px var(--color-shadow);
             margin-bottom: 2rem;
         }
         .photo-form h2 {
@@ -322,11 +323,11 @@ $page_title = "Manage Gallery - Jacob & Melissa";
         .photo-form .form-group select {
             width: 100%;
             padding: 0.6rem 0.75rem;
-            border: 1px solid #ccc;
+            border: 1px solid var(--color-border);
             border-radius: 4px;
             font-family: 'Crimson Text', serif;
             font-size: 1rem;
-            background: white;
+            background: var(--color-surface);
         }
         .photo-form .form-group select:focus {
             border-color: var(--color-green);
@@ -346,10 +347,10 @@ $page_title = "Manage Gallery - Jacob & Melissa";
             gap: 1.25rem;
         }
         .gallery-admin-card {
-            background: white;
+            background: var(--color-surface);
             border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            box-shadow: 0 2px 10px var(--color-shadow);
         }
         .gallery-admin-card img {
             width: 100%;
@@ -369,13 +370,13 @@ $page_title = "Manage Gallery - Jacob & Melissa";
         .gallery-admin-card-body .photo-date {
             font-family: 'Crimson Text', serif;
             font-size: 0.85rem;
-            color: #888;
+            color: var(--color-text-muted);
             margin-bottom: 0.5rem;
         }
         .gallery-admin-card-body .photo-path {
             font-family: monospace;
             font-size: 0.75rem;
-            color: #aaa;
+            color: var(--color-text-muted);
             word-break: break-all;
             margin-bottom: 0.5rem;
         }
@@ -406,7 +407,7 @@ $page_title = "Manage Gallery - Jacob & Melissa";
         .card-actions .delete-link:hover { background: rgba(220, 53, 69, 0.1); }
         .photo-count-label {
             font-family: 'Crimson Text', serif;
-            color: #666;
+            color: var(--color-text-secondary);
             margin-bottom: 1rem;
             display: block;
         }

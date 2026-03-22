@@ -654,7 +654,8 @@ $page_title = "Manage Guests - Jacob & Melissa";
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($page_title); ?></title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="stylesheet" href="/css/style.css?v=<?php 
+    <?php include __DIR__ . '/includes/theme_init.php'; ?>
+    <link rel="stylesheet" href="/css/style.css?v=<?php
         $cssPath = __DIR__ . '/css/style.css';
         echo file_exists($cssPath) ? filemtime($cssPath) : time(); 
     ?>">
@@ -698,9 +699,9 @@ $page_title = "Manage Guests - Jacob & Melissa";
             flex-wrap: wrap;
             margin-bottom: 2rem;
             padding: 1.5rem;
-            background: white;
+            background: var(--color-surface);
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px var(--color-shadow);
         }
         .stat-item {
             text-align: center;
@@ -712,7 +713,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
         }
         .stat-label {
             font-size: 0.85rem;
-            color: #666;
+            color: var(--color-text-secondary);
             font-family: 'Crimson Text', serif;
         }
         .stat-attending .stat-number { color: var(--color-green); }
@@ -734,14 +735,14 @@ $page_title = "Manage Guests - Jacob & Melissa";
             flex-wrap: wrap;
             margin-bottom: 1.5rem;
             padding: 1rem 1.5rem;
-            background: white;
+            background: var(--color-surface);
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px var(--color-shadow);
         }
         .filters-bar input[type="text"],
         .filters-bar input[type="number"] {
             padding: 0.5rem 1rem;
-            border: 1px solid #ccc;
+            border: 1px solid var(--color-border);
             border-radius: 4px;
             font-family: 'Crimson Text', serif;
             font-size: 1rem;
@@ -778,10 +779,10 @@ $page_title = "Manage Guests - Jacob & Melissa";
         
         .add-guest-form {
             position: relative;
-            background: white;
+            background: var(--color-surface);
             padding: 2rem;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px var(--color-shadow);
             margin-bottom: 2rem;
         }
         .add-guest-form h2 {
@@ -815,9 +816,9 @@ $page_title = "Manage Guests - Jacob & Melissa";
         .btn-secondary:hover { background-color: #5a6268; color: white; }
         
         .guests-table-container {
-            background: white;
+            background: var(--color-surface);
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px var(--color-shadow);
         }
         .guests-table {
             width: 100%;
@@ -855,18 +856,18 @@ $page_title = "Manage Guests - Jacob & Melissa";
         }
         .guests-table td {
             padding: 0.6rem 1rem;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid var(--color-border);
             font-size: 1rem;
         }
         .guests-table tr:hover {
-            background-color: #f8f9fa;
+            background-color: var(--color-surface-alt);
         }
         .guests-table tr.group-start {
             border-top: 2px solid var(--color-green);
         }
         .guests-table tr.plus-one-row {
             font-style: italic;
-            color: #666;
+            color: var(--color-text-secondary);
         }
         .rsvp-badge {
             display: inline-block;
@@ -875,9 +876,9 @@ $page_title = "Manage Guests - Jacob & Melissa";
             font-size: 0.85rem;
             font-weight: bold;
         }
-        .rsvp-attending { background: #d4edda; color: #155724; }
-        .rsvp-declined { background: #f8d7da; color: #721c24; }
-        .rsvp-pending { background: #e2e3e5; color: #383d41; }
+        .rsvp-attending { background: var(--color-alert-success-bg); color: var(--color-alert-success-text); }
+        .rsvp-declined { background: var(--color-alert-error-bg); color: var(--color-alert-error-text); }
+        .rsvp-pending { background: var(--color-light); color: var(--color-text-secondary); }
         
         .action-links {
             display: flex;
@@ -918,7 +919,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
         
         .guest-count-label {
             font-family: 'Crimson Text', serif;
-            color: #666;
+            color: var(--color-text-secondary);
             margin-bottom: 1rem;
             display: block;
         }
@@ -930,9 +931,9 @@ $page_title = "Manage Guests - Jacob & Melissa";
             flex-wrap: wrap;
             margin-bottom: 1rem;
             padding: 0.75rem 1.5rem;
-            background: white;
+            background: var(--color-surface);
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px var(--color-shadow);
             border-left: 4px solid var(--color-green);
         }
         .bulk-action-bar.visible {
@@ -947,13 +948,13 @@ $page_title = "Manage Guests - Jacob & Melissa";
         }
         .bulk-action-bar button {
             padding: 0.4rem 0.85rem;
-            border: 1px solid #ccc;
+            border: 1px solid var(--color-border);
             border-radius: 4px;
             cursor: pointer;
             font-family: 'Cinzel', serif;
             font-size: 0.8rem;
             transition: background 0.2s, border-color 0.2s;
-            background: white;
+            background: var(--color-surface);
             color: var(--color-dark);
         }
         .bulk-action-bar button:hover {
@@ -979,10 +980,10 @@ $page_title = "Manage Guests - Jacob & Melissa";
         }
         
         .admin-rsvp-form {
-            background: white;
+            background: var(--color-surface);
             padding: 2rem;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px var(--color-shadow);
             margin-bottom: 2rem;
         }
         .admin-rsvp-form h2 {
@@ -991,7 +992,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
         }
         .admin-rsvp-desc {
             font-family: 'Crimson Text', serif;
-            color: #666;
+            color: var(--color-text-secondary);
             margin-bottom: 1.5rem;
             font-size: 1.05rem;
         }
@@ -999,11 +1000,11 @@ $page_title = "Manage Guests - Jacob & Melissa";
             margin-bottom: 1.5rem;
         }
         .admin-rsvp-member-card {
-            border: 1px solid #ddd;
+            border: 1px solid var(--color-border);
             border-radius: 8px;
             padding: 1.25rem;
             margin-bottom: 1rem;
-            background: white;
+            background: var(--color-surface);
             transition: border-color 0.2s;
         }
         .admin-rsvp-member-card.ar-attending {
@@ -1040,7 +1041,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
         }
         .ar-event-sublabel {
             font-size: 0.85rem;
-            color: #888;
+            color: var(--color-text-muted);
         }
         .ar-plus-one-header {
             display: flex;
@@ -1055,20 +1056,20 @@ $page_title = "Manage Guests - Jacob & Melissa";
             gap: 0;
             border-radius: 6px;
             overflow: hidden;
-            border: 1px solid #ccc;
+            border: 1px solid var(--color-border);
         }
         .ar-attending-toggle button {
             padding: 0.4rem 1rem;
             border: none;
-            background: white;
+            background: var(--color-surface);
             cursor: pointer;
             font-family: 'Cinzel', serif;
             font-size: 0.85rem;
             transition: all 0.2s;
-            color: #666;
+            color: var(--color-text-secondary);
         }
         .ar-attending-toggle button:not(:last-child) {
-            border-right: 1px solid #ccc;
+            border-right: 1px solid var(--color-border);
         }
         .ar-attending-toggle button.ar-active-yes {
             background: var(--color-green);
@@ -1084,14 +1085,14 @@ $page_title = "Manage Guests - Jacob & Melissa";
         .ar-member-dietary label {
             font-family: 'Crimson Text', serif;
             font-size: 0.95rem;
-            color: #666;
+            color: var(--color-text-secondary);
             display: block;
             margin-bottom: 0.25rem;
         }
         .ar-member-dietary input {
             width: 100%;
             padding: 0.5rem 0.75rem;
-            border: 1px solid #ccc;
+            border: 1px solid var(--color-border);
             border-radius: 4px;
             font-family: 'Crimson Text', serif;
             font-size: 1rem;
@@ -1146,7 +1147,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
         .admin-rsvp-form .form-group textarea {
             width: 100%;
             padding: 0.5rem 0.75rem;
-            border: 1px solid #ccc;
+            border: 1px solid var(--color-border);
             border-radius: 4px;
             font-family: 'Crimson Text', serif;
             font-size: 1rem;
@@ -1168,18 +1169,18 @@ $page_title = "Manage Guests - Jacob & Melissa";
         .admin-rsvp-error {
             margin-top: 1rem;
             padding: 0.75rem 1rem;
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+            background: var(--color-alert-error-bg);
+            color: var(--color-alert-error-text);
+            border: 1px solid var(--color-alert-error-border);
             border-radius: 6px;
             display: none;
         }
         .admin-rsvp-success {
             margin-top: 1rem;
             padding: 0.75rem 1rem;
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+            background: var(--color-alert-success-bg);
+            color: var(--color-alert-success-text);
+            border: 1px solid var(--color-alert-success-border);
             border-radius: 6px;
             display: none;
         }
@@ -1236,7 +1237,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
                     <p class="admin-rsvp-desc">Entering RSVP for <strong><?php echo htmlspecialchars($rsvpGuest['first_name'] . ' ' . $rsvpGuest['last_name']); ?></strong>'s group (from mail-in card). No email required.</p>
                     
                     <div class="admin-rsvp-group-members" id="ar-group-members">
-                        <p style="color:#666; font-family:'Crimson Text',serif;">Loading group members...</p>
+                        <p style="color:var(--color-text-secondary); font-family:'Crimson Text',serif;">Loading group members...</p>
                     </div>
                     
                     <div class="form-group">
@@ -1557,7 +1558,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
                             $maxChildren = $stats['reception_children'] + $stats['pending_children'];
                             $maxInfants = $stats['reception_infants'] + $stats['pending_infants'];
                         ?>
-                        <span class="stat-label" style="font-size: 0.75rem; color: #999;"><?php echo $maxAdults; ?> adults, <?php echo $maxChildren; ?> children, <?php echo $maxInfants; ?> infants</span>
+                        <span class="stat-label" style="font-size: 0.75rem; color: var(--color-text-muted);"><?php echo $maxAdults; ?> adults, <?php echo $maxChildren; ?> children, <?php echo $maxInfants; ?> infants</span>
                     </div>
                 </div>
                 <div class="stats-bar" style="margin-top: -1rem;">
@@ -1605,7 +1606,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
                     </div>
                     <?php if ($statusFilter !== ''): ?>
                         <div class="stat-item" style="align-self: center;">
-                            <a href="/admin-guests" class="stat-link" style="font-size: 0.85rem; color: #666;">[Clear filter]</a>
+                            <a href="/admin-guests" class="stat-link" style="font-size: 0.85rem; color: var(--color-text-secondary);">[Clear filter]</a>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -1616,7 +1617,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
                 <?php endif; ?>
                 <div class="add-guest-form" <?php if (!$editGuest || $rsvpGuest): ?>style="display:none;"<?php endif; ?>>
                     <?php if (!$editGuest): ?>
-                    <button type="button" id="close-add-guest-btn" style="position:absolute; top:0.5rem; right:0.75rem; background:none; border:none; font-size:1.4rem; cursor:pointer; color:#888; line-height:1;" title="Close">&times;</button>
+                    <button type="button" id="close-add-guest-btn" style="position:absolute; top:0.5rem; right:0.75rem; background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--color-text-muted); line-height:1;" title="Close">&times;</button>
                     <?php endif; ?>
                     <h2><?php echo $editGuest ? 'Edit Guest' : 'Add Guest'; ?></h2>
                     <form method="POST" action="/admin-guests">
@@ -1733,11 +1734,11 @@ $page_title = "Manage Guests - Jacob & Melissa";
                             <?php endif; ?>
                             <div class="form-group" style="flex-basis:100%;">
                                 <label for="notes">Admin Notes</label>
-                                <textarea id="notes" name="notes" rows="2" style="width:100%; padding:0.5rem; border:1px solid #ccc; border-radius:4px; font-family:'Crimson Text',serif; font-size:1rem;"><?php echo htmlspecialchars($editGuest['notes'] ?? ''); ?></textarea>
+                                <textarea id="notes" name="notes" rows="2" style="width:100%; padding:0.5rem; border:1px solid var(--color-border); border-radius:4px; font-family:'Crimson Text',serif; font-size:1rem;"><?php echo htmlspecialchars($editGuest['notes'] ?? ''); ?></textarea>
                             </div>
                         </div>
                         <?php if ($editGuest): ?>
-                        <h3 style="margin: 1rem 0 0.5rem; font-size: 1rem; color: #555;">Mailing Address (Group #<?php echo htmlspecialchars($editGuest['mailing_group'] ?? 'N/A'); ?>)</h3>
+                        <h3 style="margin: 1rem 0 0.5rem; font-size: 1rem; color: var(--color-text-secondary);">Mailing Address (Group #<?php echo htmlspecialchars($editGuest['mailing_group'] ?? 'N/A'); ?>)</h3>
                         <div class="form-row">
                             <div class="form-group" style="flex: 2;">
                                 <label for="address_1">Address Line 1</label>
@@ -1815,7 +1816,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
                 
                 <!-- Dietary Restrictions View -->
                 <button type="button" id="dietary-toggle" class="btn-filter" style="margin-bottom: 1rem;">View Dietary Restrictions</button>
-                <div id="dietary-panel" style="display: none; margin-bottom: 1.5rem; background: #f9f9f6; border: 1px solid #ddd; border-radius: 8px; padding: 1rem;">
+                <div id="dietary-panel" style="display: none; margin-bottom: 1.5rem; background: var(--color-surface-alt); border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
                         <h3 style="margin: 0;">Dietary Restrictions</h3>
                         <a href="/admin-guests?export_dietary=1" class="btn-secondary" style="text-decoration: none; font-size: 0.9rem;">Export Dietary Restrictions</a>
@@ -1840,20 +1841,20 @@ $page_title = "Manage Guests - Jacob & Melissa";
                         }
                     }
                     if (empty($dietaryEntries)): ?>
-                        <p style="color: #666;">No dietary restrictions have been submitted.</p>
+                        <p style="color: var(--color-text-secondary);">No dietary restrictions have been submitted.</p>
                     <?php else: ?>
                         <table style="width: 100%; border-collapse: collapse;">
                             <thead>
                                 <tr>
-                                    <th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #ccc;">Guest</th>
-                                    <th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #ccc;">Dietary Restriction</th>
+                                    <th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid var(--color-border);">Guest</th>
+                                    <th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid var(--color-border);">Dietary Restriction</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($dietaryEntries as $entry): ?>
                                     <tr>
-                                        <td style="padding: 0.4rem 0.5rem; border-bottom: 1px solid #eee;"><?php echo $entry['name']; ?></td>
-                                        <td style="padding: 0.4rem 0.5rem; border-bottom: 1px solid #eee;"><?php echo $entry['dietary']; ?></td>
+                                        <td style="padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--color-border);"><?php echo $entry['name']; ?></td>
+                                        <td style="padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--color-border);"><?php echo $entry['dietary']; ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -1871,7 +1872,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
 
                 <!-- Song Requests View -->
                 <button type="button" id="songs-toggle" class="btn-filter" style="margin-bottom: 1rem;">View Song Requests</button>
-                <div id="songs-panel" style="display: none; margin-bottom: 1.5rem; background: #f9f9f6; border: 1px solid #ddd; border-radius: 8px; padding: 1rem;">
+                <div id="songs-panel" style="display: none; margin-bottom: 1.5rem; background: var(--color-surface-alt); border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem;">
                     <h3 style="margin: 0 0 0.75rem;">Song Requests</h3>
                     <?php
                     $songEntries = [];
@@ -1888,20 +1889,20 @@ $page_title = "Manage Guests - Jacob & Melissa";
                         }
                     }
                     if (empty($songEntries)): ?>
-                        <p style="color: #666;">No song requests have been submitted.</p>
+                        <p style="color: var(--color-text-secondary);">No song requests have been submitted.</p>
                     <?php else: ?>
                         <table style="width: 100%; border-collapse: collapse;">
                             <thead>
                                 <tr>
-                                    <th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #ccc;">Guest</th>
-                                    <th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #ccc;">Song Request</th>
+                                    <th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid var(--color-border);">Guest</th>
+                                    <th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid var(--color-border);">Song Request</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($songEntries as $entry): ?>
                                     <tr>
-                                        <td style="padding: 0.4rem 0.5rem; border-bottom: 1px solid #eee;"><?php echo $entry['name']; ?></td>
-                                        <td style="padding: 0.4rem 0.5rem; border-bottom: 1px solid #eee;"><?php echo $entry['song']; ?></td>
+                                        <td style="padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--color-border);"><?php echo $entry['name']; ?></td>
+                                        <td style="padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--color-border);"><?php echo $entry['song']; ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -1919,7 +1920,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
 
                 <!-- Guest Messages View -->
                 <button type="button" id="messages-toggle" class="btn-filter" style="margin-bottom: 1rem;">View Guest Messages</button>
-                <div id="messages-panel" style="display: none; margin-bottom: 1.5rem; background: #f9f9f6; border: 1px solid #ddd; border-radius: 8px; padding: 1rem;">
+                <div id="messages-panel" style="display: none; margin-bottom: 1.5rem; background: var(--color-surface-alt); border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem;">
                     <h3 style="margin: 0 0 0.75rem;">Guest Messages</h3>
                     <?php
                     $messageEntries = [];
@@ -1936,20 +1937,20 @@ $page_title = "Manage Guests - Jacob & Melissa";
                         }
                     }
                     if (empty($messageEntries)): ?>
-                        <p style="color: #666;">No messages have been submitted.</p>
+                        <p style="color: var(--color-text-secondary);">No messages have been submitted.</p>
                     <?php else: ?>
                         <table style="width: 100%; border-collapse: collapse;">
                             <thead>
                                 <tr>
-                                    <th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #ccc;">Guest</th>
-                                    <th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #ccc;">Message</th>
+                                    <th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid var(--color-border);">Guest</th>
+                                    <th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid var(--color-border);">Message</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($messageEntries as $entry): ?>
                                     <tr>
-                                        <td style="padding: 0.4rem 0.5rem; border-bottom: 1px solid #eee;"><?php echo $entry['name']; ?></td>
-                                        <td style="padding: 0.4rem 0.5rem; border-bottom: 1px solid #eee;"><?php echo $entry['message']; ?></td>
+                                        <td style="padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--color-border);"><?php echo $entry['name']; ?></td>
+                                        <td style="padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--color-border);"><?php echo $entry['message']; ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -1972,7 +1973,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
 
                 <!-- Reception Guests by Group View -->
                 <button type="button" id="groups-toggle" class="btn-filter" style="margin-bottom: 1rem;">View Reception Guests by Group</button>
-                <div id="groups-panel" style="display: none; margin-bottom: 1.5rem; background: #f9f9f6; border: 1px solid #ddd; border-radius: 8px; padding: 1rem;">
+                <div id="groups-panel" style="display: none; margin-bottom: 1.5rem; background: var(--color-surface-alt); border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem;">
                     <h3 style="margin: 0 0 0.75rem;">Reception Guests by Group</h3>
                     <?php
                     $groupCounts = [];
@@ -1993,11 +1994,11 @@ $page_title = "Manage Guests - Jacob & Melissa";
                     ksort($groupCounts, SORT_NATURAL | SORT_FLAG_CASE);
                     $maxCount = !empty($groupCounts) ? max($groupCounts) : 1;
                     if (empty($groupCounts)): ?>
-                        <p style="color: #666;">No guests found.</p>
+                        <p style="color: var(--color-text-secondary);">No guests found.</p>
                     <?php else: ?>
                         <div style="overflow-x: auto;">
                             <div style="min-width: <?php echo max(count($groupCounts) * 60, 300); ?>px; padding: 0 0.5rem;">
-                                <div style="display: flex; align-items: flex-end; gap: 4px; height: 200px; border-bottom: 2px solid #ccc;">
+                                <div style="display: flex; align-items: flex-end; gap: 4px; height: 200px; border-bottom: 2px solid var(--color-border);">
                                     <?php foreach ($groupCounts as $name => $count):
                                         $pct = ($count / $maxCount) * 100;
                                     ?>
@@ -2024,21 +2025,21 @@ $page_title = "Manage Guests - Jacob & Melissa";
                             if (strncasecmp($name, 'Us', 2) === 0) $usTotal += $count;
                         }
                         ?>
-                        <div style="display: flex; gap: 1.5rem; margin-top: 1rem; padding: 0.75rem; background: white; border-radius: 6px; border: 1px solid #ddd;">
+                        <div style="display: flex; gap: 1.5rem; margin-top: 1rem; padding: 0.75rem; background: var(--color-surface); border-radius: 6px; border: 1px solid var(--color-border);">
                             <div style="text-align: center;">
                                 <div style="font-size: 1.4rem; font-weight: bold; color: var(--color-green);"><?php echo $jTotal; ?></div>
-                                <div style="font-size: 0.8rem; color: #666;">J Group Guests</div>
+                                <div style="font-size: 0.8rem; color: var(--color-text-secondary);">J Group Guests</div>
                             </div>
                             <div style="text-align: center;">
                                 <div style="font-size: 1.4rem; font-weight: bold; color: var(--color-green);"><?php echo $mTotal; ?></div>
-                                <div style="font-size: 0.8rem; color: #666;">M Group Guests</div>
+                                <div style="font-size: 0.8rem; color: var(--color-text-secondary);">M Group Guests</div>
                             </div>
                             <div style="text-align: center;">
                                 <div style="font-size: 1.4rem; font-weight: bold; color: var(--color-green);"><?php echo $usTotal; ?></div>
-                                <div style="font-size: 0.8rem; color: #666;">Us Group Guests</div>
+                                <div style="font-size: 0.8rem; color: var(--color-text-secondary);">Us Group Guests</div>
                             </div>
                         </div>
-                        <p style="font-size: 0.8rem; color: #888; margin: 0.75rem 0 0; font-style: italic;">Note: Guests who have declined the reception are excluded from these counts.</p>
+                        <p style="font-size: 0.8rem; color: var(--color-text-muted); margin: 0.75rem 0 0; font-style: italic;">Note: Guests who have declined the reception are excluded from these counts.</p>
                     <?php endif; ?>
                 </div>
                 <script>
@@ -2052,7 +2053,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
 
                 <!-- RSVP Timeline View -->
                 <button type="button" id="timeline-toggle" class="btn-filter" style="margin-bottom: 1rem;">View RSVP Timeline</button>
-                <div id="timeline-panel" style="display: none; margin-bottom: 1.5rem; background: #f9f9f6; border: 1px solid #ddd; border-radius: 8px; padding: 1rem;">
+                <div id="timeline-panel" style="display: none; margin-bottom: 1.5rem; background: var(--color-surface-alt); border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem;">
                     <h3 style="margin: 0 0 0.75rem;">RSVP Timeline</h3>
                     <?php
                     $totalGuests = (int)($stats['total'] ?? 0);
@@ -2062,24 +2063,24 @@ $page_title = "Manage Guests - Jacob & Melissa";
                     }
                     $responsePct = $totalGuests > 0 ? round(($totalResponded / $totalGuests) * 100, 1) : 0;
                     ?>
-                    <div style="display: flex; gap: 1.5rem; margin-bottom: 1rem; padding: 0.75rem; background: white; border-radius: 6px; border: 1px solid #ddd;">
+                    <div style="display: flex; gap: 1.5rem; margin-bottom: 1rem; padding: 0.75rem; background: var(--color-surface); border-radius: 6px; border: 1px solid var(--color-border);">
                         <div style="text-align: center;">
                             <div style="font-size: 1.4rem; font-weight: bold; color: var(--color-green);"><?php echo $totalResponded; ?> of <?php echo $totalGuests; ?></div>
-                            <div style="font-size: 0.8rem; color: #666;">Guests Responded (<?php echo $responsePct; ?>%)</div>
+                            <div style="font-size: 0.8rem; color: var(--color-text-secondary);">Guests Responded (<?php echo $responsePct; ?>%)</div>
                         </div>
                         <div style="text-align: center;">
                             <div style="font-size: 1.4rem; font-weight: bold; color: var(--color-green);"><?php echo count($rsvpTimeline); ?></div>
-                            <div style="font-size: 0.8rem; color: #666;">Days with Responses</div>
+                            <div style="font-size: 0.8rem; color: var(--color-text-secondary);">Days with Responses</div>
                         </div>
                     </div>
                     <?php if (empty($rsvpTimeline)): ?>
-                        <p style="color: #666;">No RSVP responses have been submitted yet.</p>
+                        <p style="color: var(--color-text-secondary);">No RSVP responses have been submitted yet.</p>
                     <?php else:
                         $maxDayCount = max(array_column($rsvpTimeline, 'count'));
                     ?>
                         <div style="overflow-x: auto;">
                             <div style="min-width: <?php echo max(count($rsvpTimeline) * 60, 300); ?>px; padding: 0 0.5rem;">
-                                <div style="display: flex; align-items: flex-end; gap: 4px; height: 200px; border-bottom: 2px solid #ccc;">
+                                <div style="display: flex; align-items: flex-end; gap: 4px; height: 200px; border-bottom: 2px solid var(--color-border);">
                                     <?php foreach ($rsvpTimeline as $day):
                                         $pct = ((int)$day['count'] / $maxDayCount) * 100;
                                     ?>
@@ -2105,9 +2106,9 @@ $page_title = "Manage Guests - Jacob & Melissa";
                         // Show cumulative running total
                         $cumulative = 0;
                         ?>
-                        <div style="margin-top: 1rem; padding: 0.75rem; background: white; border-radius: 6px; border: 1px solid #ddd;">
+                        <div style="margin-top: 1rem; padding: 0.75rem; background: var(--color-surface); border-radius: 6px; border: 1px solid var(--color-border);">
                             <div style="font-size: 0.85rem; font-weight: bold; margin-bottom: 0.5rem;">Cumulative Responses</div>
-                            <div style="display: flex; align-items: flex-end; gap: 4px; height: 120px; border-bottom: 2px solid #ccc;">
+                            <div style="display: flex; align-items: flex-end; gap: 4px; height: 120px; border-bottom: 2px solid var(--color-border);">
                                 <?php foreach ($rsvpTimeline as $day):
                                     $cumulative += (int)$day['count'];
                                     $cumPct = $totalGuests > 0 ? ($cumulative / $totalGuests) * 100 : 0;
@@ -2242,7 +2243,7 @@ $page_title = "Manage Guests - Jacob & Melissa";
                                 </tr>
                             <?php endforeach; ?>
                             <?php if (empty($guests)): ?>
-                                <tr><td colspan="11" style="text-align:center; padding:2rem; color:#666;">No guests found.</td></tr>
+                                <tr><td colspan="11" style="text-align:center; padding:2rem; color:var(--color-text-secondary);">No guests found.</td></tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
