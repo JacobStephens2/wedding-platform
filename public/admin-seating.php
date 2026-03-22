@@ -1117,9 +1117,9 @@ $page_title = "Seating Chart - Jacob & Melissa";
                                                 </div>
                                             </td>
                                         </tr>
-                                        <?php if ($guest['has_plus_one'] && $guest['plus_one_reception_attending'] === 'yes'): ?>
+                                        <?php if ($guest['has_plus_one'] && $guest['plus_one_reception_attending'] === 'yes'): ?><?php $seatPos++; ?>
                                         <tr class="plus-one-row">
-                                            <td></td>
+                                            <td><span class="seat-num"><?php echo $seatPos; ?></span></td>
                                             <td><?php echo htmlspecialchars($guest['plus_one_name'] ?: 'Guest of ' . $guest['first_name']); ?> (plus one)<?php
                                                 if (!empty($guest['plus_one_is_child'])): ?> <span class="age-badge child" title="Child">child</span><?php endif;
                                                 if (!empty($guest['plus_one_is_infant'])): ?> <span class="age-badge infant" title="Infant">infant</span><?php endif;
@@ -1470,7 +1470,7 @@ $page_title = "Seating Chart - Jacob & Melissa";
         if (info.plus_one_is_child) poAgeHtml += ' <span class="age-badge child" title="Child">child</span>';
         if (info.plus_one_is_infant) poAgeHtml += ' <span class="age-badge infant" title="Infant">infant</span>';
         tr.innerHTML =
-            '<td></td>' +
+            '<td><span class="seat-num"></span></td>' +
             '<td>' + escHtml(info.plus_one_name) + ' (plus one)' + poAgeHtml + dietaryIcon + '</td>' +
             '<td></td>' +
             '<td>' + dietaryHtml + '</td>' +
@@ -2100,10 +2100,9 @@ $page_title = "Seating Chart - Jacob & Melissa";
 
     function renumberSeats(tbody) {
         let pos = 1;
-        tbody.querySelectorAll('tr[data-guest-id]').forEach(row => {
+        tbody.querySelectorAll('tr').forEach(row => {
             const numEl = row.querySelector('.seat-num');
-            if (numEl) numEl.textContent = pos;
-            pos++;
+            if (numEl) { numEl.textContent = pos; pos++; }
         });
     }
 
@@ -2175,15 +2174,15 @@ $page_title = "Seating Chart - Jacob & Melissa";
             cols.forEach(c => {
                 const entry = c.guests[i];
                 if (entry) {
+                    const seatNum = i + 1;
                     if (entry.isPlusOne) {
-                        html += '<td class="grid-cell-plusone">' + escHtml(entry.name) + '</td>';
+                        html += '<td class="grid-cell-plusone"><span class="grid-seat-num">' + seatNum + '.</span>' + escHtml(entry.name) + '</td>';
                     } else if (c.isUnseated) {
                         html += '<td class="grid-cell-guest grid-cell-unseated" data-guest-id="' + entry.guestId + '" data-table-id="">'
                             + '<span class="grid-guest-name">' + escHtml(entry.name) + '</span>'
                             + '<span class="grid-move-icon" title="Assign to table">&#x21c4;</span>'
                             + '</td>';
                     } else {
-                        const seatNum = c.guests.slice(0, i).filter(g => !g.isPlusOne).length + 1;
                         html += '<td class="grid-cell-guest" data-guest-id="' + entry.guestId + '" data-table-id="' + entry.tableId + '">'
                             + '<span class="grid-seat-num">' + seatNum + '.</span>'
                             + '<span class="grid-guest-name">' + escHtml(entry.name) + '</span>'
