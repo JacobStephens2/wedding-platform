@@ -583,8 +583,8 @@ $page_title = "Seating Chart - Jacob & Melissa";
             white-space: nowrap;
         }
         .btn-sm:hover { background: var(--color-light); }
-        .btn-sm.danger { color: #8b0000; border-color: #dca; }
-        .btn-sm.danger:hover { background: #fff0f0; }
+        .btn-sm.danger { color: #dc3545; border-color: #dc3545; }
+        .btn-sm.danger:hover { background: rgba(220, 53, 69, 0.1); }
         .btn-sm.primary { color: var(--color-green); border-color: var(--color-green); }
         .btn-sm.primary:hover { background: #e8f5e0; }
 
@@ -655,7 +655,7 @@ $page_title = "Seating Chart - Jacob & Melissa";
         .delete-table-btn {
             margin-left: auto;
             font-size: 0.75rem;
-            color: #8b0000;
+            color: #dc3545;
             background: none;
             border: none;
             cursor: pointer;
@@ -960,11 +960,11 @@ $page_title = "Seating Chart - Jacob & Melissa";
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
                             Floor Plan Image
                         </button>
-                        <label style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; color:#555; cursor:pointer; padding-left:0.25rem;" onclick="event.stopPropagation();">
+                        <label style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; color:var(--color-text-secondary); cursor:pointer; padding-left:0.25rem;" onclick="event.stopPropagation();">
                             <input type="checkbox" id="export-include-names" style="width:auto; margin:0;">
                             with guest names
                         </label>
-                        <label style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; color:#555; cursor:pointer; padding-left:0.25rem;" onclick="event.stopPropagation();">
+                        <label style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; color:var(--color-text-secondary); cursor:pointer; padding-left:0.25rem;" onclick="event.stopPropagation();">
                             <input type="checkbox" id="export-first-names-only" style="width:auto; margin:0;">
                             first names only
                         </label>
@@ -1051,10 +1051,10 @@ $page_title = "Seating Chart - Jacob & Melissa";
                             <?php if (!empty($table['notes'])): ?>
                                 <div class="table-description" ondblclick="editTableNotes(<?php echo $table['table_id']; ?>, this)">
                                     <?php echo htmlspecialchars($table['notes']); ?>
-                                    <span style="font-size:0.75rem;color:#aaa;margin-left:0.5rem;">(double-click to edit)</span>
+                                    <span style="font-size:0.75rem;color:var(--color-text-muted);margin-left:0.5rem;">(double-click to edit)</span>
                                 </div>
                             <?php else: ?>
-                                <div class="table-description" ondblclick="editTableNotes(<?php echo $table['table_id']; ?>, this)" style="color:#bbb;">
+                                <div class="table-description" ondblclick="editTableNotes(<?php echo $table['table_id']; ?>, this)" style="color:var(--color-text-muted);">
                                     No notes. <span style="font-size:0.75rem;">(double-click to add)</span>
                                 </div>
                             <?php endif; ?>
@@ -1782,12 +1782,12 @@ $page_title = "Seating Chart - Jacob & Melissa";
             const newNotes = input.value.trim();
             const result = await api({ action: 'update_table', table_id: tableId, notes: newNotes });
             if (result) {
-                el.innerHTML = (newNotes || 'No notes.') + ' <span style="font-size:0.75rem;color:#aaa;margin-left:0.5rem;">(double-click to edit)</span>';
-                if (!newNotes) el.style.color = '#bbb';
-                else el.style.color = '#666';
+                el.innerHTML = (newNotes || 'No notes.') + ' <span style="font-size:0.75rem;color:var(--color-text-muted);margin-left:0.5rem;">(double-click to edit)</span>';
+                if (!newNotes) el.style.color = 'var(--color-text-muted)';
+                else el.style.color = 'var(--color-text-secondary)';
                 showToast('Notes updated.');
             } else {
-                el.innerHTML = (current || 'No notes.') + ' <span style="font-size:0.75rem;color:#aaa;margin-left:0.5rem;">(double-click to edit)</span>';
+                el.innerHTML = (current || 'No notes.') + ' <span style="font-size:0.75rem;color:var(--color-text-muted);margin-left:0.5rem;">(double-click to edit)</span>';
             }
         }
 
@@ -1795,7 +1795,7 @@ $page_title = "Seating Chart - Jacob & Melissa";
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
             if (e.key === 'Escape') {
-                el.innerHTML = (current || 'No notes.') + ' <span style="font-size:0.75rem;color:#aaa;margin-left:0.5rem;">(double-click to edit)</span>';
+                el.innerHTML = (current || 'No notes.') + ' <span style="font-size:0.75rem;color:var(--color-text-muted);margin-left:0.5rem;">(double-click to edit)</span>';
             }
         });
 
@@ -1854,7 +1854,7 @@ $page_title = "Seating Chart - Jacob & Melissa";
                 '</span>' +
             '</div>' +
             '<div class="table-body" id="tbody-' + tableId + '">' +
-                '<div class="table-description" ondblclick="editTableNotes(' + tableId + ', this)" style="color:#bbb;">' +
+                '<div class="table-description" ondblclick="editTableNotes(' + tableId + ', this)" style="color:var(--color-text-muted);">' +
                     'No notes. <span style="font-size:0.75rem;">(double-click to add)</span>' +
                 '</div>' +
                 '<table class="guest-list"><thead><tr>' +
