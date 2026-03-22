@@ -85,8 +85,10 @@ if ($authenticated) {
             SELECT st.id as table_id, st.table_number, st.table_name, st.capacity, st.notes as table_notes,
                    st.pos_x, st.pos_y,
                    g.id as guest_id, g.first_name, g.last_name, g.group_name, g.seat_number,
-                   g.reception_attending, g.dietary,
-                   g.has_plus_one, g.plus_one_name, g.plus_one_reception_attending, g.plus_one_dietary
+                   g.reception_attending, g.dietary, g.message,
+                   g.is_child, g.is_infant,
+                   g.has_plus_one, g.plus_one_name, g.plus_one_reception_attending, g.plus_one_dietary,
+                   g.plus_one_is_child, g.plus_one_is_infant
             FROM seating_tables st
             LEFT JOIN guests g ON g.seating_table_id = st.id
             ORDER BY st.table_number, g.seat_number, g.last_name, g.first_name
@@ -113,8 +115,10 @@ if ($authenticated) {
 
         // Get unseated guests who are attending the reception
         $stmt = $pdo->query("
-            SELECT id, first_name, last_name, group_name, reception_attending, dietary,
-                   has_plus_one, plus_one_name, plus_one_reception_attending, plus_one_dietary
+            SELECT id, first_name, last_name, group_name, reception_attending, dietary, message,
+                   is_child, is_infant,
+                   has_plus_one, plus_one_name, plus_one_reception_attending, plus_one_dietary,
+                   plus_one_is_child, plus_one_is_infant
             FROM guests
             WHERE seating_table_id IS NULL
               AND reception_attending = 'yes'
@@ -169,11 +173,14 @@ if ($authenticated) {
             foreach ($t['guests'] as $g) {
                 $guests[] = [
                     'name' => $g['first_name'] . ' ' . $g['last_name'],
+                    'first_name' => $g['first_name'],
                     'dietary' => $g['dietary'] ?? '',
                 ];
                 if ($g['has_plus_one'] && $g['plus_one_reception_attending'] === 'yes') {
+                    $poFirstName = $g['plus_one_name'] ?: 'Guest of ' . $g['first_name'];
                     $guests[] = [
-                        'name' => ($g['plus_one_name'] ?: 'Guest of ' . $g['first_name']) . ' (plus one)',
+                        'name' => $poFirstName . ' (plus one)',
+                        'first_name' => explode(' ', $poFirstName)[0],
                         'dietary' => $g['plus_one_dietary'] ?? '',
                     ];
                 }
@@ -527,6 +534,22 @@ $page_title = "Seating Chart - Jacob & Melissa";
             padding: 0.1rem 0.4rem;
             border-radius: 12px;
             font-size: 0.75rem;
+        }
+        .age-badge {
+            display: inline-block;
+            padding: 0.1rem 0.4rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            vertical-align: middle;
+        }
+        .age-badge.child {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .age-badge.infant {
+            background-color: #e2d6f3;
+            color: #4a1a7a;
         }
         .group-badge {
             display: inline-block;
@@ -1053,9 +1076,14 @@ $page_title = "Seating Chart - Jacob & Melissa";
                                             'name' => $guest['first_name'] . ' ' . $guest['last_name'],
                                             'group' => $guest['group_name'],
                                             'dietary' => $guest['dietary'] ?? '',
+                                            'message' => $guest['message'] ?? '',
+                                            'is_child' => (bool)$guest['is_child'],
+                                            'is_infant' => (bool)$guest['is_infant'],
                                             'has_plus_one' => (bool)($guest['has_plus_one'] && $guest['plus_one_reception_attending'] === 'yes'),
                                             'plus_one_name' => $guest['plus_one_name'] ?: 'Guest of ' . $guest['first_name'],
                                             'plus_one_dietary' => $guest['plus_one_dietary'] ?? '',
+                                            'plus_one_is_child' => (bool)($guest['plus_one_is_child'] ?? false),
+                                            'plus_one_is_infant' => (bool)($guest['plus_one_is_infant'] ?? false),
                                         ];
                                         ?>
                                         <tr draggable="true"
@@ -1063,7 +1091,12 @@ $page_title = "Seating Chart - Jacob & Melissa";
                                             data-guest-id="<?php echo $guest['guest_id']; ?>"
                                             data-guest-info='<?php echo htmlspecialchars(json_encode($guestInfo), ENT_QUOTES); ?>'>
                                             <td><span class="drag-handle" title="Drag to reorder">⠿</span><span class="seat-num"><?php echo $seatPos; ?></span></td>
-                                            <td><?php echo htmlspecialchars($guest['first_name'] . ' ' . $guest['last_name']); ?><?php if (!empty($guest['dietary'])): ?> <span title="<?php echo htmlspecialchars($guest['dietary']); ?>" style="cursor:help;">🍽</span><?php endif; ?></td>
+                                            <td><?php echo htmlspecialchars($guest['first_name'] . ' ' . $guest['last_name']); ?><?php
+                                                if ($guest['is_child']): ?> <span class="age-badge child" title="Child">child</span><?php endif;
+                                                if ($guest['is_infant']): ?> <span class="age-badge infant" title="Infant">infant</span><?php endif;
+                                                if (!empty($guest['dietary'])): ?> <span title="<?php echo htmlspecialchars($guest['dietary']); ?>" style="cursor:help;">🍽</span><?php endif;
+                                                if (!empty($guest['message'])): ?> <span title="<?php echo htmlspecialchars($guest['message']); ?>" style="cursor:help;">💬</span><?php endif;
+                                            ?></td>
                                             <td><span class="group-badge"><?php echo htmlspecialchars($guest['group_name']); ?></span></td>
                                             <td>
                                                 <?php if (!empty($guest['dietary'])): ?>
@@ -1087,7 +1120,11 @@ $page_title = "Seating Chart - Jacob & Melissa";
                                         <?php if ($guest['has_plus_one'] && $guest['plus_one_reception_attending'] === 'yes'): ?>
                                         <tr class="plus-one-row">
                                             <td></td>
-                                            <td><?php echo htmlspecialchars($guest['plus_one_name'] ?: 'Guest of ' . $guest['first_name']); ?> (plus one)<?php if (!empty($guest['plus_one_dietary'])): ?> <span title="<?php echo htmlspecialchars($guest['plus_one_dietary']); ?>" style="cursor:help;">🍽</span><?php endif; ?></td>
+                                            <td><?php echo htmlspecialchars($guest['plus_one_name'] ?: 'Guest of ' . $guest['first_name']); ?> (plus one)<?php
+                                                if (!empty($guest['plus_one_is_child'])): ?> <span class="age-badge child" title="Child">child</span><?php endif;
+                                                if (!empty($guest['plus_one_is_infant'])): ?> <span class="age-badge infant" title="Infant">infant</span><?php endif;
+                                                if (!empty($guest['plus_one_dietary'])): ?> <span title="<?php echo htmlspecialchars($guest['plus_one_dietary']); ?>" style="cursor:help;">🍽</span><?php endif;
+                                            ?></td>
                                             <td></td>
                                             <td>
                                                 <?php if (!empty($guest['plus_one_dietary'])): ?>
@@ -1130,9 +1167,14 @@ $page_title = "Seating Chart - Jacob & Melissa";
                                     'name' => $ug['first_name'] . ' ' . $ug['last_name'],
                                     'group' => $ug['group_name'],
                                     'dietary' => $ug['dietary'] ?? '',
+                                    'message' => $ug['message'] ?? '',
+                                    'is_child' => (bool)$ug['is_child'],
+                                    'is_infant' => (bool)$ug['is_infant'],
                                     'has_plus_one' => (bool)($ug['has_plus_one'] && $ug['plus_one_reception_attending'] === 'yes'),
                                     'plus_one_name' => $ug['plus_one_name'] ?: 'Guest of ' . $ug['first_name'],
                                     'plus_one_dietary' => $ug['plus_one_dietary'] ?? '',
+                                    'plus_one_is_child' => (bool)($ug['plus_one_is_child'] ?? false),
+                                    'plus_one_is_infant' => (bool)($ug['plus_one_is_infant'] ?? false),
                                 ];
                                 ?>
                                 <div class="unseated-guest" data-guest-id="<?php echo $ug['id']; ?>"
@@ -1389,6 +1431,10 @@ $page_title = "Seating Chart - Jacob & Melissa";
             dietaryHtml = '<span class="dietary-badge">' + escHtml(info.dietary) + '</span>';
         }
         let dietaryIcon = info.dietary ? ' <span title="' + escHtml(info.dietary) + '" style="cursor:help;">🍽</span>' : '';
+        let ageHtml = '';
+        if (info.is_child) ageHtml += ' <span class="age-badge child" title="Child">child</span>';
+        if (info.is_infant) ageHtml += ' <span class="age-badge infant" title="Infant">infant</span>';
+        let msgIcon = info.message ? ' <span title="' + escHtml(info.message) + '" style="cursor:help;">💬</span>' : '';
 
         let moveOpts = '<option value="">Move to...</option>';
         tables.forEach(t => {
@@ -1399,7 +1445,7 @@ $page_title = "Seating Chart - Jacob & Melissa";
 
         tr.innerHTML =
             '<td><span class="drag-handle" title="Drag to reorder">⠿</span><span class="seat-num"></span></td>' +
-            '<td>' + escHtml(info.name) + dietaryIcon + '</td>' +
+            '<td>' + escHtml(info.name) + ageHtml + dietaryIcon + msgIcon + '</td>' +
             '<td><span class="group-badge">' + escHtml(info.group) + '</span></td>' +
             '<td>' + dietaryHtml + '</td>' +
             '<td><div class="guest-actions">' +
@@ -1418,9 +1464,12 @@ $page_title = "Seating Chart - Jacob & Melissa";
             dietaryHtml = '<span class="dietary-badge">' + escHtml(info.plus_one_dietary) + '</span>';
         }
         let dietaryIcon = info.plus_one_dietary ? ' <span title="' + escHtml(info.plus_one_dietary) + '" style="cursor:help;">🍽</span>' : '';
+        let poAgeHtml = '';
+        if (info.plus_one_is_child) poAgeHtml += ' <span class="age-badge child" title="Child">child</span>';
+        if (info.plus_one_is_infant) poAgeHtml += ' <span class="age-badge infant" title="Infant">infant</span>';
         tr.innerHTML =
             '<td></td>' +
-            '<td>' + escHtml(info.plus_one_name) + ' (plus one)' + dietaryIcon + '</td>' +
+            '<td>' + escHtml(info.plus_one_name) + ' (plus one)' + poAgeHtml + dietaryIcon + '</td>' +
             '<td></td>' +
             '<td>' + dietaryHtml + '</td>' +
             '<td></td>';
@@ -2423,7 +2472,7 @@ $page_title = "Seating Chart - Jacob & Melissa";
                 // Name label below
                 ctx.fillStyle = '#555';
                 ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-                ctx.fillText(t.guests.map(g => firstNamesOnly ? g.name.split(' ')[0] : g.name).join(' & '), cx, cy + rh / 2 + 14);
+                ctx.fillText(t.guests.map(g => firstNamesOnly ? (g.first_name || g.name.split(' ')[0]) : g.name).join(' & '), cx, cy + rh / 2 + 14);
             } else {
                 // Circle for round tables
                 ctx.beginPath();
@@ -2455,7 +2504,7 @@ $page_title = "Seating Chart - Jacob & Melissa";
                         else if (Math.cos(angle) < -0.3) ctx.textAlign = 'right';
                         else ctx.textAlign = 'center';
 
-                        ctx.fillText(firstNamesOnly ? g.name.split(' ')[0] : g.name, nx, ny + 4);
+                        ctx.fillText(firstNamesOnly ? (g.first_name || g.name.split(' ')[0]) : g.name, nx, ny + 4);
                     });
                     ctx.textAlign = 'center';
                 }
