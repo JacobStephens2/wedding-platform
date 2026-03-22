@@ -872,6 +872,31 @@ $page_title = "Seating Chart - Jacob & Melissa";
         .grid-cell-unseated {
             border-left: 2px solid #b44;
         }
+        .grid-reorder-arrows {
+            float: right;
+            opacity: 0;
+            display: inline-flex;
+            gap: 1px;
+            margin-right: 0.3rem;
+            transition: opacity 0.15s;
+        }
+        .grid-cell-guest:hover .grid-reorder-arrows {
+            opacity: 1;
+        }
+        .grid-arrow-btn {
+            background: none;
+            border: 1px solid var(--color-border);
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.55rem;
+            line-height: 1;
+            padding: 0.1rem 0.25rem;
+            color: var(--color-text-muted);
+        }
+        .grid-arrow-btn:hover {
+            background: var(--color-light);
+            color: var(--color-dark);
+        }
         .grid-move-select {
             display: block;
             margin-top: 0.3rem;
@@ -2131,9 +2156,9 @@ $page_title = "Seating Chart - Jacob & Melissa";
             if (tbody) {
                 tbody.querySelectorAll('tr[data-guest-id]').forEach(row => {
                     const info = JSON.parse(row.dataset.guestInfo);
-                    guests.push({ name: info.name, guestId: info.id, tableId: parseInt(tableId), isPlusOne: false });
+                    guests.push({ name: info.name, guestId: info.id, tableId: parseInt(tableId), isPlusOne: false, hasPlusOne: info.has_plus_one });
                     if (info.has_plus_one) {
-                        guests.push({ name: info.plus_one_name + ' (plus one)', guestId: null, tableId: parseInt(tableId), isPlusOne: true });
+                        guests.push({ name: info.plus_one_name + ' (plus one)', guestId: null, parentGuestId: info.id, tableId: parseInt(tableId), isPlusOne: true });
                     }
                 });
             }
@@ -2171,7 +2196,7 @@ $page_title = "Seating Chart - Jacob & Melissa";
         html += '</tr></thead><tbody>';
         for (let i = 0; i < maxRows; i++) {
             html += '<tr>';
-            cols.forEach(c => {
+            cols.forEach((c, colIdx) => {
                 const entry = c.guests[i];
                 if (entry) {
                     const seatNum = i + 1;
@@ -2183,9 +2208,19 @@ $page_title = "Seating Chart - Jacob & Melissa";
                             + '<span class="grid-move-icon" title="Assign to table">&#x21c4;</span>'
                             + '</td>';
                     } else {
+                        // Find index among primary guests only (for reorder)
+                        const primaryGuests = c.guests.filter(g => !g.isPlusOne);
+                        const primaryIdx = primaryGuests.indexOf(entry);
+                        const isFirst = primaryIdx === 0;
+                        const isLast = primaryIdx === primaryGuests.length - 1;
+                        let arrows = '<span class="grid-reorder-arrows">';
+                        if (!isFirst) arrows += '<button class="grid-arrow-btn" onclick="event.stopPropagation(); gridMoveGuest(' + entry.guestId + ', ' + c.tableId + ', \'up\')" title="Move up">&#x25B2;</button>';
+                        if (!isLast) arrows += '<button class="grid-arrow-btn" onclick="event.stopPropagation(); gridMoveGuest(' + entry.guestId + ', ' + c.tableId + ', \'down\')" title="Move down">&#x25BC;</button>';
+                        arrows += '</span>';
                         html += '<td class="grid-cell-guest" data-guest-id="' + entry.guestId + '" data-table-id="' + entry.tableId + '">'
                             + '<span class="grid-seat-num">' + seatNum + '.</span>'
                             + '<span class="grid-guest-name">' + escHtml(entry.name) + '</span>'
+                            + arrows
                             + '<span class="grid-move-icon" title="Move to another table">&#x21c4;</span>'
                             + '</td>';
                     }
@@ -2245,6 +2280,45 @@ $page_title = "Seating Chart - Jacob & Melissa";
             sel.remove();
         });
     });
+
+    async function gridMoveGuest(guestId, tableId, direction) {
+        const tbody = document.getElementById('guests-' + tableId);
+        if (!tbody) return;
+
+        const row = tbody.querySelector('tr[data-guest-id="' + guestId + '"]');
+        if (!row) return;
+
+        // Collect this guest's row + its plus-one row as a unit
+        const nextSib = row.nextElementSibling;
+        const plusOneRow = nextSib?.classList.contains('plus-one-row') ? nextSib : null;
+
+        if (direction === 'up') {
+            // Find the previous guest row (skip plus-one rows)
+            let prev = row.previousElementSibling;
+            if (prev?.classList.contains('plus-one-row')) prev = prev.previousElementSibling;
+            if (!prev || !prev.dataset.guestId) return;
+
+            // Insert before the previous guest row
+            tbody.insertBefore(row, prev);
+            if (plusOneRow) tbody.insertBefore(plusOneRow, prev);
+        } else {
+            // Find the next guest row (skip our own plus-one)
+            let next = plusOneRow ? plusOneRow.nextElementSibling : nextSib;
+            if (!next || !next.dataset.guestId) return;
+
+            // Find the insertion point after the next guest (and its plus-one)
+            const nextNext = next.nextElementSibling;
+            const nextPlusOne = nextNext?.classList.contains('plus-one-row') ? nextNext : null;
+            const insertRef = nextPlusOne ? nextPlusOne.nextElementSibling : nextNext;
+
+            tbody.insertBefore(row, insertRef);
+            if (plusOneRow) tbody.insertBefore(plusOneRow, insertRef);
+        }
+
+        renumberSeats(tbody);
+        await saveSeatingOrder(tbody);
+        buildGridView();
+    }
 
     function switchView(view) {
         const gridContainer = document.getElementById('grid-view-container');
