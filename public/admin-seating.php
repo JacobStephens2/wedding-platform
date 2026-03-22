@@ -2267,7 +2267,9 @@ $page_title = "Seating Chart - Jacob & Melissa";
         cell.appendChild(sel);
         sel.focus();
 
+        let changed = false;
         sel.addEventListener('change', async function() {
+            changed = true;
             const val = sel.value;
             sel.remove();
             if (!val) return;
@@ -2280,7 +2282,8 @@ $page_title = "Seating Chart - Jacob & Melissa";
         });
 
         sel.addEventListener('blur', function() {
-            sel.remove();
+            // Delay removal so change event can fire first
+            setTimeout(() => { if (!changed) sel.remove(); }, 150);
         });
     });
 
