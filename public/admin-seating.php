@@ -214,70 +214,6 @@ $page_title = "Seating Chart - Jacob & Melissa";
         .stat-label { font-size: 0.9rem; color: var(--color-dark); }
 
         /* ---- Toast ---- */
-        /* ---- Guest search ---- */
-        .guest-search {
-            margin-bottom: 1rem;
-            position: relative;
-        }
-        .guest-search input {
-            width: 100%;
-            padding: 0.6rem 1rem 0.6rem 2.2rem;
-            border: 1px solid var(--color-border);
-            border-radius: 6px;
-            font-size: 0.9rem;
-            background: var(--color-surface);
-            color: var(--color-dark);
-        }
-        .guest-search input:focus {
-            outline: none;
-            border-color: var(--color-green);
-            box-shadow: 0 0 0 2px rgba(77, 107, 46, 0.2);
-        }
-        .guest-search-icon {
-            position: absolute;
-            left: 0.7rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--color-text-muted);
-            font-size: 0.9rem;
-            pointer-events: none;
-        }
-        .guest-search-results {
-            margin-top: 0.5rem;
-            font-size: 0.85rem;
-            color: var(--color-text-secondary);
-        }
-        tr.search-highlight td,
-        .unseated-guest.search-highlight {
-            background: rgba(77, 107, 46, 0.15) !important;
-        }
-        .table-card.search-has-match {
-            border-color: var(--color-green);
-        }
-        .table-card:not(.search-has-match).search-dimmed {
-            opacity: 0.4;
-        }
-
-        /* ---- Group warnings ---- */
-        .group-warnings-box {
-            padding: 0.75rem 1rem;
-            background: var(--color-surface-alt);
-            border: 1px solid var(--color-border);
-            border-radius: 6px;
-            margin-bottom: 1rem;
-            font-size: 0.85rem;
-        }
-        .group-warnings-box summary {
-            cursor: pointer;
-            font-weight: bold;
-            color: var(--color-gold);
-        }
-        .group-warning-item {
-            margin: 0.3rem 0 0.3rem 1rem;
-            color: var(--color-text-secondary);
-        }
-        .group-warning-item strong { color: var(--color-dark); }
-
         .toast {
             position: fixed;
             bottom: 2rem;
@@ -984,16 +920,6 @@ $page_title = "Seating Chart - Jacob & Melissa";
                     </div>
                 </div>
 
-                <!-- Guest search -->
-                <div class="guest-search">
-                    <span class="guest-search-icon">&#x1F50D;</span>
-                    <input type="text" id="guest-search-input" placeholder="Search guests..." autocomplete="off">
-                    <div class="guest-search-results" id="guest-search-results"></div>
-                </div>
-
-                <!-- Group split warnings -->
-                <div id="group-warnings" style="display:none;"></div>
-
                 <!-- Export bar -->
                 <div class="export-bar">
                     <span class="export-bar-label">Export:</span>
@@ -1438,7 +1364,6 @@ $page_title = "Seating Chart - Jacob & Melissa";
 
             room.appendChild(el);
         });
-        checkGroupSplits();
     }
 
     // ---- Drag table to reposition ----
@@ -2220,40 +2145,6 @@ $page_title = "Seating Chart - Jacob & Melissa";
         reorderSourceRow = null;
     });
 
-    // ---- Group split detection ----
-    function checkGroupSplits() {
-        const groupTables = {}; // group -> Set of table names
-        document.querySelectorAll('tr[data-guest-id]').forEach(row => {
-            const info = JSON.parse(row.dataset.guestInfo);
-            const tableCard = row.closest('.table-card');
-            if (!tableCard || !info.group) return;
-            const tableName = tableCard.querySelector('.table-header h3')?.textContent.trim() || '';
-            if (!groupTables[info.group]) groupTables[info.group] = new Set();
-            groupTables[info.group].add(tableName);
-        });
-
-        const splits = [];
-        for (const [group, tableSet] of Object.entries(groupTables)) {
-            if (tableSet.size > 1) {
-                splits.push({ group, tables: Array.from(tableSet) });
-            }
-        }
-
-        const container = document.getElementById('group-warnings');
-        if (splits.length === 0) {
-            container.style.display = 'none';
-            return;
-        }
-
-        let html = '<details class="group-warnings-box"><summary>' + splits.length + ' group' + (splits.length !== 1 ? 's' : '') + ' split across tables</summary>';
-        splits.forEach(s => {
-            html += '<div class="group-warning-item"><strong>' + escHtml(s.group) + '</strong> — ' + s.tables.map(t => escHtml(t)).join(', ') + '</div>';
-        });
-        html += '</details>';
-        container.innerHTML = html;
-        container.style.display = '';
-    }
-
     function renumberSeats(tbody) {
         let pos = 1;
         tbody.querySelectorAll('tr').forEach(row => {
@@ -2513,72 +2404,6 @@ $page_title = "Seating Chart - Jacob & Melissa";
             gridBtn.classList.remove('active');
         }
     }
-
-    // ---- Guest search ----
-    const searchInput = document.getElementById('guest-search-input');
-    const searchResults = document.getElementById('guest-search-results');
-
-    searchInput.addEventListener('input', function() {
-        const q = this.value.trim().toLowerCase();
-
-        // Clear previous highlights
-        document.querySelectorAll('.search-highlight').forEach(el => el.classList.remove('search-highlight'));
-        document.querySelectorAll('.search-has-match, .search-dimmed').forEach(el => {
-            el.classList.remove('search-has-match', 'search-dimmed');
-        });
-
-        if (!q) { searchResults.textContent = ''; return; }
-
-        let matchCount = 0;
-        const matchedCards = new Set();
-
-        // Search seated guests
-        document.querySelectorAll('tr[data-guest-id]').forEach(row => {
-            const info = JSON.parse(row.dataset.guestInfo);
-            const text = (info.name + ' ' + info.group + ' ' + (info.dietary || '')).toLowerCase();
-            if (text.includes(q)) {
-                row.classList.add('search-highlight');
-                matchCount++;
-                const card = row.closest('.table-card');
-                if (card) {
-                    matchedCards.add(card);
-                    // Auto-expand the table body
-                    const tbody = card.querySelector('.table-body');
-                    if (tbody) tbody.classList.remove('collapsed');
-                }
-            }
-        });
-
-        // Search unseated guests
-        document.querySelectorAll('.unseated-guest[data-guest-id]').forEach(div => {
-            const info = JSON.parse(div.dataset.guestInfo);
-            const text = (info.name + ' ' + info.group + ' ' + (info.dietary || '')).toLowerCase();
-            if (text.includes(q)) {
-                div.classList.add('search-highlight');
-                matchCount++;
-            }
-        });
-
-        // Dim non-matching cards
-        if (matchCount > 0) {
-            document.querySelectorAll('.table-card').forEach(card => {
-                if (matchedCards.has(card)) {
-                    card.classList.add('search-has-match');
-                } else {
-                    card.classList.add('search-dimmed');
-                }
-            });
-        }
-
-        searchResults.textContent = matchCount === 0 ? 'No matches found' :
-            matchCount + ' guest' + (matchCount !== 1 ? 's' : '') + ' found';
-
-        // Scroll to first match
-        if (matchCount > 0) {
-            const first = document.querySelector('.search-highlight');
-            if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-    });
 
     // ---- Keyboard shortcuts ----
     document.addEventListener('keydown', (e) => {
