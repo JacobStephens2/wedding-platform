@@ -128,6 +128,15 @@ try {
                 exit;
             }
 
+            // Check for duplicate name
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM seating_tables WHERE table_name = ?");
+            $stmt->execute([$tableName]);
+            if ($stmt->fetchColumn() > 0) {
+                http_response_code(400);
+                echo json_encode(['error' => 'A table with that name already exists.']);
+                exit;
+            }
+
             // Get next table number
             $stmt = $pdo->query("SELECT COALESCE(MAX(table_number), 0) + 1 FROM seating_tables");
             $nextNum = $stmt->fetchColumn();
