@@ -1802,6 +1802,32 @@ $page_title = "Seating Chart - Jacob & Melissa";
         input.select();
     }
 
+    function buildTableCardHtml(tableId, tableNum, name, capacity) {
+        return '<div class="table-card" id="card-' + tableId + '" data-table-id="' + tableId + '">' +
+            '<div class="table-header" onclick="toggleTable(' + tableId + ')">' +
+                '<h3>Table ' + tableNum + ' &mdash; ' +
+                    '<span class="editable" onclick="event.stopPropagation(); editTableName(' + tableId + ', this)">' + escHtml(name) + '</span>' +
+                '</h3>' +
+                '<span class="table-meta" id="meta-' + tableId + '">0 / <span class="editable-capacity" onclick="event.stopPropagation(); editCapacity(' + tableId + ', this)" title="Click to edit capacity">' + capacity + '</span> seats' +
+                    '<span class="seat-remaining-badge seats-available">' + capacity + ' remaining</span>' +
+                '</span>' +
+            '</div>' +
+            '<div class="table-body" id="tbody-' + tableId + '">' +
+                '<div class="table-description" ondblclick="editTableNotes(' + tableId + ', this)" style="color:#bbb;">' +
+                    'No notes. <span style="font-size:0.75rem;">(double-click to add)</span>' +
+                '</div>' +
+                '<table class="guest-list"><thead><tr>' +
+                    '<th style="width:2rem;">#</th><th>Guest</th><th>Group</th><th>Dietary</th><th>Actions</th>' +
+                '</tr></thead><tbody id="guests-' + tableId + '"></tbody></table>' +
+                '<div class="add-guest-row">' +
+                    '<select id="add-select-' + tableId + '"><option value="">Add guest to this table...</option></select>' +
+                    '<button class="btn-sm primary" onclick="seatGuestFromSelect(' + tableId + ')">Add</button>' +
+                '</div>' +
+                '<button class="delete-table-btn" onclick="deleteTable(' + tableId + ', \'' + escHtml(name).replace(/'/g, "\\'") + '\')">Delete this table...</button>' +
+            '</div>' +
+        '</div>';
+    }
+
     async function addTable() {
         const input = document.getElementById('new-table-name');
         const name = input.value.trim();
@@ -1809,21 +1835,81 @@ $page_title = "Seating Chart - Jacob & Melissa";
         const capInput = document.getElementById('new-table-capacity');
         const capacity = parseInt(capInput.value) || 10;
         const result = await api({ action: 'add_table', table_name: name, capacity: capacity });
-        if (result) {
-            showToast(result.message);
-            saveExpansionState();
-            setTimeout(() => location.reload(), 600);
+        if (!result) return;
+        showToast(result.message);
+
+        const tableId = result.table_id;
+        const tableNum = result.table_number;
+
+        // Add to tables array
+        tables.push({ id: tableId, number: tableNum, name: name, capacity: capacity, guest_count: 0, pos_x: 50, pos_y: 85 });
+
+        // Insert card into DOM before the unseated section (or at end)
+        const unseated = document.getElementById('unseated-section');
+        const dietary = document.querySelector('.dietary-summary');
+        const container = document.querySelector('.seating-container');
+        const ref = unseated || dietary || null;
+        const temp = document.createElement('div');
+        temp.innerHTML = buildTableCardHtml(tableId, tableNum, name, capacity);
+        const card = temp.firstElementChild;
+        if (ref) container.insertBefore(card, ref);
+        else container.appendChild(card);
+
+        // Populate the add-guest select with unseated guests
+        const addSel = document.getElementById('add-select-' + tableId);
+        if (addSel) {
+            document.querySelectorAll('.unseated-guest[data-guest-id]').forEach(div => {
+                const info = JSON.parse(div.dataset.guestInfo);
+                const opt = document.createElement('option');
+                opt.value = info.id;
+                opt.textContent = info.name + ' (' + info.group + ')';
+                addSel.appendChild(opt);
+            });
         }
+
+        // Add drop zone handler for the new card
+        card.addEventListener('dragover', (e) => { e.preventDefault(); card.style.outline = '2px solid var(--color-green)'; });
+        card.addEventListener('dragleave', () => { card.style.outline = ''; });
+        card.addEventListener('drop', (e) => {
+            e.preventDefault();
+            card.style.outline = '';
+            const tid = card.dataset.tableId;
+            if (reorderSourceRow && reorderSourceRow.closest('.table-card')?.dataset.tableId === tid) return;
+            if (dragGuestId && tid) {
+                moveGuest(dragGuestId, parseInt(tid));
+                dragGuestId = null;
+            }
+        });
+
+        // Update stats and floor plan
+        const statTables = document.getElementById('stat-tables');
+        if (statTables) statTables.textContent = tables.length;
+        renderFloorPlan();
+
+        // Reset inputs
+        input.value = '';
+        capInput.value = '10';
+        input.focus();
     }
 
     async function deleteTable(tableId, name) {
         if (!confirm('Delete table "' + name + '"? All guests must be unseated first.')) return;
         const result = await api({ action: 'delete_table', table_id: tableId });
-        if (result) {
-            showToast(result.message);
-            saveExpansionState();
-            setTimeout(() => location.reload(), 600);
-        }
+        if (!result) return;
+        showToast(result.message);
+
+        // Remove card from DOM
+        const card = document.getElementById('card-' + tableId);
+        if (card) card.remove();
+
+        // Remove from tables array
+        const idx = tables.findIndex(t => t.id === tableId);
+        if (idx !== -1) tables.splice(idx, 1);
+
+        // Update stats and floor plan
+        const statTables = document.getElementById('stat-tables');
+        if (statTables) statTables.textContent = tables.length;
+        renderFloorPlan();
     }
 
     // ---- Table card toggle (with localStorage persistence) ----
@@ -2532,7 +2618,8 @@ $page_title = "Seating Chart - Jacob & Melissa";
 
         // Download
         const link = document.createElement('a');
-        link.download = 'seating-chart-floorplan.png';
+        const dateStr = new Date().toISOString().slice(0, 10);
+        link.download = 'seating-chart-floorplan-' + dateStr + '.png';
         link.href = canvas.toDataURL('image/png');
         link.click();
         showToast('Floor plan image downloaded.');
