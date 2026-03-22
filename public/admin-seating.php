@@ -921,10 +921,15 @@ $page_title = "Seating Chart - Jacob & Melissa";
         @media (max-width: 768px) {
             .seating-container { padding: 1rem; }
             .stats { flex-direction: column; gap: 1rem; }
+            .floorplan { padding-bottom: 75%; }
             .fp-table { width: 44px; height: 44px; font-size: 0.6rem; }
+            .fp-table.sweetheart { width: 65px; height: 32px; }
             .fp-table-num { font-size: 0.75rem; }
+            .fp-table-name { font-size: 0.5rem; }
             .guest-list th, .guest-list td { padding: 0.4rem 0.5rem; font-size: 0.85rem; }
             .guest-actions { flex-direction: column; align-items: flex-start; }
+            .grid-spreadsheet th, .grid-spreadsheet td { min-width: 130px; padding: 0.3rem 0.5rem; font-size: 0.8rem; }
+            .bulk-actions { flex-wrap: wrap; }
         }
     </style>
 </head>
@@ -1639,10 +1644,22 @@ $page_title = "Seating Chart - Jacob & Melissa";
     }
 
     function updateStats(seatedDelta) {
+        // Recalculate from DOM for accuracy
+        let seated = 0;
+        document.querySelectorAll('.table-card[data-table-id]').forEach(card => {
+            const tbody = document.getElementById('guests-' + card.dataset.tableId);
+            if (!tbody) return;
+            seated += tbody.querySelectorAll('tr[data-guest-id]').length;
+            seated += tbody.querySelectorAll('tr.plus-one-row').length;
+        });
+        const unseated = document.querySelectorAll('.unseated-guest[data-guest-id]').length;
         const seatedEl = document.getElementById('stat-seated');
         const unseatedEl = document.getElementById('stat-unseated');
-        if (seatedEl) seatedEl.textContent = parseInt(seatedEl.textContent) + seatedDelta;
-        if (unseatedEl) unseatedEl.textContent = parseInt(unseatedEl.textContent) - seatedDelta;
+        if (seatedEl) seatedEl.textContent = seated;
+        if (unseatedEl) unseatedEl.textContent = unseated;
+        // Show/hide unseated stat
+        const unseatedWrap = document.getElementById('stat-unseated-wrap');
+        if (unseatedWrap) unseatedWrap.style.display = unseated > 0 ? '' : 'none';
     }
 
     function ensureUnseatedSection() {
