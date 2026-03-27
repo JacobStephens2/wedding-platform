@@ -445,7 +445,7 @@ if ($authenticated) {
             $params[] = (int)$groupFilter;
         }
 
-        $allowedStatusFilters = ['attending', 'declined', 'pending', 'not_declined', 'ceremony_yes', 'ceremony_no', 'reception_yes', 'reception_no', 'rehearsal'];
+        $allowedStatusFilters = ['attending', 'declined', 'pending', 'not_declined', 'ceremony_yes', 'ceremony_no', 'reception_yes', 'reception_no', 'rehearsal', 'adults', 'children', 'infants'];
         if ($statusFilter !== '' && in_array($statusFilter, $allowedStatusFilters)) {
             switch ($statusFilter) {
                 case 'attending':
@@ -474,6 +474,15 @@ if ($authenticated) {
                     break;
                 case 'rehearsal':
                     $where[] = "g.rehearsal_invited = 1";
+                    break;
+                case 'adults':
+                    $where[] = "((g.is_child = 0 AND g.is_infant = 0 AND g.reception_attending = 'yes') OR (g.has_plus_one = 1 AND g.plus_one_is_child = 0 AND g.plus_one_is_infant = 0 AND g.plus_one_reception_attending = 'yes'))";
+                    break;
+                case 'children':
+                    $where[] = "((g.is_child = 1 AND g.reception_attending = 'yes') OR (g.has_plus_one = 1 AND g.plus_one_is_child = 1 AND g.plus_one_reception_attending = 'yes'))";
+                    break;
+                case 'infants':
+                    $where[] = "((g.is_infant = 1 AND g.reception_attending = 'yes') OR (g.has_plus_one = 1 AND g.plus_one_is_infant = 1 AND g.plus_one_reception_attending = 'yes'))";
                     break;
             }
         }
@@ -534,6 +543,15 @@ if ($authenticated) {
                             break;
                         case 'rehearsal':
                             $includeRow = !empty($guest['plus_one_rehearsal_invited']);
+                            break;
+                        case 'adults':
+                            $includeRow = empty($guest['plus_one_is_child']) && empty($guest['plus_one_is_infant']) && ($guest['plus_one_reception_attending'] ?? '') === 'yes';
+                            break;
+                        case 'children':
+                            $includeRow = !empty($guest['plus_one_is_child']) && ($guest['plus_one_reception_attending'] ?? '') === 'yes';
+                            break;
+                        case 'infants':
+                            $includeRow = !empty($guest['plus_one_is_infant']) && ($guest['plus_one_reception_attending'] ?? '') === 'yes';
                             break;
                     }
                 }
@@ -1581,16 +1599,22 @@ $page_title = "Manage Guests - Jacob & Melissa";
                         </a>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-number" style="color: var(--color-green); font-size: 1.4rem;"><?php echo $stats['reception'] - $stats['reception_children'] - $stats['reception_infants']; ?></span>
-                        <span class="stat-label">Adults</span>
+                        <a href="/admin-guests?status_filter=adults" class="stat-link">
+                            <span class="stat-number" style="color: var(--color-green); font-size: 1.4rem;"><?php echo $stats['reception'] - $stats['reception_children'] - $stats['reception_infants']; ?></span>
+                            <span class="stat-label">Adults</span>
+                        </a>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-number" style="color: var(--color-green); font-size: 1.4rem;"><?php echo $stats['reception_children']; ?></span>
-                        <span class="stat-label">Children</span>
+                        <a href="/admin-guests?status_filter=children" class="stat-link">
+                            <span class="stat-number" style="color: var(--color-green); font-size: 1.4rem;"><?php echo $stats['reception_children']; ?></span>
+                            <span class="stat-label">Children</span>
+                        </a>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-number" style="color: var(--color-green); font-size: 1.4rem;"><?php echo $stats['reception_infants']; ?></span>
-                        <span class="stat-label">Infants</span>
+                        <a href="/admin-guests?status_filter=infants" class="stat-link">
+                            <span class="stat-number" style="color: var(--color-green); font-size: 1.4rem;"><?php echo $stats['reception_infants']; ?></span>
+                            <span class="stat-label">Infants</span>
+                        </a>
                     </div>
                     <div class="stat-item">
                         <a href="/admin-guests?status_filter=reception_no" class="stat-link">
