@@ -748,20 +748,23 @@ $page_title = "Manage Registry - Jacob & Melissa";
             margin-left: 0.5rem;
         }
         .btn-most-wanted {
-            background-color: #e9ecef;
-            color: var(--color-dark);
+            background-color: var(--color-surface-alt);
+            color: var(--color-text-secondary);
+            border: 1px solid var(--color-border);
         }
         .btn-most-wanted:hover {
             background-color: var(--color-gold);
-            color: white;
+            color: var(--color-dark);
         }
         .btn-most-wanted-active {
             background-color: var(--color-gold);
-            color: white;
+            color: var(--color-dark);
+            font-weight: bold;
         }
         .btn-most-wanted-active:hover {
-            background-color: #e9ecef;
-            color: var(--color-dark);
+            background-color: var(--color-surface-alt);
+            color: var(--color-text-secondary);
+            border: 1px solid var(--color-border);
         }
         .unpublished-badge {
             display: inline-block;
