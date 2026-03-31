@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../../private/config.php';
 require_once __DIR__ . '/../../private/db.php';
+require_once __DIR__ . '/../../private/email_handler.php';
 
 header('Content-Type: application/json');
 
@@ -48,6 +49,28 @@ try {
         $itemId
     ]);
     
+    // Send notification email when an item is marked as purchased
+    if ($newPurchasedStatus) {
+        $titleStmt = $pdo->prepare("SELECT title, price FROM registry_items WHERE id = ?");
+        $titleStmt->execute([$itemId]);
+        $itemInfo = $titleStmt->fetch();
+        $itemTitle = $itemInfo['title'] ?? 'Unknown item';
+        $itemPrice = $itemInfo['price'] ? '$' . number_format($itemInfo['price'], 2) : '';
+
+        $subject = "Registry Item Purchased: $itemTitle";
+        $body = "A registry item has been purchased!\n\n";
+        $body .= "Item: $itemTitle\n";
+        if ($itemPrice) {
+            $body .= "Price: $itemPrice\n";
+        }
+        $body .= "\n— Wedding Website";
+
+        $recipients = $_ENV['REGISTRY_PURCHASE_NOTIFY'] ?? '';
+        foreach (array_filter(array_map('trim', explode(',', $recipients))) as $email) {
+            sendEmail($email, $subject, $body);
+        }
+    }
+
     echo json_encode([
         'success' => true,
         'purchased' => $newPurchasedStatus,
