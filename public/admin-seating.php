@@ -405,6 +405,12 @@ $page_title = "Seating Chart - Jacob & Melissa";
             border-bottom: 1px dashed rgba(255,255,255,0.4);
         }
         .editable:hover { border-bottom-color: white; }
+        .editable-number {
+            cursor: pointer;
+            border-bottom: 1px dashed rgba(255,255,255,0.4);
+            padding: 0 0.1rem;
+        }
+        .editable-number:hover { border-bottom-color: white; }
         .editable-capacity {
             cursor: pointer;
             border-bottom: 1px dashed var(--color-text-muted);
@@ -1011,7 +1017,7 @@ $page_title = "Seating Chart - Jacob & Melissa";
                     <div class="table-card" id="card-<?php echo $table['table_id']; ?>" data-table-id="<?php echo $table['table_id']; ?>">
                         <div class="table-header" onclick="toggleTable(<?php echo $table['table_id']; ?>)">
                             <h3>
-                                Table <?php echo $tableNum; ?> &mdash;
+                                Table <span class="editable-number" onclick="event.stopPropagation(); editTableNumber(<?php echo $table['table_id']; ?>, this)" title="Click to reassign table number"><?php echo $tableNum; ?></span> &mdash;
                                 <span class="editable" onclick="event.stopPropagation(); editTableName(<?php echo $table['table_id']; ?>, this)"><?php echo htmlspecialchars($table['table_name']); ?></span>
                             </h3>
                             <span class="table-meta" id="meta-<?php echo $table['table_id']; ?>"><?php echo $totalAtTable; ?> / <span class="editable-capacity" onclick="event.stopPropagation(); editCapacity(<?php echo $table['table_id']; ?>, this)" title="Click to edit capacity"><?php echo $table['capacity']; ?></span> seats<?php
@@ -1861,6 +1867,64 @@ $page_title = "Seating Chart - Jacob & Melissa";
         input.focus();
     }
 
+    function editTableNumber(tableId, el) {
+        const current = parseInt(el.textContent.trim());
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.value = current;
+        input.min = 1;
+        input.className = 'edit-input';
+        input.style.width = '55px';
+
+        async function save() {
+            const newNum = parseInt(input.value);
+            if (newNum > 0 && newNum !== current) {
+                const result = await api({ action: 'reassign_number', table_id: tableId, new_number: newNum });
+                if (result && result.tables) {
+                    // Update all table numbers in the JS data and re-render headers
+                    result.tables.forEach(t => {
+                        const tData = tables.find(x => x.id === t.id);
+                        if (tData) tData.number = t.number;
+                    });
+                    // Update all card headers with new numbers
+                    document.querySelectorAll('.table-card[data-table-id]').forEach(card => {
+                        const cid = parseInt(card.dataset.tableId);
+                        const tData = tables.find(x => x.id === cid);
+                        if (!tData) return;
+                        const numSpan = card.querySelector('.editable-number');
+                        if (numSpan) numSpan.textContent = tData.number;
+                    });
+                    // Re-sort the card list in the DOM by table number
+                    const container = document.querySelector('.tables-list');
+                    if (container) {
+                        const cards = Array.from(container.querySelectorAll('.table-card[data-table-id]'));
+                        cards.sort((a, b) => {
+                            const aNum = tables.find(x => x.id === parseInt(a.dataset.tableId))?.number ?? 0;
+                            const bNum = tables.find(x => x.id === parseInt(b.dataset.tableId))?.number ?? 0;
+                            return aNum - bNum;
+                        });
+                        cards.forEach(c => container.appendChild(c));
+                    }
+                    renderFloorPlan();
+                    showToast('Table number reassigned.');
+                    return;
+                }
+            }
+            el.textContent = current;
+        }
+
+        input.addEventListener('blur', save);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+            if (e.key === 'Escape') { el.textContent = current; }
+        });
+
+        el.textContent = '';
+        el.appendChild(input);
+        input.focus();
+        input.select();
+    }
+
     function editCapacity(tableId, el) {
         const current = parseInt(el.textContent.trim());
         const input = document.createElement('input');
@@ -1903,7 +1967,7 @@ $page_title = "Seating Chart - Jacob & Melissa";
     function buildTableCardHtml(tableId, tableNum, name, capacity) {
         return '<div class="table-card" id="card-' + tableId + '" data-table-id="' + tableId + '">' +
             '<div class="table-header" onclick="toggleTable(' + tableId + ')">' +
-                '<h3>Table ' + tableNum + ' &mdash; ' +
+                '<h3>Table <span class="editable-number" onclick="event.stopPropagation(); editTableNumber(' + tableId + ', this)" title="Click to reassign table number">' + tableNum + '</span> &mdash; ' +
                     '<span class="editable" onclick="event.stopPropagation(); editTableName(' + tableId + ', this)">' + escHtml(name) + '</span>' +
                 '</h3>' +
                 '<span class="table-meta" id="meta-' + tableId + '">0 / <span class="editable-capacity" onclick="event.stopPropagation(); editCapacity(' + tableId + ', this)" title="Click to edit capacity">' + capacity + '</span> seats' +
