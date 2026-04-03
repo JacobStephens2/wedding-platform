@@ -181,6 +181,56 @@ try {
             echo json_encode(['success' => true, 'message' => 'Table deleted.']);
             break;
 
+        case 'reassign_number':
+            $tableId = intval($input['table_id'] ?? 0);
+            $newNumber = intval($input['new_number'] ?? 0);
+            if (!$tableId || $newNumber < 1) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Valid table_id and new_number (>= 1) required.']);
+                exit;
+            }
+
+            // Get the table's current number
+            $stmt = $pdo->prepare("SELECT table_number FROM seating_tables WHERE id = ?");
+            $stmt->execute([$tableId]);
+            $row = $stmt->fetch();
+            if (!$row) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Table not found.']);
+                exit;
+            }
+            $oldNumber = (int) $row['table_number'];
+
+            if ($oldNumber !== $newNumber) {
+                $pdo->beginTransaction();
+                // Temporarily move the target table out of the way
+                $pdo->prepare("UPDATE seating_tables SET table_number = 0 WHERE id = ?")->execute([$tableId]);
+                // Bump tables at or above the new number up by 1 (skip the target)
+                $pdo->prepare("UPDATE seating_tables SET table_number = table_number + 1 WHERE table_number >= ? ORDER BY table_number DESC")->execute([$newNumber]);
+                // Place the target table at the new number
+                $pdo->prepare("UPDATE seating_tables SET table_number = ? WHERE id = ?")->execute([$newNumber, $tableId]);
+                // Compact: close any gap left by the old position
+                // Tables that were above the old number and weren't shifted should move down
+                // Simplest: renumber all tables sequentially by current order
+                $stmt = $pdo->query("SELECT id FROM seating_tables ORDER BY table_number ASC, id ASC");
+                $seq = 1;
+                $renumber = $pdo->prepare("UPDATE seating_tables SET table_number = ? WHERE id = ?");
+                foreach ($stmt->fetchAll() as $t) {
+                    $renumber->execute([$seq++, $t['id']]);
+                }
+                $pdo->commit();
+            }
+
+            // Return updated table numbers
+            $stmt = $pdo->query("SELECT id, table_number FROM seating_tables ORDER BY table_number");
+            $mapping = [];
+            foreach ($stmt->fetchAll() as $t) {
+                $mapping[] = ['id' => (int) $t['id'], 'number' => (int) $t['table_number']];
+            }
+
+            echo json_encode(['success' => true, 'message' => 'Table number reassigned.', 'tables' => $mapping]);
+            break;
+
         case 'reorder_seats':
             $tableId = intval($input['table_id'] ?? 0);
             $guestIds = $input['guest_ids'] ?? [];
