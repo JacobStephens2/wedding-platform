@@ -2558,26 +2558,19 @@ $page_title = "Seating Chart - Jacob & Melissa";
             if (gridDragIsPlusOne && dropGuestId === gridDragGuestId) {
                 const po = findPlusOneRow(tbody, dragRow);
                 if (po) {
-                    const currentBefore = po.isBefore;
-                    let newBefore;
-                    if (dropOnPlusOne) {
-                        newBefore = !isBelow; // above plus-one = stay before, below = move after
+                    // Always toggle: if currently after → move before, if before → move after
+                    const newBefore = !po.isBefore;
+                    if (newBefore) {
+                        tbody.insertBefore(po.row, dragRow);
                     } else {
-                        newBefore = !isBelow; // above primary = move before, below primary = stay after
+                        tbody.insertBefore(po.row, dragRow.nextElementSibling);
                     }
-                    if (newBefore !== currentBefore) {
-                        if (newBefore) {
-                            tbody.insertBefore(po.row, dragRow);
-                        } else {
-                            tbody.insertBefore(po.row, dragRow.nextElementSibling);
-                        }
-                        // Update the guestInfo
-                        const info = JSON.parse(dragRow.dataset.guestInfo);
-                        info.plus_one_seat_before = newBefore;
-                        dragRow.dataset.guestInfo = JSON.stringify(info);
-                        renumberSeats(tbody);
-                        await api({ action: 'set_plus_one_seat_before', guest_id: gridDragGuestId, before: newBefore ? 1 : 0 });
-                    }
+                    // Update the guestInfo
+                    const info = JSON.parse(dragRow.dataset.guestInfo);
+                    info.plus_one_seat_before = newBefore;
+                    dragRow.dataset.guestInfo = JSON.stringify(info);
+                    renumberSeats(tbody);
+                    await api({ action: 'set_plus_one_seat_before', guest_id: gridDragGuestId, before: newBefore ? 1 : 0 });
                 }
             } else {
                 // CASE: Moving a guest (or plus-one's pair) to a different position
