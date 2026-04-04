@@ -832,30 +832,20 @@ $page_title = "Seating Chart - Jacob & Melissa";
         .grid-cell-unseated {
             border-left: 2px solid #b44;
         }
-        .grid-reorder-arrows {
-            float: right;
-            opacity: 0;
-            display: inline-flex;
-            gap: 1px;
-            margin-right: 0.3rem;
-            transition: opacity 0.15s;
+        .grid-cell-guest[draggable="true"] {
+            cursor: grab;
         }
-        .grid-cell-guest:hover .grid-reorder-arrows {
-            opacity: 1;
+        .grid-cell-guest.grid-dragging {
+            opacity: 0.3;
         }
-        .grid-arrow-btn {
-            background: none;
-            border: 1px solid var(--color-border);
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 0.55rem;
-            line-height: 1;
-            padding: 0.1rem 0.25rem;
-            color: var(--color-text-muted);
+        .grid-cell-guest.grid-drag-over-above {
+            box-shadow: inset 0 2px 0 0 var(--color-primary);
         }
-        .grid-arrow-btn:hover {
-            background: var(--color-light);
-            color: var(--color-dark);
+        .grid-cell-guest.grid-drag-over-below {
+            box-shadow: inset 0 -2px 0 0 var(--color-primary);
+        }
+        .grid-cell-plusone.grid-drag-over-below {
+            box-shadow: inset 0 -2px 0 0 var(--color-primary);
         }
         .grid-move-select {
             display: block;
@@ -2325,19 +2315,11 @@ $page_title = "Seating Chart - Jacob & Melissa";
                             + '<span class="grid-move-icon" title="Assign to table">&#x21c4;</span>'
                             + '</td>';
                     } else {
-                        // Find index among primary guests only (for reorder)
                         const primaryGuests = c.guests.filter(g => !g.isPlusOne);
                         const primaryIdx = primaryGuests.indexOf(entry);
-                        const isFirst = primaryIdx === 0;
-                        const isLast = primaryIdx === primaryGuests.length - 1;
-                        let arrows = '<span class="grid-reorder-arrows">';
-                        if (!isFirst) arrows += '<button class="grid-arrow-btn" onclick="event.stopPropagation(); gridMoveGuest(' + entry.guestId + ', ' + c.tableId + ', \'up\')" title="Move up">&#x25B2;</button>';
-                        if (!isLast) arrows += '<button class="grid-arrow-btn" onclick="event.stopPropagation(); gridMoveGuest(' + entry.guestId + ', ' + c.tableId + ', \'down\')" title="Move down">&#x25BC;</button>';
-                        arrows += '</span>';
-                        html += '<td class="grid-cell-guest" data-guest-id="' + entry.guestId + '" data-table-id="' + entry.tableId + '">'
+                        html += '<td class="grid-cell-guest" draggable="true" data-guest-id="' + entry.guestId + '" data-table-id="' + entry.tableId + '" data-primary-index="' + primaryIdx + '">'
                             + '<span class="grid-seat-num">' + seatNum + '.</span>'
                             + '<span class="grid-guest-name">' + escHtml(entry.name) + '</span>'
-                            + arrows
                             + '<span class="grid-move-icon" title="Move to another table">&#x21c4;</span>'
                             + '</td>';
                     }
@@ -2411,51 +2393,161 @@ $page_title = "Seating Chart - Jacob & Melissa";
         });
     });
 
-    async function gridMoveGuest(guestId, tableId, direction) {
-        const tbody = document.getElementById('guests-' + tableId);
-        if (!tbody) return;
+    // ---- Grid drag-and-drop reordering ----
+    let gridDragGuestId = null;
+    let gridDragTableId = null;
 
-        const row = tbody.querySelector('tr[data-guest-id="' + guestId + '"]');
-        if (!row) return;
+    (function() {
+        const gridContainer = document.getElementById('grid-view-container');
 
-        // Collect this guest's row + its plus-one row as a unit
-        const nextSib = row.nextElementSibling;
-        const plusOneRow = nextSib?.classList.contains('plus-one-row') ? nextSib : null;
+        gridContainer.addEventListener('dragstart', function(e) {
+            const cell = e.target.closest('.grid-cell-guest[draggable="true"]');
+            if (!cell) return;
+            gridDragGuestId = parseInt(cell.dataset.guestId);
+            gridDragTableId = parseInt(cell.dataset.tableId);
+            cell.classList.add('grid-dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', ''); // Required for Firefox
+        });
 
-        if (direction === 'up') {
-            // Find the previous guest row (skip plus-one rows)
-            let prev = row.previousElementSibling;
-            if (prev?.classList.contains('plus-one-row')) prev = prev.previousElementSibling;
-            if (!prev || !prev.dataset.guestId) return;
+        gridContainer.addEventListener('dragover', function(e) {
+            const cell = e.target.closest('.grid-cell-guest[draggable="true"], .grid-cell-plusone');
+            if (!cell) return;
+            // Only allow reorder within same table
+            const cellTableId = cell.dataset.tableId ? parseInt(cell.dataset.tableId) : (cell.closest('td')?.previousElementSibling ? null : null);
+            // For plus-one cells, find the parent column's table ID by checking the column index
+            let targetTableId = null;
+            if (cell.classList.contains('grid-cell-plusone')) {
+                // Get column index and resolve table ID from header
+                const row = cell.closest('tr');
+                const idx = Array.from(row.children).indexOf(cell);
+                const headerCells = cell.closest('table').querySelectorAll('thead tr:first-child th');
+                // We need to match to our cols data - use the draggable cells in same column
+                // Simpler: find the nearest draggable cell in same column
+                const allRows = cell.closest('tbody').querySelectorAll('tr');
+                for (const r of allRows) {
+                    const c = r.children[idx];
+                    if (c && c.dataset.tableId) { targetTableId = parseInt(c.dataset.tableId); break; }
+                }
+            } else {
+                targetTableId = parseInt(cell.dataset.tableId);
+            }
+            if (gridDragTableId !== targetTableId) return;
 
-            // Insert before the previous guest row
-            tbody.insertBefore(row, prev);
-            if (plusOneRow) tbody.insertBefore(plusOneRow, prev);
-        } else {
-            // Find the next guest row (skip our own plus-one)
-            let next = plusOneRow ? plusOneRow.nextElementSibling : nextSib;
-            if (!next || !next.dataset.guestId) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
 
-            // Find the insertion point after the next guest (and its plus-one)
-            const nextNext = next.nextElementSibling;
-            const nextPlusOne = nextNext?.classList.contains('plus-one-row') ? nextNext : null;
-            const insertRef = nextPlusOne ? nextPlusOne.nextElementSibling : nextNext;
+            // Clear previous indicators in this table column
+            gridContainer.querySelectorAll('.grid-drag-over-above, .grid-drag-over-below').forEach(el => {
+                el.classList.remove('grid-drag-over-above', 'grid-drag-over-below');
+            });
 
-            tbody.insertBefore(row, insertRef);
-            if (plusOneRow) tbody.insertBefore(plusOneRow, insertRef);
-        }
+            // Determine above/below based on mouse position within cell
+            const rect = cell.getBoundingClientRect();
+            const midY = rect.top + rect.height / 2;
+            if (e.clientY < midY) {
+                cell.classList.add('grid-drag-over-above');
+            } else {
+                cell.classList.add('grid-drag-over-below');
+            }
+        });
 
-        renumberSeats(tbody);
-        await saveSeatingOrder(tbody);
+        gridContainer.addEventListener('dragleave', function(e) {
+            const cell = e.target.closest('.grid-cell-guest, .grid-cell-plusone');
+            if (cell) {
+                cell.classList.remove('grid-drag-over-above', 'grid-drag-over-below');
+            }
+        });
 
-        // Preserve scroll position across grid rebuild
-        const wrapper = document.querySelector('.grid-spreadsheet-wrapper');
-        const scrollLeft = wrapper ? wrapper.scrollLeft : 0;
-        const scrollTop = wrapper ? wrapper.scrollTop : 0;
-        buildGridView();
-        const newWrapper = document.querySelector('.grid-spreadsheet-wrapper');
-        if (newWrapper) { newWrapper.scrollLeft = scrollLeft; newWrapper.scrollTop = scrollTop; }
-    }
+        gridContainer.addEventListener('drop', async function(e) {
+            e.preventDefault();
+            gridContainer.querySelectorAll('.grid-drag-over-above, .grid-drag-over-below, .grid-dragging').forEach(el => {
+                el.classList.remove('grid-drag-over-above', 'grid-drag-over-below', 'grid-dragging');
+            });
+
+            if (!gridDragGuestId || !gridDragTableId) return;
+
+            let dropCell = e.target.closest('.grid-cell-guest[draggable="true"], .grid-cell-plusone');
+            if (!dropCell) return;
+
+            // Resolve the target primary guest ID for the drop position
+            let dropGuestId = null;
+            let dropAfter = false;
+            const rect = dropCell.getBoundingClientRect();
+            const isBelow = e.clientY >= rect.top + rect.height / 2;
+
+            if (dropCell.classList.contains('grid-cell-plusone')) {
+                // Dropped on a plus-one row: treat as dropping below the parent guest
+                // Find parent guest by looking up the same column for the preceding draggable cell
+                const row = dropCell.closest('tr');
+                const colIdx = Array.from(row.children).indexOf(dropCell);
+                let prevRow = row.previousElementSibling;
+                while (prevRow) {
+                    const prevCell = prevRow.children[colIdx];
+                    if (prevCell && prevCell.dataset.guestId) {
+                        dropGuestId = parseInt(prevCell.dataset.guestId);
+                        break;
+                    }
+                    prevRow = prevRow.previousElementSibling;
+                }
+                dropAfter = true;
+            } else {
+                dropGuestId = parseInt(dropCell.dataset.guestId);
+                dropAfter = isBelow;
+            }
+
+            if (!dropGuestId || dropGuestId === gridDragGuestId) { gridDragGuestId = null; gridDragTableId = null; return; }
+
+            // Reorder in the card view's tbody
+            const tbody = document.getElementById('guests-' + gridDragTableId);
+            if (!tbody) return;
+
+            const dragRow = tbody.querySelector('tr[data-guest-id="' + gridDragGuestId + '"]');
+            const dropRow = tbody.querySelector('tr[data-guest-id="' + dropGuestId + '"]');
+            if (!dragRow || !dropRow) return;
+
+            // Collect drag guest + plus-one as a unit
+            const dragNext = dragRow.nextElementSibling;
+            const dragPlusOne = dragNext?.classList.contains('plus-one-row') ? dragNext : null;
+
+            // Collect drop guest + plus-one
+            const dropNext = dropRow.nextElementSibling;
+            const dropPlusOne = dropNext?.classList.contains('plus-one-row') ? dropNext : null;
+
+            if (dropAfter) {
+                // Insert after the drop guest (and its plus-one)
+                const insertRef = dropPlusOne ? dropPlusOne.nextElementSibling : dropNext;
+                tbody.insertBefore(dragRow, insertRef);
+                if (dragPlusOne) tbody.insertBefore(dragPlusOne, insertRef);
+            } else {
+                // Insert before the drop guest
+                tbody.insertBefore(dragRow, dropRow);
+                if (dragPlusOne) tbody.insertBefore(dragPlusOne, dropRow);
+            }
+
+            renumberSeats(tbody);
+            await saveSeatingOrder(tbody);
+
+            // Preserve scroll position across grid rebuild
+            const wrapper = document.querySelector('.grid-spreadsheet-wrapper');
+            const scrollLeft = wrapper ? wrapper.scrollLeft : 0;
+            const scrollTop = wrapper ? wrapper.scrollTop : 0;
+            buildGridView();
+            const newWrapper = document.querySelector('.grid-spreadsheet-wrapper');
+            if (newWrapper) { newWrapper.scrollLeft = scrollLeft; newWrapper.scrollTop = scrollTop; }
+
+            gridDragGuestId = null;
+            gridDragTableId = null;
+        });
+
+        gridContainer.addEventListener('dragend', function(e) {
+            gridContainer.querySelectorAll('.grid-drag-over-above, .grid-drag-over-below, .grid-dragging').forEach(el => {
+                el.classList.remove('grid-drag-over-above', 'grid-drag-over-below', 'grid-dragging');
+            });
+            gridDragGuestId = null;
+            gridDragTableId = null;
+        });
+    })();
 
     function switchView(view) {
         const gridContainer = document.getElementById('grid-view-container');
