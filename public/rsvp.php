@@ -12,10 +12,12 @@ include __DIR__ . '/includes/header.php';
         <div class="location-item">
             <h3>St. Agatha St. James Parish</h3>
             <p>3728 Chestnut St, Philadelphia, PA 19104</p>
+            <p>Nuptial Mass at 1:30&nbsp;p.m.</p>
         </div>
         <div class="location-item">
             <h3>Bala Golf Club</h3>
             <p>2200 Belmont Ave, Philadelphia, PA 19131</p>
+            <p>Reception begins at 4:00&nbsp;p.m.</p>
         </div>
     </div>
 
@@ -486,11 +488,11 @@ document.addEventListener('DOMContentLoaded', function() {
                      + '<span class="group-member-name">' + escapeHtml(memberName) + '</span>'
                      + '<div class="event-rsvp-rows">'
                      + '<div class="event-rsvp-row">'
-                     + '<span class="event-label">Ceremony <span class="event-sublabel">(St. Agatha St. James)</span></span>'
+                     + '<span class="event-label">Ceremony <span class="event-sublabel">(St. Agatha St. James, 1:30 p.m.)</span></span>'
                      + eventToggleHtml('btn-ceremony', curCeremony)
                      + '</div>'
                      + '<div class="event-rsvp-row">'
-                     + '<span class="event-label">Reception <span class="event-sublabel">(Bala Golf Club)</span></span>'
+                     + '<span class="event-label">Reception <span class="event-sublabel">(Bala Golf Club, 4:00 p.m.)</span></span>'
                      + eventToggleHtml('btn-reception', curReception)
                      + '</div>'
                      + '</div>'
@@ -524,11 +526,11 @@ document.addEventListener('DOMContentLoaded', function() {
                          + '</div>'
                          + '<div class="event-rsvp-rows">'
                          + '<div class="event-rsvp-row">'
-                         + '<span class="event-label">Ceremony <span class="event-sublabel">(St. Agatha St. James)</span></span>'
+                         + '<span class="event-label">Ceremony <span class="event-sublabel">(St. Agatha St. James, 1:30 p.m.)</span></span>'
                          + eventToggleHtml('btn-po-ceremony', poCeremony)
                          + '</div>'
                          + '<div class="event-rsvp-row">'
-                         + '<span class="event-label">Reception <span class="event-sublabel">(Bala Golf Club)</span></span>'
+                         + '<span class="event-label">Reception <span class="event-sublabel">(Bala Golf Club, 4:00 p.m.)</span></span>'
                          + eventToggleHtml('btn-po-reception', poReception)
                          + '</div>'
                          + '</div>'

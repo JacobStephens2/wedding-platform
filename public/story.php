@@ -168,7 +168,7 @@ function renderBlockImages(array $photos): string {
     
     <section class="story-section">
         <h2>Divine Mercy&rsquo;s Design</h2>
-        <p>Our Nuptial Mass will be on April 11, 2026 at St. Agatha St. James Parish in Philadelphia. The reception will be at Bala Golf&nbsp;Club.</p>
+        <p>Our Nuptial Mass will be on April 11, 2026 at 1:30&nbsp;p.m. at St. Agatha St. James Parish in Philadelphia. The reception will follow at 4:00&nbsp;p.m. at Bala Golf&nbsp;Club.</p>
         <?php echo renderBlockImages($storyPhotos['divine_mercy'] ?? []); ?>
         <p style="margin-top: 2rem;"><em>It&rsquo;s been quite the journey of faith and hope. God has been present every step of the way. We still love dancing and being very involved in our parish community, and are excited to be preparing for our sacramental wedding. Jacob entered the Catholic Church in fullness on Divine Mercy Sunday, 2025, and our wedding date is set for the eve of Divine Mercy Sunday, 2026. God has made us new and continues to make us new and give us new life and new hearts, and we see His beauty and His hand in our Easter Octave wedding&nbsp;date.</em></p>
     </section>

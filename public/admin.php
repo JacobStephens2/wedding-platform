@@ -128,6 +128,9 @@ $page_title = "Admin - Jacob & Melissa";
                         <a href="<?php echo htmlspecialchars(adminUrl('/admin-seating')); ?>">Seating Chart</a>
                     </li>
                     <li class="admin-menu-item">
+                        <a href="<?php echo htmlspecialchars(adminUrl('/admin-rehearsal-seating')); ?>">Rehearsal Dinner Seating</a>
+                    </li>
+                    <li class="admin-menu-item">
                         <a href="<?php echo htmlspecialchars(adminUrl('/admin-registry')); ?>">Manage Registry</a>
                     </li>
                     <li class="admin-menu-item">

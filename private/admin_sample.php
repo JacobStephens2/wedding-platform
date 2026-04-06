@@ -821,3 +821,115 @@ function getSampleSeatingData(): array
         'tables_json' => $allTablesJson,
     ];
 }
+
+function getSampleRehearsalSeatingData(): array
+{
+    $seatingData = [
+        1 => [
+            'table_id' => 901,
+            'table_name' => 'Head Table',
+            'capacity' => 6,
+            'notes' => 'Wedding party and immediate family.',
+            'pos_x' => 50,
+            'pos_y' => 20,
+            'guests' => [
+                [
+                    'table_id' => 901,
+                    'table_number' => 1,
+                    'table_name' => 'Head Table',
+                    'capacity' => 6,
+                    'table_notes' => 'Wedding party and immediate family.',
+                    'pos_x' => 50,
+                    'pos_y' => 20,
+                    'guest_id' => 101,
+                    'first_name' => 'Olivia',
+                    'last_name' => 'Bennett',
+                    'group_name' => 'Bennett Family',
+                    'seat_number' => 1,
+                    'rehearsal_invited' => 1,
+                    'dietary' => 'Vegetarian',
+                    'message' => '',
+                    'is_child' => 0,
+                    'is_infant' => 0,
+                    'has_plus_one' => 1,
+                    'plus_one_name' => 'Daniel Bennett',
+                    'plus_one_rehearsal_invited' => 1,
+                    'plus_one_dietary' => 'No shellfish',
+                    'plus_one_is_child' => 0,
+                    'plus_one_is_infant' => 0,
+                    'plus_one_seat_before' => 0,
+                ],
+            ],
+        ],
+        2 => [
+            'table_id' => 902,
+            'table_name' => 'Family',
+            'capacity' => 8,
+            'notes' => 'Parents and siblings.',
+            'pos_x' => 30,
+            'pos_y' => 55,
+            'guests' => [
+                [
+                    'table_id' => 902,
+                    'table_number' => 2,
+                    'table_name' => 'Family',
+                    'capacity' => 8,
+                    'table_notes' => 'Parents and siblings.',
+                    'pos_x' => 30,
+                    'pos_y' => 55,
+                    'guest_id' => 102,
+                    'first_name' => 'Marcus',
+                    'last_name' => 'Reed',
+                    'group_name' => 'Reed Household',
+                    'seat_number' => 1,
+                    'rehearsal_invited' => 1,
+                    'dietary' => '',
+                    'message' => '',
+                    'is_child' => 0,
+                    'is_infant' => 0,
+                    'has_plus_one' => 0,
+                    'plus_one_name' => '',
+                    'plus_one_rehearsal_invited' => 0,
+                    'plus_one_dietary' => '',
+                    'plus_one_is_child' => 0,
+                    'plus_one_is_infant' => 0,
+                    'plus_one_seat_before' => 0,
+                ],
+            ],
+        ],
+    ];
+
+    $unseatedGuests = [
+        [
+            'id' => 901,
+            'first_name' => 'Priya',
+            'last_name' => 'Shah',
+            'group_name' => 'Wedding Party',
+            'rehearsal_invited' => 1,
+            'dietary' => 'Nut-free',
+            'message' => '',
+            'is_child' => 0,
+            'is_infant' => 0,
+            'has_plus_one' => 0,
+            'plus_one_name' => '',
+            'plus_one_rehearsal_invited' => 0,
+            'plus_one_dietary' => '',
+            'plus_one_is_child' => 0,
+            'plus_one_is_infant' => 0,
+            'plus_one_seat_before' => 0,
+        ],
+    ];
+
+    $stats = ['tables' => 2, 'seated' => 2, 'unseated' => 1, 'dietary' => 2];
+    $allTablesJson = json_encode([
+        ['id' => 901, 'number' => 1, 'name' => 'Head Table', 'capacity' => 6, 'guest_count' => 2, 'pos_x' => 50, 'pos_y' => 20],
+        ['id' => 902, 'number' => 2, 'name' => 'Family', 'capacity' => 8, 'guest_count' => 1, 'pos_x' => 30, 'pos_y' => 55],
+    ]);
+
+    return [
+        'seating_data' => $seatingData,
+        'unseated_guests' => $unseatedGuests,
+        'stats' => $stats,
+        'tables_json' => $allTablesJson,
+    ];
+}
