@@ -19,6 +19,7 @@ if (isAdminSampleMode() || isAdminAuthenticated()):
                 <li><a href="<?php echo htmlspecialchars(adminUrl('/check-rsvps')); ?>">Check RSVPs</a></li>
                 <li><a href="<?php echo htmlspecialchars(adminUrl('/admin-guests')); ?>">Manage Guests</a></li>
                 <li><a href="<?php echo htmlspecialchars(adminUrl('/admin-seating')); ?>">Seating Chart</a></li>
+                <li><a href="<?php echo htmlspecialchars(adminUrl('/admin-rehearsal-seating')); ?>">Rehearsal Seating</a></li>
                 <li><a href="<?php echo htmlspecialchars(adminUrl('/admin-registry')); ?>">Manage Registry</a></li>
                 <li><a href="<?php echo htmlspecialchars(adminUrl('/admin-house-fund')); ?>">Manage House Fund</a></li>
                 <li><a href="<?php echo htmlspecialchars(adminUrl('/admin-honeymoon-fund')); ?>">Manage Honeymoon Fund</a></li>

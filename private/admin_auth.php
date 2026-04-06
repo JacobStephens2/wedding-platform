@@ -51,6 +51,13 @@ function isAdminAuthenticated() {
     return isset($_SESSION['admin_authenticated']) && $_SESSION['admin_authenticated'] === true;
 }
 
+function isRehearsalSeatingAuthenticated() {
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
+    }
+    return isset($_SESSION['rehearsal_seating_authenticated']) && $_SESSION['rehearsal_seating_authenticated'] === true;
+}
+
 function adminLogout() {
     if (session_status() !== PHP_SESSION_ACTIVE) {
         session_start();

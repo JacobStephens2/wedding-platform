@@ -6,7 +6,13 @@ include __DIR__ . '/includes/header.php';
 
 <main class="page-container">
     <h1 class="page-title">About</h1>
-    
+
+    <section class="about-section">
+        <h2>Schedule</h2>
+        <p><strong>Nuptial Mass</strong> &mdash; 1:30&nbsp;p.m. at St. Agatha St. James Parish, 3728 Chestnut St, Philadelphia, PA&nbsp;19104</p>
+        <p><strong>Reception</strong> &mdash; 4:00&nbsp;p.m. at Bala Golf Club, 2200 Belmont Ave, Philadelphia, PA&nbsp;19131</p>
+    </section>
+
     <section class="about-section">
         <h2>Children Welcome</h2>
         <p>We are delighted to have children join us in celebrating our wedding! Little ones are welcome at both the ceremony and reception. We understand that children may need to move around or make some noise, and that's perfectly fine with us. We want all our loved ones, including the youngest ones, to be part of this special day.</p>
