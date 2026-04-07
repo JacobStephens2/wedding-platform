@@ -1083,6 +1083,7 @@ $page_title = "Seating Chart - Jacob & Melissa";
                                         $guestInfo = [
                                             'id' => $guest['guest_id'],
                                             'name' => $guest['first_name'] . ' ' . $guest['last_name'],
+                                            'first_name' => $guest['first_name'],
                                             'group' => $guest['group_name'],
                                             'dietary' => $guest['dietary'] ?? '',
                                             'message' => $guest['message'] ?? '',
@@ -1307,6 +1308,15 @@ $page_title = "Seating Chart - Jacob & Melissa";
     <script>
     // ---- Data ----
     const tables = <?php echo $allTablesJson; ?>;
+    // Extract a "first name" that keeps any trailing title prefix attached.
+    // e.g. "Fr. Carlos Smith" -> "Fr. Carlos" (so we don't render just "Fr.").
+    function extractFirstName(fullName) {
+        if (!fullName) return '';
+        const parts = fullName.trim().split(/\s+/);
+        if (parts.length < 2) return parts[0] || '';
+        if (parts[0].endsWith('.')) return parts[0] + ' ' + parts[1];
+        return parts[0];
+    }
     function getExportData() {
         const tablesData = [];
         document.querySelectorAll('.table-card[data-table-id]').forEach(card => {
@@ -1320,9 +1330,11 @@ $page_title = "Seating Chart - Jacob & Melissa";
             if (tbody) {
                 tbody.querySelectorAll('tr[data-guest-id]').forEach(row => {
                     const info = JSON.parse(row.dataset.guestInfo);
-                    guests.push({ name: info.name, first_name: info.name.split(' ')[0], dietary: info.dietary || '' });
+                    // Prefer the actual DB first_name (which may already include
+                    // a title like "Fr. Carlos") over splitting the full name.
+                    guests.push({ name: info.name, first_name: info.first_name || extractFirstName(info.name), dietary: info.dietary || '' });
                     if (info.has_plus_one) {
-                        guests.push({ name: info.plus_one_name + ' (plus one)', first_name: info.plus_one_name.split(' ')[0], dietary: info.plus_one_dietary || '' });
+                        guests.push({ name: info.plus_one_name + ' (plus one)', first_name: extractFirstName(info.plus_one_name), dietary: info.plus_one_dietary || '' });
                     }
                 });
             }
@@ -2968,7 +2980,7 @@ $page_title = "Seating Chart - Jacob & Melissa";
                 // Name label below
                 ctx.fillStyle = '#555';
                 ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-                ctx.fillText(t.guests.map(g => firstNamesOnly ? (g.first_name || g.name.split(' ')[0]) : g.name).join(' & '), cx, cy + rh / 2 + 14);
+                ctx.fillText(t.guests.map(g => firstNamesOnly ? (g.first_name || extractFirstName(g.name)) : g.name).join(' & '), cx, cy + rh / 2 + 14);
             } else {
                 // Circle for round tables
                 ctx.beginPath();
@@ -3001,7 +3013,7 @@ $page_title = "Seating Chart - Jacob & Melissa";
                         const angle = startAngle + (i / count) * Math.PI * 2;
                         const nx = cx + Math.cos(angle) * nameR;
                         const ny = cy + Math.sin(angle) * nameR;
-                        const label = firstNamesOnly ? (g.first_name || g.name.split(' ')[0]) : g.name;
+                        const label = firstNamesOnly ? (g.first_name || extractFirstName(g.name)) : g.name;
                         const textW = ctx.measureText(label).width;
                         const pillW = textW + padX * 2;
 
