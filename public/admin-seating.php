@@ -2906,16 +2906,26 @@ $page_title = "Seating Chart - Jacob & Melissa";
 
         // Tables
         const tableR = includeNames ? 48 : 38;
-        const green = '#4d6b2e';
         const red = '#b44';
+
+        // Generate a distinct color per non-sweetheart table so guest name labels
+        // can be visually grouped back to their table even when they overlap.
+        const colorTables = d.tables.filter(t => t.capacity > 2);
+        const tableColorByNumber = {};
+        colorTables.forEach((t, i) => {
+            const hue = Math.round((i * 360 / Math.max(colorTables.length, 1) + 95) % 360);
+            tableColorByNumber[t.number] = `hsl(${hue}, 48%, 36%)`;
+        });
+        const fallbackColor = '#4d6b2e';
 
         d.tables.forEach(t => {
             const cx = rm.x + (t.pos_x / 100) * rm.w;
             const cy = rm.y + (t.pos_y / 100) * rm.h;
             const overCap = t.guests.length > t.capacity;
             const isSweetheart = t.capacity <= 2;
+            const tableColor = overCap ? red : (tableColorByNumber[t.number] || fallbackColor);
 
-            ctx.fillStyle = overCap ? red : green;
+            ctx.fillStyle = tableColor;
 
             if (isSweetheart) {
                 // Rectangle for sweetheart table
@@ -2946,28 +2956,61 @@ $page_title = "Seating Chart - Jacob & Melissa";
                 ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
                 ctx.fillText(t.guests.length + '/' + t.capacity, cx, cy + 14);
 
-                // Guest names around the table (rendered first so table name goes below)
+                // Guest names around the table — drawn as colored pills connected by
+                // a thin leader line back to the table, so overlapping labels from
+                // adjacent tables remain visually grouped to the right table.
                 const baseNameR = 50;
                 const extraR = Math.max(0, (t.guests.length - 8) * 5);
                 const nameR = tableR + (includeNames ? baseNameR + extraR : 0);
                 if (includeNames && t.guests.length > 0) {
                     const fontSize = t.guests.length > 12 ? 8 : (t.guests.length > 8 ? 9 : 10);
                     ctx.font = fontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-                    ctx.fillStyle = '#333';
                     const count = t.guests.length;
                     const startAngle = -Math.PI / 2;
+                    const padX = 4;
+                    const padY = 2;
+                    const pillH = fontSize + padY * 2 + 2;
                     t.guests.forEach((g, i) => {
                         const angle = startAngle + (i / count) * Math.PI * 2;
                         const nx = cx + Math.cos(angle) * nameR;
                         const ny = cy + Math.sin(angle) * nameR;
+                        const label = firstNamesOnly ? (g.first_name || g.name.split(' ')[0]) : g.name;
+                        const textW = ctx.measureText(label).width;
+                        const pillW = textW + padX * 2;
 
-                        // Align text based on position around the circle
-                        if (Math.cos(angle) > 0.3) ctx.textAlign = 'left';
-                        else if (Math.cos(angle) < -0.3) ctx.textAlign = 'right';
-                        else ctx.textAlign = 'center';
+                        // Pill horizontal anchor based on side of the table
+                        let pillX;
+                        if (Math.cos(angle) > 0.3) pillX = nx - 2;                 // left edge of pill
+                        else if (Math.cos(angle) < -0.3) pillX = nx - pillW + 2;   // right edge
+                        else pillX = nx - pillW / 2;                               // centered
+                        const pillY = ny - pillH / 2 + 2;
 
-                        ctx.fillText(firstNamesOnly ? (g.first_name || g.name.split(' ')[0]) : g.name, nx, ny + 4);
+                        // Leader line from table edge toward the pill anchor point
+                        const edgeX = cx + Math.cos(angle) * (tableR + 1);
+                        const edgeY = cy + Math.sin(angle) * (tableR + 1);
+                        const anchorX = pillX + pillW / 2;
+                        const anchorY = pillY + pillH / 2;
+                        ctx.strokeStyle = tableColor;
+                        ctx.globalAlpha = 0.45;
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(edgeX, edgeY);
+                        ctx.lineTo(anchorX, anchorY);
+                        ctx.stroke();
+                        ctx.globalAlpha = 1;
+
+                        // Pill background
+                        ctx.fillStyle = tableColor;
+                        roundRect(ctx, pillX, pillY, pillW, pillH, pillH / 2);
+                        ctx.fill();
+
+                        // White label text on pill
+                        ctx.fillStyle = '#fff';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(label, pillX + pillW / 2, pillY + pillH / 2 + 0.5);
                     });
+                    ctx.textBaseline = 'alphabetic';
                     ctx.textAlign = 'center';
                 }
 
