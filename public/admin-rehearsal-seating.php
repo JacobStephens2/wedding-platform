@@ -80,21 +80,27 @@ if ($sampleMode) {
             header('Content-Disposition: attachment; filename="rehearsal-dinner-seating.csv"');
             $out = fopen('php://output', 'w');
             fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
-            fputcsv($out, ['Table #', 'Table Name', 'Guest Name', 'Group', 'Dietary Restrictions']);
+            fputcsv($out, ['Table #', 'Table Name', 'First Name', 'Last Name', 'Group', 'Dietary Restrictions']);
             foreach ($rows as $r) {
                 if (!$r['first_name']) continue;
                 fputcsv($out, [
                     $r['table_number'],
                     $r['table_name'],
-                    $r['first_name'] . ' ' . $r['last_name'],
+                    $r['first_name'],
+                    $r['last_name'],
                     $r['group_name'],
                     $r['dietary'] ?? '',
                 ]);
                 if ($r['has_plus_one'] && $r['plus_one_rehearsal_invited']) {
+                    $poName = $r['plus_one_name'] ?: 'Guest of ' . $r['first_name'];
+                    $poParts = explode(' ', trim($poName), 2);
+                    $poFirst = $poParts[0] ?? '';
+                    $poLast = ($poParts[1] ?? '') . ' (plus one)';
                     fputcsv($out, [
                         $r['table_number'],
                         $r['table_name'],
-                        ($r['plus_one_name'] ?: 'Guest of ' . $r['first_name']) . ' (plus one)',
+                        $poFirst,
+                        trim($poLast),
                         '',
                         $r['plus_one_dietary'] ?? '',
                     ]);
@@ -108,7 +114,7 @@ if ($sampleMode) {
                 ORDER BY group_name, last_name, first_name
             ");
             foreach ($stmt2->fetchAll() as $ug) {
-                fputcsv($out, ['', '(Unseated)', $ug['first_name'] . ' ' . $ug['last_name'], $ug['group_name'], $ug['dietary'] ?? '']);
+                fputcsv($out, ['', '(Unseated)', $ug['first_name'], $ug['last_name'], $ug['group_name'], $ug['dietary'] ?? '']);
             }
             fclose($out);
             exit;
