@@ -27,6 +27,13 @@ include __DIR__ . '/includes/header.php';
         <h2>Holy Communion</h2>
         <p>During the Mass, we will celebrate Holy Communion. In accordance with Catholic teaching, Holy Communion is reserved for Catholics who are in a state of grace and have received their First Holy Communion. If you are not Catholic or are not able to receive Communion, we invite you to remain in your seat during the distribution of Communion, or you may come forward with your arms crossed over your chest to receive a blessing from the priest. We are grateful for your presence and participation in our celebration, regardless of whether you receive Communion.</p>
     </section>
+
+    <section class="about-section">
+        <h2>Sunday Mass</h2>
+        <p>For guests who would like to attend Sunday Mass on April&nbsp;12, here are a couple of nearby options:</p>
+        <p><strong>St. Agatha St. James Parish</strong> &mdash; 9:00&nbsp;a.m. and 11:30&nbsp;a.m. (with our amazing choir) at 3728 Chestnut St, Philadelphia, PA&nbsp;19104</p>
+        <p><strong>Cathedral Basilica of Saints Peter and Paul</strong> &mdash; 8:00&nbsp;a.m., 9:30&nbsp;a.m., and 11:00&nbsp;a.m. at 1723 Race St, Philadelphia, PA&nbsp;19103</p>
+    </section>
 </main>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>
