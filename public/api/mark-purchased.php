@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../../private/config.php';
 require_once __DIR__ . '/../../private/db.php';
 require_once __DIR__ . '/../../private/email_handler.php';
+require_once __DIR__ . '/../../private/turnstile.php';
 
 header('Content-Type: application/json');
 
@@ -26,37 +27,6 @@ if (!$itemId) {
     exit;
 }
 
-/**
- * Verify a Cloudflare Turnstile token against the siteverify endpoint.
- * Returns true when verification succeeds, false otherwise.
- */
-function verifyTurnstileToken(string $token, string $secret, ?string $remoteIp): bool
-{
-    if ($secret === '' || $token === '') {
-        return false;
-    }
-    $payload = http_build_query(array_filter([
-        'secret' => $secret,
-        'response' => $token,
-        'remoteip' => $remoteIp,
-    ]));
-    $ctx = stream_context_create([
-        'http' => [
-            'method' => 'POST',
-            'header' => "Content-Type: application/x-www-form-urlencoded\r\n",
-            'content' => $payload,
-            'timeout' => 6,
-            'ignore_errors' => true,
-        ],
-    ]);
-    $resp = @file_get_contents('https://challenges.cloudflare.com/turnstile/v0/siteverify', false, $ctx);
-    if ($resp === false) {
-        return false;
-    }
-    $data = json_decode($resp, true);
-    return is_array($data) && !empty($data['success']);
-}
-
 try {
     $pdo = getDbConnection();
 
@@ -77,10 +47,8 @@ try {
     // Bot protection: require a valid Turnstile token when transitioning an
     // item to purchased. Unmarking (available) stays open so the "Mark as
     // Available" button keeps working without re-solving a challenge.
-    $turnstileSecret = $_ENV['TURNSTILE_SECRET_KEY'] ?? '';
-    if ($newPurchasedStatus && $turnstileSecret !== '') {
-        $remoteIp = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['REMOTE_ADDR'] ?? null;
-        if (!verifyTurnstileToken($turnstileToken, $turnstileSecret, $remoteIp)) {
+    if ($newPurchasedStatus && turnstileEnabled()) {
+        if (!verifyTurnstileToken($turnstileToken, turnstileClientIp())) {
             http_response_code(403);
             echo json_encode(['success' => false, 'error' => 'Bot check failed. Please reload and try again.']);
             exit;
