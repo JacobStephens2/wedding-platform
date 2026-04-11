@@ -254,6 +254,10 @@ include __DIR__ . '/includes/header.php';
                 <label for="purchaser-name">Your Name (only visible to Melissa and Jacob)</label>
                 <input type="text" id="purchaser-name" name="purchaser_name" placeholder="Enter your name">
             </div>
+            <div class="form-group">
+                <label for="purchaser-message">Message (optional, only visible to Melissa and Jacob)</label>
+                <textarea id="purchaser-message" name="purchaser_message" rows="3" maxlength="2000" placeholder="Leave a note with your gift"></textarea>
+            </div>
             <input type="hidden" id="purchase-item-id" name="item_id">
             <div class="modal-actions">
                 <button type="submit" class="btn">Mark as Purchased</button>
@@ -373,9 +377,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const purchaserNameInput = document.getElementById('purchaser-name');
     const purchaseItemIdInput = document.getElementById('purchase-item-id');
     
+    const purchaserMessageInput = document.getElementById('purchaser-message');
+
     function openModal(itemId) {
         purchaseItemIdInput.value = itemId;
         purchaserNameInput.value = '';
+        if (purchaserMessageInput) purchaserMessageInput.value = '';
         modal.style.display = 'block';
         document.body.style.overflow = 'hidden';
     }
@@ -527,12 +534,13 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             const itemId = purchaseItemIdInput.value;
             const purchaserName = purchaserNameInput.value.trim();
-            markItemPurchased(itemId, purchaserName, false);
+            const purchaserMessage = purchaserMessageInput ? purchaserMessageInput.value.trim() : '';
+            markItemPurchased(itemId, purchaserName, false, purchaserMessage);
             closeModal();
         });
     }
-    
-    function markItemPurchased(itemId, purchaserName, isToggle) {
+
+    function markItemPurchased(itemId, purchaserName, isToggle, purchaserMessage) {
         fetch('/api/mark-purchased.php', {
             method: 'POST',
             headers: {
@@ -540,7 +548,8 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             body: JSON.stringify({
                 item_id: itemId,
-                purchaser_name: purchaserName
+                purchaser_name: purchaserName,
+                purchaser_message: purchaserMessage || ''
             })
         })
         .then(response => response.json())

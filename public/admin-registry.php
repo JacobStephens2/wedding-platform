@@ -161,7 +161,8 @@ if (!$sampleMode && $authenticated && isset($_GET['toggle_purchased'])) {
             $stmt = $pdo->prepare("
                 UPDATE registry_items
                 SET purchased = ?,
-                    purchased_by = NULL
+                    purchased_by = NULL,
+                    purchase_message = NULL
                 WHERE id = ?
             ");
             $stmt->execute([
@@ -262,7 +263,7 @@ if (!$sampleMode && $authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && i
         }));
         if (!empty($ids)) {
             $placeholders = implode(',', array_fill(0, count($ids), '?'));
-            $stmt = $pdo->prepare("UPDATE registry_items SET purchased = 0, purchased_by = NULL WHERE id IN ($placeholders)");
+            $stmt = $pdo->prepare("UPDATE registry_items SET purchased = 0, purchased_by = NULL, purchase_message = NULL WHERE id IN ($placeholders)");
             $stmt->execute($ids);
             header('Location: /admin-registry?unmarked=' . count($ids) . '#recent-purchases');
             exit;
@@ -321,7 +322,7 @@ if ($sampleMode) {
     try {
         $pdo = getDbConnection();
         $stmt = $pdo->query("
-            SELECT id, title, description, url, image_url, price, purchased, purchased_by, created_at, updated_at, published, sort_order, most_wanted
+            SELECT id, title, description, url, image_url, price, purchased, purchased_by, purchase_message, created_at, updated_at, published, sort_order, most_wanted
             FROM registry_items
             ORDER BY sort_order ASC, id ASC
         ");
@@ -970,6 +971,18 @@ $page_title = "Manage Registry - Jacob & Melissa";
         .recent-purchases-table .rp-col-title a:hover {
             text-decoration: underline;
         }
+        .recent-purchases-table .rp-message {
+            margin-top: 0.35rem;
+            padding: 0.4rem 0.6rem;
+            border-left: 3px solid var(--color-green);
+            background-color: var(--color-light);
+            color: var(--color-text-secondary);
+            font-style: italic;
+            font-size: 0.92rem;
+            line-height: 1.4;
+            max-width: 36rem;
+            white-space: normal;
+        }
         .recent-purchases-table .rp-col-check {
             width: 1.5rem;
         }
@@ -1273,9 +1286,8 @@ $page_title = "Manage Registry - Jacob & Melissa";
                     </button>
                     <div class="recent-purchases-body" id="recent-purchases-body">
                         <p class="recent-purchases-note">
-                            Most recently purchased first. Times shown in Eastern Time. The purchase form does not currently collect a
-                            message from the buyer, so only names are shown. Rows are grouped visually when multiple purchases happened
-                            in the same minute &mdash; a tight cluster of anonymous purchases is a good sign of bot/spam activity.
+                            Most recently purchased first. Times shown in Eastern Time. Rows are grouped visually when multiple purchases
+                            happened in the same minute &mdash; a tight cluster of anonymous purchases is a good sign of bot/spam activity.
                         </p>
                         <?php if (empty($purchasedItemsList)): ?>
                             <p>No items have been marked as purchased yet.</p>
@@ -1333,6 +1345,9 @@ $page_title = "Manage Registry - Jacob & Melissa";
                                                     <a href="<?php echo htmlspecialchars($p['url']); ?>" target="_blank" rel="noopener noreferrer">
                                                         <?php echo htmlspecialchars($p['title']); ?>
                                                     </a>
+                                                    <?php if (!empty($p['purchase_message'])): ?>
+                                                        <div class="rp-message">&ldquo;<?php echo nl2br(htmlspecialchars($p['purchase_message'])); ?>&rdquo;</div>
+                                                    <?php endif; ?>
                                                 </td>
                                                 <td class="rp-col-price"><?php echo $p['price'] ? '$' . number_format((float) $p['price'], 2) : '—'; ?></td>
                                                 <td class="rp-col-name">
