@@ -21,7 +21,7 @@ $honeymoonFundVisible = true;
 try {
     $pdo = getDbConnection();
     $stmt = $pdo->query("
-        SELECT id, title, description, url, image_url, price, purchased, purchased_by, created_at, most_wanted
+        SELECT id, title, description, url, image_url, price, purchased, created_at, most_wanted
         FROM registry_items
         WHERE published = TRUE
         ORDER BY purchased ASC, most_wanted DESC, sort_order ASC, id ASC
@@ -232,9 +232,6 @@ include __DIR__ . '/includes/header.php';
                                 </button>
                             <?php endif; ?>
                         </div>
-                        <?php if ($item['purchased'] && $item['purchased_by']): ?>
-                            <p class="registry-item-purchased-by">Purchased by: <?php echo htmlspecialchars($item['purchased_by']); ?></p>
-                        <?php endif; ?>
                     </div>
                 </div>
             <?php endforeach; ?>
