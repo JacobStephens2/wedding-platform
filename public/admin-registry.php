@@ -159,8 +159,8 @@ if (!$sampleMode && $authenticated && isset($_GET['toggle_purchased'])) {
             $newPurchasedStatus = !$item['purchased'];
             // Update with proper purchased_by handling - clear it when toggling
             $stmt = $pdo->prepare("
-                UPDATE registry_items 
-                SET purchased = ?, 
+                UPDATE registry_items
+                SET purchased = ?,
                     purchased_by = NULL
                 WHERE id = ?
             ");
@@ -248,6 +248,32 @@ if (!$sampleMode && $authenticated && isset($_GET['move_down'], $_GET['id']) && 
     }
 }
 
+// Handle bulk mark-as-available (used by the Recent Purchases section to clear
+// suspected spam/bot purchases in one click)
+if (!$sampleMode && $authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_mark_available'])) {
+    try {
+        $pdo = getDbConnection();
+        $ids = $_POST['unmark_ids'] ?? [];
+        if (!is_array($ids)) {
+            $ids = [];
+        }
+        $ids = array_values(array_filter(array_map('intval', $ids), function ($id) {
+            return $id > 0;
+        }));
+        if (!empty($ids)) {
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $stmt = $pdo->prepare("UPDATE registry_items SET purchased = 0, purchased_by = NULL WHERE id IN ($placeholders)");
+            $stmt->execute($ids);
+            header('Location: /admin-registry?unmarked=' . count($ids) . '#recent-purchases');
+            exit;
+        }
+        header('Location: /admin-registry#recent-purchases');
+        exit;
+    } catch (Exception $e) {
+        $error = 'Error marking items as available: ' . htmlspecialchars($e->getMessage());
+    }
+}
+
 // Handle bulk reorder
 if (!$sampleMode && $authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_reorder']) && isset($_POST['positions'])) {
     try {
@@ -295,7 +321,7 @@ if ($sampleMode) {
     try {
         $pdo = getDbConnection();
         $stmt = $pdo->query("
-            SELECT id, title, description, url, image_url, price, purchased, purchased_by, created_at, published, sort_order, most_wanted
+            SELECT id, title, description, url, image_url, price, purchased, purchased_by, created_at, updated_at, published, sort_order, most_wanted
             FROM registry_items
             ORDER BY sort_order ASC, id ASC
         ");
@@ -827,6 +853,158 @@ $page_title = "Manage Registry - Jacob & Melissa";
             border-color: var(--color-gold);
             background-color: var(--color-registry-prompt-bg);
         }
+        .recent-purchases-container {
+            background-color: var(--color-surface);
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--color-shadow);
+            margin-bottom: 2rem;
+        }
+        .recent-purchases-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0;
+            margin: 0 0 0.5rem 0;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font: inherit;
+            text-align: left;
+        }
+        .recent-purchases-header h2 {
+            color: var(--color-green);
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        .recent-purchases-toggle-icon {
+            display: inline-block;
+            width: 1.1rem;
+            height: 1.1rem;
+            border-right: 2px solid currentColor;
+            border-bottom: 2px solid currentColor;
+            color: var(--color-green);
+            transform: rotate(-135deg);
+            transition: transform 0.25s ease, color 0.2s ease;
+            flex-shrink: 0;
+            margin-left: 1rem;
+        }
+        .recent-purchases-container.collapsed .recent-purchases-toggle-icon {
+            transform: rotate(45deg);
+        }
+        .recent-purchases-container.collapsed .recent-purchases-body {
+            display: none;
+        }
+        .recent-purchases-note {
+            margin: 0 0 1rem 0;
+            font-size: 0.95rem;
+            color: var(--color-text-secondary);
+            font-family: 'Crimson Text', serif;
+            line-height: 1.5;
+        }
+        .recent-purchases-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .recent-purchases-select-all {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: 'Crimson Text', serif;
+            color: var(--color-text-secondary);
+            cursor: pointer;
+        }
+        .btn-mark-available-bulk {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 4px;
+            font-family: 'Cinzel', serif;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn-mark-available-bulk:hover:not(:disabled) {
+            background-color: #c82333;
+        }
+        .btn-mark-available-bulk:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .recent-purchases-table-wrapper {
+            overflow-x: auto;
+        }
+        .recent-purchases-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--color-surface);
+        }
+        .recent-purchases-table th,
+        .recent-purchases-table td {
+            padding: 0.6rem 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--color-border);
+            vertical-align: middle;
+            font-family: 'Crimson Text', serif;
+        }
+        .recent-purchases-table th {
+            background-color: var(--color-green);
+            color: white;
+            font-family: 'Cinzel', serif;
+            font-weight: 400;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+        .recent-purchases-table tbody tr:hover {
+            background-color: var(--color-light);
+        }
+        .recent-purchases-table .rp-col-title a {
+            color: var(--color-gold);
+            text-decoration: none;
+        }
+        .recent-purchases-table .rp-col-title a:hover {
+            text-decoration: underline;
+        }
+        .recent-purchases-table .rp-col-check {
+            width: 1.5rem;
+        }
+        .recent-purchases-table .rp-col-time {
+            white-space: nowrap;
+            color: var(--color-dark);
+            font-size: 0.9rem;
+        }
+        .recent-purchases-table .rp-col-price {
+            white-space: nowrap;
+            color: var(--color-green);
+            font-weight: bold;
+        }
+        .recent-purchases-table .rp-col-name {
+            color: var(--color-dark);
+        }
+        .recent-purchases-table .rp-col-action {
+            white-space: nowrap;
+            text-align: right;
+        }
+        .recent-purchases-table .rp-cluster td.rp-col-time {
+            border-left: 3px solid var(--color-gold);
+            padding-left: 0.5rem;
+        }
+        .rp-noname-tag {
+            color: #b02a37;
+            font-style: italic;
+            font-size: 0.9rem;
+        }
+        .recent-purchases-table tr.rp-noname.rp-cluster {
+            background-color: #fff6f6;
+        }
+        [data-theme="dark"] .recent-purchases-table tr.rp-noname.rp-cluster {
+            background-color: rgba(176, 42, 55, 0.15);
+        }
     </style>
 </head>
 <body>
@@ -873,6 +1051,11 @@ $page_title = "Manage Registry - Jacob & Melissa";
                 <?php if (isset($_GET['reordered'])): ?>
                     <div class="alert alert-success">
                         <p>Order updated.</p>
+                    </div>
+                <?php endif; ?>
+                <?php if (isset($_GET['unmarked'])): ?>
+                    <div class="alert alert-success">
+                        <p><?php echo (int) $_GET['unmarked']; ?> item(s) marked as available.</p>
                     </div>
                 <?php endif; ?>
                 <?php if ($success): ?>
@@ -1070,6 +1253,108 @@ $page_title = "Manage Registry - Jacob & Melissa";
                     </div>
                 </div>
                 
+                <?php
+                // Build the Recent Purchases log (purchased items, most recent first).
+                // Sorted by updated_at since we don't track a dedicated purchased_at yet;
+                // for still-purchased items the last update is almost always the purchase event.
+                $purchasedItemsList = array_values(array_filter($items, function ($it) {
+                    return !empty($it['purchased']);
+                }));
+                usort($purchasedItemsList, function ($a, $b) {
+                    return strcmp($b['updated_at'] ?? $b['created_at'] ?? '', $a['updated_at'] ?? $a['created_at'] ?? '');
+                });
+                $displayTz = new DateTimeZone('America/New_York');
+                $utcTz = new DateTimeZone('UTC');
+                ?>
+                <div class="recent-purchases-container" id="recent-purchases">
+                    <button type="button" class="recent-purchases-header" id="recent-purchases-toggle" aria-expanded="true" aria-controls="recent-purchases-body">
+                        <h2>Recent Purchases (<?php echo count($purchasedItemsList); ?>)</h2>
+                        <span class="recent-purchases-toggle-icon" aria-hidden="true"></span>
+                    </button>
+                    <div class="recent-purchases-body" id="recent-purchases-body">
+                        <p class="recent-purchases-note">
+                            Most recently purchased first. Times shown in Eastern Time. The purchase form does not currently collect a
+                            message from the buyer, so only names are shown. Rows are grouped visually when multiple purchases happened
+                            in the same minute &mdash; a tight cluster of anonymous purchases is a good sign of bot/spam activity.
+                        </p>
+                        <?php if (empty($purchasedItemsList)): ?>
+                            <p>No items have been marked as purchased yet.</p>
+                        <?php else: ?>
+                            <form method="POST" action="/admin-registry#recent-purchases" id="bulk-unmark-form">
+                                <input type="hidden" name="bulk_mark_available" value="1">
+                                <div class="recent-purchases-controls">
+                                    <label class="recent-purchases-select-all">
+                                        <input type="checkbox" id="select-all-purchases"> Select all
+                                    </label>
+                                    <button type="submit" class="btn btn-mark-available-bulk" id="bulk-unmark-btn" disabled
+                                            onclick="return confirm('Mark the selected items as available again? This cannot be undone.');">
+                                        Mark selected as Available
+                                    </button>
+                                </div>
+                                <div class="recent-purchases-table-wrapper">
+                                    <table class="recent-purchases-table">
+                                        <thead>
+                                            <tr>
+                                                <th class="rp-col-check"></th>
+                                                <th class="rp-col-time">Purchased (ET)</th>
+                                                <th class="rp-col-title">Item</th>
+                                                <th class="rp-col-price">Price</th>
+                                                <th class="rp-col-name">Purchased by</th>
+                                                <th class="rp-col-action"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php
+                                            $prevMinute = null;
+                                            foreach ($purchasedItemsList as $p):
+                                                $raw = $p['updated_at'] ?? $p['created_at'] ?? null;
+                                                $formatted = '';
+                                                $thisMinute = null;
+                                                if ($raw) {
+                                                    try {
+                                                        $dt = new DateTime($raw, $utcTz);
+                                                        $dt->setTimezone($displayTz);
+                                                        $formatted = $dt->format('M j, Y g:i A');
+                                                        $thisMinute = $dt->format('Y-m-d H:i');
+                                                    } catch (Exception $e) {
+                                                        $formatted = htmlspecialchars($raw);
+                                                    }
+                                                }
+                                                $clusterClass = ($prevMinute !== null && $thisMinute === $prevMinute) ? ' rp-cluster' : '';
+                                                $prevMinute = $thisMinute;
+                                                $noName = empty(trim((string) ($p['purchased_by'] ?? '')));
+                                            ?>
+                                            <tr class="rp-row<?php echo $clusterClass; ?><?php echo $noName ? ' rp-noname' : ''; ?>">
+                                                <td class="rp-col-check">
+                                                    <input type="checkbox" name="unmark_ids[]" value="<?php echo (int) $p['id']; ?>" class="rp-checkbox">
+                                                </td>
+                                                <td class="rp-col-time"><?php echo htmlspecialchars($formatted); ?></td>
+                                                <td class="rp-col-title">
+                                                    <a href="<?php echo htmlspecialchars($p['url']); ?>" target="_blank" rel="noopener noreferrer">
+                                                        <?php echo htmlspecialchars($p['title']); ?>
+                                                    </a>
+                                                </td>
+                                                <td class="rp-col-price"><?php echo $p['price'] ? '$' . number_format((float) $p['price'], 2) : '—'; ?></td>
+                                                <td class="rp-col-name">
+                                                    <?php if ($noName): ?>
+                                                        <span class="rp-noname-tag">(no name)</span>
+                                                    <?php else: ?>
+                                                        <?php echo htmlspecialchars($p['purchased_by']); ?>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td class="rp-col-action">
+                                                    <a href="/admin-registry?toggle_purchased=<?php echo (int) $p['id']; ?>#recent-purchases" class="btn-small btn-toggle">Mark Available</a>
+                                                </td>
+                                            </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </form>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
                 <div class="add-item-form">
                     <h2 id="form-title"><?php echo $editItem ? 'Edit Registry Item' : 'Add New Registry Item'; ?></h2>
                     <form method="POST" action="/admin-registry" id="item-form">
@@ -1229,6 +1514,48 @@ $page_title = "Manage Registry - Jacob & Melissa";
             toggle.addEventListener('click', function() {
                 setCollapsed(!container.classList.contains('collapsed'));
             });
+        })();
+
+        // Recent Purchases: fold/unfold and bulk unmark wiring
+        (function() {
+            const RP_COLLAPSED_KEY = 'admin-registry-recent-purchases-collapsed';
+            const container = document.querySelector('.recent-purchases-container');
+            const toggle = document.getElementById('recent-purchases-toggle');
+            const body = document.getElementById('recent-purchases-body');
+            if (container && toggle && body) {
+                function setCollapsed(collapsed) {
+                    container.classList.toggle('collapsed', collapsed);
+                    toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+                    try { localStorage.setItem(RP_COLLAPSED_KEY, collapsed ? '1' : '0'); } catch (e) {}
+                }
+                function isCollapsed() {
+                    try { return localStorage.getItem(RP_COLLAPSED_KEY) === '1'; } catch (e) { return false; }
+                }
+                setCollapsed(isCollapsed());
+                toggle.addEventListener('click', function() {
+                    setCollapsed(!container.classList.contains('collapsed'));
+                });
+            }
+
+            const selectAll = document.getElementById('select-all-purchases');
+            const bulkBtn = document.getElementById('bulk-unmark-btn');
+            const checkboxes = document.querySelectorAll('.rp-checkbox');
+            function refreshBulkState() {
+                if (!bulkBtn) return;
+                const anyChecked = Array.from(checkboxes).some(c => c.checked);
+                bulkBtn.disabled = !anyChecked;
+            }
+            if (selectAll) {
+                selectAll.addEventListener('change', function() {
+                    checkboxes.forEach(c => { c.checked = selectAll.checked; });
+                    refreshBulkState();
+                });
+            }
+            checkboxes.forEach(c => c.addEventListener('change', function() {
+                if (!c.checked && selectAll) selectAll.checked = false;
+                refreshBulkState();
+            }));
+            refreshBulkState();
         })();
 
         // Reorder position inputs
