@@ -1,8 +1,12 @@
 <?php
 require_once __DIR__ . '/../private/config.php';
+$turnstileSiteKey = $_ENV['TURNSTILE_SITE_KEY'] ?? '';
 $page_title = "RSVP - Jacob & Melissa";
 include __DIR__ . '/includes/header.php';
 ?>
+<?php if ($turnstileSiteKey): ?>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<?php endif; ?>
 
 <main class="page-container">
     <h1 class="page-title">RSVP</h1>
@@ -70,6 +74,12 @@ include __DIR__ . '/includes/header.php';
             <textarea id="rsvp-song" placeholder="Is there a song that would get you on the dance floor?"></textarea>
         </div>
         
+        <?php if ($turnstileSiteKey): ?>
+            <div class="form-group">
+                <div id="rsvp-turnstile" class="cf-turnstile" data-sitekey="<?php echo htmlspecialchars($turnstileSiteKey); ?>"></div>
+            </div>
+        <?php endif; ?>
+
         <div class="rsvp-form-actions">
             <button type="button" class="btn" id="btn-submit-rsvp">Submit RSVP</button>
             <button type="button" class="btn-back" id="btn-back-search">← Search Again</button>
@@ -671,9 +681,24 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        // Read Turnstile token if widget is present on the page.
+        const turnstileEl = document.getElementById('rsvp-turnstile');
+        let turnstileToken = '';
+        if (turnstileEl) {
+            if (typeof turnstile === 'undefined') {
+                showRsvpError('Bot check is still loading. Please try again in a moment.');
+                return;
+            }
+            try { turnstileToken = turnstile.getResponse(turnstileEl) || ''; } catch (e) {}
+            if (!turnstileToken) {
+                showRsvpError('Please complete the bot check before submitting.');
+                return;
+            }
+        }
+
         btnSubmit.classList.add('loading');
         btnSubmit.textContent = 'Submitting';
-        
+
         try {
             const resp = await fetch('/api/submit-group-rsvp', {
                 method: 'POST',
@@ -682,7 +707,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     guests: guestData,
                     email: email,
                     message: message,
-                    song_request: songRequest
+                    song_request: songRequest,
+                    cf_turnstile_token: turnstileToken
                 })
             });
             
@@ -748,14 +774,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 stepSuccess.scrollIntoView({ behavior: 'smooth', block: 'start' });
             } else {
                 showRsvpError(data.error || 'An error occurred. Please try again.');
+                resetRsvpTurnstile();
             }
         } catch (err) {
             console.error('Submit error:', err);
             showRsvpError('An error occurred. Please try again.');
+            resetRsvpTurnstile();
         }
-        
+
         btnSubmit.classList.remove('loading');
         btnSubmit.textContent = isUpdate ? 'Update RSVP' : 'Submit RSVP';
+    }
+
+    function resetRsvpTurnstile() {
+        const el = document.getElementById('rsvp-turnstile');
+        if (!el || typeof turnstile === 'undefined') return;
+        try { turnstile.reset(el); } catch (e) {}
     }
     
     function showRsvpError(msg) {

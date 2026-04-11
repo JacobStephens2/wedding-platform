@@ -17,6 +17,7 @@
 
 require_once __DIR__ . '/../../private/config.php';
 require_once __DIR__ . '/../../private/db.php';
+require_once __DIR__ . '/../../private/turnstile.php';
 
 header('Content-Type: application/json');
 
@@ -33,10 +34,18 @@ $guestRsvps = $input['guests'];
 $email = trim($input['email'] ?? '');
 $message = trim($input['message'] ?? '');
 $songRequest = trim($input['song_request'] ?? '');
+$turnstileToken = trim($input['cf_turnstile_token'] ?? '');
 
 if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
     http_response_code(400);
     echo json_encode(['error' => 'Please enter a valid email address.']);
+    exit;
+}
+
+// Bot protection
+if (turnstileEnabled() && !verifyTurnstileToken($turnstileToken, turnstileClientIp())) {
+    http_response_code(403);
+    echo json_encode(['error' => 'Bot check failed. Please reload the page and try again.']);
     exit;
 }
 
