@@ -14,6 +14,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $input = json_decode(file_get_contents('php://input'), true);
 $itemId = $input['item_id'] ?? null;
 $purchaserName = trim($input['purchaser_name'] ?? '');
+$purchaserMessage = trim($input['purchaser_message'] ?? '');
+if (mb_strlen($purchaserMessage) > 2000) {
+    $purchaserMessage = mb_substr($purchaserMessage, 0, 2000);
+}
 
 if (!$itemId) {
     http_response_code(400);
@@ -23,29 +27,31 @@ if (!$itemId) {
 
 try {
     $pdo = getDbConnection();
-    
+
     // Check if item exists
     $stmt = $pdo->prepare("SELECT id, purchased FROM registry_items WHERE id = ?");
     $stmt->execute([$itemId]);
     $item = $stmt->fetch();
-    
+
     if (!$item) {
         http_response_code(404);
         echo json_encode(['success' => false, 'error' => 'Item not found']);
         exit;
     }
-    
+
     // Toggle purchased status
     $newPurchasedStatus = !$item['purchased'];
     $stmt = $pdo->prepare("
-        UPDATE registry_items 
-        SET purchased = ?, 
-            purchased_by = ?
+        UPDATE registry_items
+        SET purchased = ?,
+            purchased_by = ?,
+            purchase_message = ?
         WHERE id = ?
     ");
     $stmt->execute([
         $newPurchasedStatus ? 1 : 0,
         $newPurchasedStatus && $purchaserName ? $purchaserName : null,
+        $newPurchasedStatus && $purchaserMessage !== '' ? $purchaserMessage : null,
         $itemId
     ]);
     
@@ -62,6 +68,12 @@ try {
         $body .= "Item: $itemTitle\n";
         if ($itemPrice) {
             $body .= "Price: $itemPrice\n";
+        }
+        if ($purchaserName !== '') {
+            $body .= "From: $purchaserName\n";
+        }
+        if ($purchaserMessage !== '') {
+            $body .= "Message: $purchaserMessage\n";
         }
         $body .= "\n— Wedding Website";
 
