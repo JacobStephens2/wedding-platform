@@ -471,6 +471,23 @@ $page_title = "Manage Gifts - Jacob & Melissa";
             color: var(--color-text-secondary);
             font-size: 0.95rem;
         }
+        .gift-filter-select {
+            padding: 0.45rem 0.65rem;
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            background-color: var(--color-surface);
+            color: inherit;
+            font: inherit;
+            font-family: 'Crimson Text', serif;
+        }
+        .gift-filter-select:focus {
+            outline: none;
+            border-color: var(--color-green);
+            box-shadow: 0 0 0 2px rgba(127, 143, 101, 0.25);
+        }
+        .gift-filter-bar #filter-reset {
+            padding: 0.5rem 0.9rem;
+        }
         .gift-filter-empty {
             padding: 1rem;
             font-family: 'Crimson Text', serif;
@@ -900,9 +917,28 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                         <div class="gift-filter-bar">
                             <label for="gift-filter">Search</label>
                             <input type="search" id="gift-filter" placeholder="Filter by gift, purchaser, message, or notes…" autocomplete="off">
+                            <label for="filter-received">Received</label>
+                            <select id="filter-received" class="gift-filter-select">
+                                <option value="">All</option>
+                                <option value="yes">Received</option>
+                                <option value="no">Not received</option>
+                            </select>
+                            <label for="filter-written">Written</label>
+                            <select id="filter-written" class="gift-filter-select">
+                                <option value="">All</option>
+                                <option value="yes">Written</option>
+                                <option value="no">Not written</option>
+                            </select>
+                            <label for="filter-sent">Sent</label>
+                            <select id="filter-sent" class="gift-filter-select">
+                                <option value="">All</option>
+                                <option value="yes">Sent</option>
+                                <option value="no">Not sent</option>
+                            </select>
+                            <button type="button" id="filter-reset" class="btn-small btn-secondary">Reset</button>
                             <span class="gift-filter-count" id="gift-filter-count"><?php echo count($allGifts); ?> of <?php echo count($allGifts); ?></span>
                         </div>
-                        <p class="gift-filter-empty" id="gift-filter-empty">No gifts match that search.</p>
+                        <p class="gift-filter-empty" id="gift-filter-empty">No gifts match the current filters.</p>
                         <div class="table-wrapper">
                             <table class="gifts-table" id="gifts-unified-table">
                                 <thead>
@@ -934,8 +970,17 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                                             $isRegistry ? 'registry' : 'off-registry off registry',
                                         ]);
                                         $searchBlob = strtolower(trim(preg_replace('/\s+/', ' ', implode(' ', $searchParts))));
+                                        // For filter UX, off-registry gifts are treated as "received"
+                                        // since admins only record them after the gift arrives.
+                                        $receivedAttr = $isRegistry ? ($g['received'] ? 'yes' : 'no') : 'yes';
+                                        $writtenAttr = $g['written'] ? 'yes' : 'no';
+                                        $sentAttr = $g['sent'] ? 'yes' : 'no';
                                     ?>
-                                        <tr class="<?php echo htmlspecialchars(implode(' ', $rowClasses)); ?>" data-search="<?php echo htmlspecialchars($searchBlob); ?>">
+                                        <tr class="<?php echo htmlspecialchars(implode(' ', $rowClasses)); ?>"
+                                            data-search="<?php echo htmlspecialchars($searchBlob); ?>"
+                                            data-received="<?php echo $receivedAttr; ?>"
+                                            data-written="<?php echo $writtenAttr; ?>"
+                                            data-sent="<?php echo $sentAttr; ?>">
                                             <td>
                                                 <span class="badge-source <?php echo $isRegistry ? 'registry' : 'offregistry'; ?>">
                                                     <?php echo $isRegistry ? 'Registry' : 'Off-Registry'; ?>
@@ -1048,32 +1093,60 @@ $page_title = "Manage Gifts - Jacob & Melissa";
             });
         })();
 
-        // Live filter for the unified gifts table. Matches against gift
-        // title, giver name, message/notes, and source (space-normalized
-        // and lowercased in data-search).
+        // Live filter for the unified gifts table. Combines a text search
+        // with three yes/no/all dropdowns for received / written / sent.
+        // Off-registry rows are pre-tagged as "received" since we only
+        // record them after the gift has arrived.
         (function() {
             const input = document.getElementById('gift-filter');
             const table = document.getElementById('gifts-unified-table');
             const count = document.getElementById('gift-filter-count');
             const empty = document.getElementById('gift-filter-empty');
+            const selReceived = document.getElementById('filter-received');
+            const selWritten = document.getElementById('filter-written');
+            const selSent = document.getElementById('filter-sent');
+            const resetBtn = document.getElementById('filter-reset');
             if (!input || !table) return;
             const rows = Array.from(table.querySelectorAll('tbody tr.gift-row'));
             const total = rows.length;
+
+            function matchesStatus(row, sel, key) {
+                const want = sel ? sel.value : '';
+                if (!want) return true;
+                return (row.dataset[key] || '') === want;
+            }
 
             function applyFilter() {
                 const q = input.value.trim().toLowerCase();
                 let visible = 0;
                 rows.forEach(function(row) {
                     const haystack = row.dataset.search || '';
-                    const match = q === '' || haystack.indexOf(q) !== -1;
-                    row.style.display = match ? '' : 'none';
-                    if (match) visible++;
+                    const textOk = q === '' || haystack.indexOf(q) !== -1;
+                    const rOk = matchesStatus(row, selReceived, 'received');
+                    const wOk = matchesStatus(row, selWritten, 'written');
+                    const sOk = matchesStatus(row, selSent, 'sent');
+                    const show = textOk && rOk && wOk && sOk;
+                    row.style.display = show ? '' : 'none';
+                    if (show) visible++;
                 });
                 if (count) count.textContent = visible + ' of ' + total;
                 if (empty) empty.classList.toggle('visible', visible === 0 && total > 0);
             }
 
             input.addEventListener('input', applyFilter);
+            [selReceived, selWritten, selSent].forEach(function(sel) {
+                if (sel) sel.addEventListener('change', applyFilter);
+            });
+            if (resetBtn) {
+                resetBtn.addEventListener('click', function() {
+                    input.value = '';
+                    if (selReceived) selReceived.value = '';
+                    if (selWritten) selWritten.value = '';
+                    if (selSent) selSent.value = '';
+                    applyFilter();
+                    input.focus();
+                });
+            }
             applyFilter();
         })();
     </script>
