@@ -114,6 +114,28 @@ foreach ($allowedStages as $stage) {
     }
 }
 
+// Handle saving an admin note on a registry purchase
+if (!$sampleMode && $authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_registry_note'])) {
+    try {
+        $pdo = getDbConnection();
+        $noteId = (int) ($_POST['registry_item_id'] ?? 0);
+        $note = trim((string) ($_POST['admin_note'] ?? ''));
+        if (mb_strlen($note) > 4000) {
+            $note = mb_substr($note, 0, 4000);
+        }
+        if ($noteId > 0) {
+            // Preserve updated_at so note edits don't jump the row in any
+            // updated_at-ordered admin view.
+            $stmt = $pdo->prepare("UPDATE registry_items SET admin_note = ?, updated_at = updated_at WHERE id = ?");
+            $stmt->execute([$note !== '' ? $note : null, $noteId]);
+            header('Location: /admin-gifts?note_saved=1#gifts-table');
+            exit;
+        }
+    } catch (Exception $e) {
+        $error = 'Error saving note: ' . htmlspecialchars($e->getMessage());
+    }
+}
+
 // Handle deleting a manual gift
 if (!$sampleMode && $authenticated && isset($_GET['delete']) && is_numeric($_GET['delete'])) {
     try {
@@ -215,6 +237,8 @@ if (isset($_GET['added'])) {
     $success = 'Gift updated successfully!';
 } elseif (isset($_GET['deleted'])) {
     $success = 'Gift deleted.';
+} elseif (isset($_GET['note_saved'])) {
+    $success = 'Note saved.';
 }
 
 // Fetch gift for editing
@@ -248,6 +272,7 @@ if ($sampleMode) {
         if (!empty($item['purchased'])) {
             $registryPurchases[] = $item + [
                 'purchase_message' => $item['purchase_message'] ?? null,
+                'admin_note' => $item['admin_note'] ?? null,
                 'received' => $item['received'] ?? 0,
                 'received_at' => $item['received_at'] ?? null,
                 'thank_you_written' => $item['thank_you_written'] ?? 0,
@@ -274,7 +299,7 @@ if ($sampleMode) {
     try {
         $pdo = getDbConnection();
         $stmt = $pdo->query("
-            SELECT id, title, price, purchased_by, purchase_message,
+            SELECT id, title, price, purchased_by, purchase_message, admin_note,
                    received, received_at,
                    thank_you_written, thank_you_written_at,
                    thank_you_sent, thank_you_sent_at, updated_at
@@ -355,6 +380,7 @@ foreach ($registryPurchases as $r) {
         'title' => $r['title'] ?? '',
         'from' => trim((string) ($r['purchased_by'] ?? '')),
         'details' => (string) ($r['purchase_message'] ?? ''),
+        'admin_note' => (string) ($r['admin_note'] ?? ''),
         'price' => $r['price'] ?? null,
         'date_display' => !empty($r['received_at'])
             ? date('M j, Y', strtotime($r['received_at']))
@@ -372,6 +398,7 @@ foreach ($manualGifts as $g) {
         'title' => $g['description'] ?? '',
         'from' => trim((string) ($g['purchaser_name'] ?? '')),
         'details' => (string) ($g['notes'] ?? ''),
+        'admin_note' => '', // off-registry gifts use `details` for admin notes already
         'price' => null,
         'date_display' => !empty($g['received_on']) ? date('M j, Y', strtotime($g['received_on'])) : '',
         'received' => null, // not tracked as a toggle for off-registry gifts
@@ -611,6 +638,36 @@ $page_title = "Manage Gifts - Jacob & Melissa";
             text-transform: none;
             color: var(--color-text-secondary);
             white-space: pre-wrap;
+        }
+        .gifts-table .gift-admin-note {
+            margin-top: 0.35rem;
+            font-family: 'Crimson Text', serif;
+            text-transform: none;
+            color: var(--color-dark);
+            white-space: pre-wrap;
+            border-left: 3px solid var(--color-gold);
+            padding-left: 0.6rem;
+        }
+        .gifts-table .gift-admin-note strong { color: var(--color-gold); }
+        .gift-title-link {
+            background: none;
+            border: none;
+            padding: 0;
+            margin: 0;
+            font: inherit;
+            color: var(--color-dark);
+            cursor: pointer;
+            text-align: left;
+            font-weight: bold;
+            text-decoration: none;
+            border-bottom: 1px dashed transparent;
+            transition: border-color 0.2s, color 0.2s;
+        }
+        .gift-title-link:hover,
+        .gift-title-link:focus {
+            color: var(--color-green);
+            border-bottom-color: var(--color-green);
+            outline: none;
         }
         .no-name { color: var(--color-text-muted); font-style: italic; }
         .actions-cell { white-space: nowrap; }
@@ -1049,13 +1106,31 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                                                     <?php echo htmlspecialchars($g['from']); ?>
                                                 <?php endif; ?>
                                             </td>
-                                            <td class="gift-title"><?php echo htmlspecialchars($g['title']); ?></td>
+                                            <td class="gift-title">
+                                                <?php if ($isRegistry): ?>
+                                                    <button type="button" class="gift-title-link js-open-note-modal"
+                                                            data-item-id="<?php echo (int) $g['id']; ?>"
+                                                            data-item-title="<?php echo htmlspecialchars($g['title']); ?>"
+                                                            data-item-note="<?php echo htmlspecialchars($g['admin_note']); ?>"
+                                                            title="Click to add or edit an admin note">
+                                                        <?php echo htmlspecialchars($g['title']); ?>
+                                                    </button>
+                                                <?php else: ?>
+                                                    <a href="/admin-gifts?edit=<?php echo (int) $g['id']; ?>#add-gift" class="gift-title-link" title="Click to edit this gift">
+                                                        <?php echo htmlspecialchars($g['title']); ?>
+                                                    </a>
+                                                <?php endif; ?>
+                                            </td>
                                             <td>
-                                                <?php if ($g['details'] !== ''): ?>
-                                                    <?php if ($isRegistry): ?>
+                                                <?php $hasDetails = $g['details'] !== ''; $hasAdminNote = $isRegistry && ($g['admin_note'] ?? '') !== ''; ?>
+                                                <?php if ($hasDetails || $hasAdminNote): ?>
+                                                    <?php if ($hasDetails && $isRegistry): ?>
                                                         <div class="gift-message">&ldquo;<?php echo nl2br(htmlspecialchars($g['details'])); ?>&rdquo;</div>
-                                                    <?php else: ?>
+                                                    <?php elseif ($hasDetails): ?>
                                                         <div class="gift-notes"><?php echo nl2br(htmlspecialchars($g['details'])); ?></div>
+                                                    <?php endif; ?>
+                                                    <?php if ($hasAdminNote): ?>
+                                                        <div class="gift-admin-note"><strong>Note:</strong> <?php echo nl2br(htmlspecialchars($g['admin_note'])); ?></div>
                                                     <?php endif; ?>
                                                 <?php else: ?>
                                                     —
@@ -1103,6 +1178,62 @@ $page_title = "Manage Gifts - Jacob & Melissa";
         </div>
     </main>
     <?php if ($authenticated): ?>
+    <!-- Admin note modal for registry purchases (click a gift title to open) -->
+    <div id="registry-note-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" id="registry-note-modal-close">&times;</span>
+            <h3>Add / Edit Note</h3>
+            <p id="registry-note-item-title" style="font-family: 'Cinzel', serif; color: var(--color-dark); font-weight: bold; margin-bottom: 1rem;"></p>
+            <form method="POST" action="/admin-gifts#gifts-table" id="registry-note-form">
+                <input type="hidden" name="save_registry_note" value="1">
+                <input type="hidden" name="registry_item_id" id="registry-note-item-id">
+                <div class="form-group">
+                    <label for="registry-note-textarea">Private note (only visible in the admin area)</label>
+                    <textarea id="registry-note-textarea" name="admin_note" rows="5" maxlength="4000" placeholder="Anything to remember when writing the thank-you card"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="btn">Save Note</button>
+                    <button type="button" class="btn btn-secondary" id="registry-note-modal-cancel">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+        (function() {
+            const modal = document.getElementById('registry-note-modal');
+            if (!modal) return;
+            const idInput = document.getElementById('registry-note-item-id');
+            const textarea = document.getElementById('registry-note-textarea');
+            const titleEl = document.getElementById('registry-note-item-title');
+            const closeBtn = document.getElementById('registry-note-modal-close');
+            const cancelBtn = document.getElementById('registry-note-modal-cancel');
+
+            function open(itemId, itemTitle, note) {
+                if (idInput) idInput.value = itemId;
+                if (titleEl) titleEl.textContent = itemTitle || '';
+                if (textarea) textarea.value = note || '';
+                modal.style.display = 'block';
+                setTimeout(function() { if (textarea) textarea.focus(); }, 50);
+            }
+            function close() { modal.style.display = 'none'; }
+
+            document.querySelectorAll('.js-open-note-modal').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    open(btn.dataset.itemId, btn.dataset.itemTitle, btn.dataset.itemNote);
+                });
+            });
+
+            if (closeBtn) closeBtn.addEventListener('click', close);
+            if (cancelBtn) cancelBtn.addEventListener('click', close);
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) close();
+            });
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && modal.style.display === 'block') close();
+            });
+        })();
+    </script>
     <script>
         // Persist the open/closed state of the Add Off-Registry Gift panel
         // across page loads. When the user lands on the page mid-edit (PHP
