@@ -575,6 +575,24 @@ $page_title = "Manage Gifts - Jacob & Melissa";
             font-family: 'Cinzel', serif;
             font-size: 0.95rem;
         }
+        .gifts-table th.sortable {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            padding-right: 1.4rem;
+        }
+        .gifts-table th.sortable::after {
+            content: '⇅';
+            position: absolute;
+            right: 0.55rem;
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: 0.5;
+            font-size: 0.8rem;
+        }
+        .gifts-table th.sortable.sort-asc::after { content: '▲'; opacity: 1; }
+        .gifts-table th.sortable.sort-desc::after { content: '▼'; opacity: 1; }
+        .gifts-table th.sortable:hover { background-color: #2d5016; }
         .gifts-table tr.thanked td {
             background-color: var(--color-light);
         }
@@ -943,14 +961,16 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                             <table class="gifts-table" id="gifts-unified-table">
                                 <thead>
                                     <tr>
-                                        <th>Source</th>
-                                        <th>Status</th>
-                                        <th>From</th>
-                                        <th>Gift</th>
+                                        <th class="sortable" data-sort-key="source">Source</th>
+                                        <th class="sortable" data-sort-key="status">Status</th>
+                                        <th class="sortable" data-sort-key="from">From</th>
+                                        <th class="sortable" data-sort-key="title">Gift</th>
                                         <th>Message / Notes</th>
-                                        <th>Price</th>
-                                        <th>Date</th>
-                                        <th>Thank-you</th>
+                                        <th class="sortable" data-sort-key="price">Price</th>
+                                        <th class="sortable" data-sort-key="date">Date</th>
+                                        <th class="sortable" data-sort-key="received">Received</th>
+                                        <th class="sortable" data-sort-key="written">Written</th>
+                                        <th class="sortable" data-sort-key="sent">Sent</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -975,12 +995,27 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                                         $receivedAttr = $isRegistry ? ($g['received'] ? 'yes' : 'no') : 'yes';
                                         $writtenAttr = $g['written'] ? 'yes' : 'no';
                                         $sentAttr = $g['sent'] ? 'yes' : 'no';
+                                        // Sort keys. Empty strings use "~" so they sort last in ascending.
+                                        $statusRank = $completed ? 3 : ($g['sent'] ? 2 : ($g['written'] ? 1 : 0));
+                                        $fromSort = $g['from'] !== '' ? mb_strtolower($g['from']) : '~';
+                                        $titleSort = mb_strtolower($g['title'] ?? '');
+                                        $priceSort = $g['price'] !== null && $g['price'] !== '' ? (float) $g['price'] : -1;
+                                        $dateSort = !empty($g['received_at']) ? strtotime($g['received_at']) : 0;
                                     ?>
                                         <tr class="<?php echo htmlspecialchars(implode(' ', $rowClasses)); ?>"
                                             data-search="<?php echo htmlspecialchars($searchBlob); ?>"
                                             data-received="<?php echo $receivedAttr; ?>"
                                             data-written="<?php echo $writtenAttr; ?>"
-                                            data-sent="<?php echo $sentAttr; ?>">
+                                            data-sent="<?php echo $sentAttr; ?>"
+                                            data-sort-source="<?php echo $isRegistry ? 'a' : 'b'; ?>"
+                                            data-sort-status="<?php echo (int) $statusRank; ?>"
+                                            data-sort-from="<?php echo htmlspecialchars($fromSort); ?>"
+                                            data-sort-title="<?php echo htmlspecialchars($titleSort); ?>"
+                                            data-sort-price="<?php echo htmlspecialchars((string) $priceSort); ?>"
+                                            data-sort-date="<?php echo (int) $dateSort; ?>"
+                                            data-sort-received="<?php echo $receivedAttr === 'yes' ? 1 : 0; ?>"
+                                            data-sort-written="<?php echo $writtenAttr === 'yes' ? 1 : 0; ?>"
+                                            data-sort-sent="<?php echo $sentAttr === 'yes' ? 1 : 0; ?>">
                                             <td>
                                                 <span class="badge-source <?php echo $isRegistry ? 'registry' : 'offregistry'; ?>">
                                                     <?php echo $isRegistry ? 'Registry' : 'Off-Registry'; ?>
@@ -1033,20 +1068,21 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                                                     <a href="/admin-gifts?toggle_registry_received=<?php echo (int) $g['id']; ?>#gifts-table" class="btn-small <?php echo $g['received'] ? 'btn-thanks-active' : 'btn-received'; ?>" title="<?php echo $g['received'] && !empty($g['received_at']) ? 'Received ' . htmlspecialchars(date('M j, Y', strtotime($g['received_at']))) : 'Mark gift as received'; ?>">
                                                         <?php echo $g['received'] ? '✓ Received' : 'Mark Received'; ?>
                                                     </a>
-                                                    <a href="/admin-gifts?toggle_registry_written=<?php echo (int) $g['id']; ?>#gifts-table" class="btn-small <?php echo $g['written'] ? 'btn-thanks-active' : 'btn-thanks-written'; ?>">
-                                                        <?php echo $g['written'] ? '✓ Written' : 'Mark Written'; ?>
-                                                    </a>
-                                                    <a href="/admin-gifts?toggle_registry_sent=<?php echo (int) $g['id']; ?>#gifts-table" class="btn-small <?php echo $g['sent'] ? 'btn-thanks-active' : 'btn-thanks-sent'; ?>">
-                                                        <?php echo $g['sent'] ? '✓ Sent' : 'Mark Sent'; ?>
-                                                    </a>
                                                 <?php else: ?>
-                                                    <a href="/admin-gifts?toggle_gift_written=<?php echo (int) $g['id']; ?>#gifts-table" class="btn-small <?php echo $g['written'] ? 'btn-thanks-active' : 'btn-thanks-written'; ?>">
-                                                        <?php echo $g['written'] ? '✓ Written' : 'Mark Written'; ?>
-                                                    </a>
-                                                    <a href="/admin-gifts?toggle_gift_sent=<?php echo (int) $g['id']; ?>#gifts-table" class="btn-small <?php echo $g['sent'] ? 'btn-thanks-active' : 'btn-thanks-sent'; ?>">
-                                                        <?php echo $g['sent'] ? '✓ Sent' : 'Mark Sent'; ?>
-                                                    </a>
+                                                    <span class="no-name" title="Off-registry gifts are recorded after arrival">—</span>
                                                 <?php endif; ?>
+                                            </td>
+                                            <td class="actions-cell">
+                                                <?php $writtenHref = $isRegistry ? 'toggle_registry_written' : 'toggle_gift_written'; ?>
+                                                <a href="/admin-gifts?<?php echo $writtenHref; ?>=<?php echo (int) $g['id']; ?>#gifts-table" class="btn-small <?php echo $g['written'] ? 'btn-thanks-active' : 'btn-thanks-written'; ?>">
+                                                    <?php echo $g['written'] ? '✓ Written' : 'Mark Written'; ?>
+                                                </a>
+                                            </td>
+                                            <td class="actions-cell">
+                                                <?php $sentHref = $isRegistry ? 'toggle_registry_sent' : 'toggle_gift_sent'; ?>
+                                                <a href="/admin-gifts?<?php echo $sentHref; ?>=<?php echo (int) $g['id']; ?>#gifts-table" class="btn-small <?php echo $g['sent'] ? 'btn-thanks-active' : 'btn-thanks-sent'; ?>">
+                                                    <?php echo $g['sent'] ? '✓ Sent' : 'Mark Sent'; ?>
+                                                </a>
                                             </td>
                                             <td class="actions-cell">
                                                 <?php if (!$isRegistry): ?>
@@ -1148,6 +1184,56 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                 });
             }
             applyFilter();
+
+            // Clickable sortable headers. Numeric columns parse as numbers;
+            // everything else compares as lowercase strings. Click once for
+            // ascending, click the same header again for descending.
+            const numericKeys = { status: true, price: true, date: true, received: true, written: true, sent: true };
+            const tbody = table.querySelector('tbody');
+            const headers = Array.from(table.querySelectorAll('th.sortable'));
+            let sortState = { key: null, dir: null };
+
+            function readSort(row, key) {
+                const raw = row.dataset['sort' + key.charAt(0).toUpperCase() + key.slice(1)];
+                if (numericKeys[key]) return parseFloat(raw);
+                return (raw || '').toLowerCase();
+            }
+
+            function sortBy(key) {
+                if (!tbody) return;
+                if (sortState.key === key) {
+                    sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortState.key = key;
+                    sortState.dir = 'asc';
+                }
+                const dirMul = sortState.dir === 'asc' ? 1 : -1;
+                const sorted = rows.slice().sort(function(a, b) {
+                    const av = readSort(a, key);
+                    const bv = readSort(b, key);
+                    if (av < bv) return -1 * dirMul;
+                    if (av > bv) return 1 * dirMul;
+                    // Stable tie-break: fall back to lowercase title
+                    const at = (a.dataset.sortTitle || '');
+                    const bt = (b.dataset.sortTitle || '');
+                    if (at < bt) return -1;
+                    if (at > bt) return 1;
+                    return 0;
+                });
+                sorted.forEach(function(row) { tbody.appendChild(row); });
+                headers.forEach(function(h) {
+                    h.classList.remove('sort-asc', 'sort-desc');
+                    if (h.dataset.sortKey === key) {
+                        h.classList.add(sortState.dir === 'asc' ? 'sort-asc' : 'sort-desc');
+                    }
+                });
+            }
+
+            headers.forEach(function(h) {
+                h.addEventListener('click', function() {
+                    sortBy(h.dataset.sortKey);
+                });
+            });
         })();
     </script>
     <?php endif; ?>
