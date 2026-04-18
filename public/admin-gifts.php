@@ -899,6 +899,34 @@ $page_title = "Manage Gifts - Jacob & Melissa";
             <?php endif; ?>
         </div>
     </main>
+    <?php if ($authenticated): ?>
+    <script>
+        // Persist the open/closed state of the Add Off-Registry Gift panel
+        // across page loads. When the user lands on the page mid-edit (PHP
+        // output `open` attribute), honor that and leave it open — the edit
+        // flow needs the form visible regardless of stored preference.
+        (function() {
+            const STORAGE_KEY = 'admin-gifts-add-panel-open';
+            const panel = document.getElementById('add-gift');
+            if (!panel || panel.tagName.toLowerCase() !== 'details') return;
+
+            const isEditing = document.querySelector('input[name="gift_id"]') !== null;
+            if (!isEditing) {
+                try {
+                    const stored = localStorage.getItem(STORAGE_KEY);
+                    if (stored === '1') panel.open = true;
+                    else if (stored === '0') panel.open = false;
+                } catch (e) { /* ignore storage errors */ }
+            }
+
+            panel.addEventListener('toggle', function() {
+                try {
+                    localStorage.setItem(STORAGE_KEY, panel.open ? '1' : '0');
+                } catch (e) { /* ignore storage errors */ }
+            });
+        })();
+    </script>
+    <?php endif; ?>
     <?php if ($authenticated && !$sampleMode): ?>
     <script>
         // Inline edit of purchased_by name on registry purchases table.
