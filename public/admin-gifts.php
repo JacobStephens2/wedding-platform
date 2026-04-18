@@ -707,6 +707,11 @@ $page_title = "Manage Gifts - Jacob & Melissa";
             color: white;
         }
         .btn-received:hover { background-color: #916dbc; }
+        .js-toggle-status.is-busy {
+            opacity: 0.6;
+            cursor: progress;
+            pointer-events: none;
+        }
         .gifts-table tr.awaiting-delivery { background-color: #fffdf3; }
         [data-theme="dark"] .gifts-table tr.awaiting-delivery { background-color: rgba(241, 196, 15, 0.08); }
         .btn-edit {
@@ -1140,7 +1145,12 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                                             <td><?php echo $g['date_display'] !== '' ? htmlspecialchars($g['date_display']) : '—'; ?></td>
                                             <td class="actions-cell">
                                                 <?php if ($isRegistry): ?>
-                                                    <a href="/admin-gifts?toggle_registry_received=<?php echo (int) $g['id']; ?>#gifts-table" class="btn-small <?php echo $g['received'] ? 'btn-thanks-active' : 'btn-received'; ?>" title="<?php echo $g['received'] && !empty($g['received_at']) ? 'Received ' . htmlspecialchars(date('M j, Y', strtotime($g['received_at']))) : 'Mark gift as received'; ?>">
+                                                    <a href="/admin-gifts?toggle_registry_received=<?php echo (int) $g['id']; ?>#gifts-table"
+                                                       class="btn-small js-toggle-status <?php echo $g['received'] ? 'btn-thanks-active' : 'btn-received'; ?>"
+                                                       data-source="registry"
+                                                       data-id="<?php echo (int) $g['id']; ?>"
+                                                       data-field="received"
+                                                       title="<?php echo $g['received'] && !empty($g['received_at']) ? 'Received ' . htmlspecialchars(date('M j, Y', strtotime($g['received_at']))) : 'Mark gift as received'; ?>">
                                                         <?php echo $g['received'] ? '✓ Received' : 'Mark Received'; ?>
                                                     </a>
                                                 <?php else: ?>
@@ -1149,13 +1159,21 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                                             </td>
                                             <td class="actions-cell">
                                                 <?php $writtenHref = $isRegistry ? 'toggle_registry_written' : 'toggle_gift_written'; ?>
-                                                <a href="/admin-gifts?<?php echo $writtenHref; ?>=<?php echo (int) $g['id']; ?>#gifts-table" class="btn-small <?php echo $g['written'] ? 'btn-thanks-active' : 'btn-thanks-written'; ?>">
+                                                <a href="/admin-gifts?<?php echo $writtenHref; ?>=<?php echo (int) $g['id']; ?>#gifts-table"
+                                                   class="btn-small js-toggle-status <?php echo $g['written'] ? 'btn-thanks-active' : 'btn-thanks-written'; ?>"
+                                                   data-source="<?php echo $isRegistry ? 'registry' : 'offregistry'; ?>"
+                                                   data-id="<?php echo (int) $g['id']; ?>"
+                                                   data-field="written">
                                                     <?php echo $g['written'] ? '✓ Written' : 'Mark Written'; ?>
                                                 </a>
                                             </td>
                                             <td class="actions-cell">
                                                 <?php $sentHref = $isRegistry ? 'toggle_registry_sent' : 'toggle_gift_sent'; ?>
-                                                <a href="/admin-gifts?<?php echo $sentHref; ?>=<?php echo (int) $g['id']; ?>#gifts-table" class="btn-small <?php echo $g['sent'] ? 'btn-thanks-active' : 'btn-thanks-sent'; ?>">
+                                                <a href="/admin-gifts?<?php echo $sentHref; ?>=<?php echo (int) $g['id']; ?>#gifts-table"
+                                                   class="btn-small js-toggle-status <?php echo $g['sent'] ? 'btn-thanks-active' : 'btn-thanks-sent'; ?>"
+                                                   data-source="<?php echo $isRegistry ? 'registry' : 'offregistry'; ?>"
+                                                   data-id="<?php echo (int) $g['id']; ?>"
+                                                   data-field="sent">
                                                     <?php echo $g['sent'] ? '✓ Sent' : 'Mark Sent'; ?>
                                                 </a>
                                             </td>
@@ -1365,6 +1383,118 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                     sortBy(h.dataset.sortKey);
                 });
             });
+
+            // In-place toggle for Mark Received / Mark Written / Mark Sent.
+            // Hits /api/toggle-gift-status and updates the row in place so
+            // the user's scroll position, sort, and filters stay intact.
+            // Sample mode is bypassed (the server would reject the call
+            // anyway) so the anchor fallback still navigates normally.
+            if (!document.querySelector('.sample-mode-banner')) {
+                function updateStatusBadge(row) {
+                    const written = row.dataset.written === 'yes';
+                    const sent = row.dataset.sent === 'yes';
+                    const completed = written && sent;
+                    const badge = row.querySelector('.badge-thanks');
+                    if (badge) {
+                        badge.classList.remove('completed', 'sent', 'written', 'pending');
+                        if (completed) { badge.classList.add('completed'); badge.textContent = 'Completed'; }
+                        else if (sent) { badge.classList.add('sent'); badge.textContent = 'Sent'; }
+                        else if (written) { badge.classList.add('written'); badge.textContent = 'Written'; }
+                        else { badge.classList.add('pending'); badge.textContent = 'Pending'; }
+                    }
+                    let rank = 0;
+                    if (completed) rank = 3;
+                    else if (sent) rank = 2;
+                    else if (written) rank = 1;
+                    row.dataset.sortStatus = String(rank);
+                    row.classList.toggle('thanked', completed);
+                    // When not completed, keep any "noname" row class intact;
+                    // completed rows get the thanked background regardless.
+                }
+
+                function updateReceivedRowClass(row) {
+                    const isRegistry = row.classList.contains('source-registry');
+                    const received = row.dataset.received === 'yes';
+                    row.classList.toggle('awaiting-delivery', isRegistry && !received);
+                }
+
+                function applyButtonState(btn, field, active, atIso) {
+                    btn.classList.remove('btn-received', 'btn-thanks-written', 'btn-thanks-sent', 'btn-thanks-active');
+                    if (active) {
+                        btn.classList.add('btn-thanks-active');
+                        if (field === 'received') {
+                            btn.textContent = '✓ Received';
+                            if (atIso) {
+                                const d = new Date(atIso.replace(' ', 'T'));
+                                btn.title = isNaN(d.getTime()) ? 'Received' :
+                                    'Received ' + d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                            } else {
+                                btn.title = 'Received';
+                            }
+                        } else if (field === 'written') {
+                            btn.textContent = '✓ Written';
+                        } else if (field === 'sent') {
+                            btn.textContent = '✓ Sent';
+                        }
+                    } else {
+                        if (field === 'received') {
+                            btn.classList.add('btn-received');
+                            btn.textContent = 'Mark Received';
+                            btn.title = 'Mark gift as received';
+                        } else if (field === 'written') {
+                            btn.classList.add('btn-thanks-written');
+                            btn.textContent = 'Mark Written';
+                        } else if (field === 'sent') {
+                            btn.classList.add('btn-thanks-sent');
+                            btn.textContent = 'Mark Sent';
+                        }
+                    }
+                }
+
+                document.querySelectorAll('.js-toggle-status').forEach(function(btn) {
+                    btn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        if (btn.classList.contains('is-busy')) return;
+                        btn.classList.add('is-busy');
+
+                        const source = btn.dataset.source;
+                        const id = parseInt(btn.dataset.id, 10);
+                        const field = btn.dataset.field;
+
+                        fetch('/api/toggle-gift-status.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ source: source, id: id, field: field })
+                        })
+                        .then(function(resp) { return resp.json().then(function(data) { return { ok: resp.ok, data: data }; }); })
+                        .then(function(result) {
+                            if (result.ok && result.data && result.data.success) {
+                                const active = !!result.data.active;
+                                const row = btn.closest('tr.gift-row');
+                                applyButtonState(btn, field, active, result.data.at);
+                                if (row) {
+                                    row.dataset[field] = active ? 'yes' : 'no';
+                                    row.dataset['sort' + field.charAt(0).toUpperCase() + field.slice(1)] = active ? '1' : '0';
+                                    if (field === 'received') updateReceivedRowClass(row);
+                                    if (field === 'written' || field === 'sent') updateStatusBadge(row);
+                                }
+                                // Re-run filters so rows that no longer match hide
+                                // without touching scroll position or sort order.
+                                applyFilter();
+                            } else {
+                                // Fall back to the href navigation on failure
+                                window.location.href = btn.href;
+                            }
+                        })
+                        .catch(function() {
+                            window.location.href = btn.href;
+                        })
+                        .finally(function() {
+                            btn.classList.remove('is-busy');
+                        });
+                    });
+                });
+            }
         })();
     </script>
     <?php endif; ?>
