@@ -1182,7 +1182,12 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                                                     <a href="/admin-gifts?edit=<?php echo (int) $g['id']; ?>#add-gift" class="btn-small btn-edit">Edit</a>
                                                     <a href="/admin-gifts?delete=<?php echo (int) $g['id']; ?>#gifts-table" class="btn-small btn-delete" onclick="return confirm('Delete this gift entry?');">Delete</a>
                                                 <?php else: ?>
-                                                    —
+                                                    <button type="button" class="btn-small btn-delete js-unmark-purchased"
+                                                            data-id="<?php echo (int) $g['id']; ?>"
+                                                            data-item-title="<?php echo htmlspecialchars($g['title']); ?>"
+                                                            title="Remove this purchase record (clears name &amp; message, leaves the item back on the registry)">
+                                                        Unmark Purchased
+                                                    </button>
                                                 <?php endif; ?>
                                             </td>
                                         </tr>
@@ -1314,8 +1319,8 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                     row.style.display = show ? '' : 'none';
                     if (show) visible++;
                 });
-                if (count) count.textContent = visible + ' of ' + total;
-                if (empty) empty.classList.toggle('visible', visible === 0 && total > 0);
+                if (count) count.textContent = visible + ' of ' + rows.length;
+                if (empty) empty.classList.toggle('visible', visible === 0 && rows.length > 0);
             }
 
             input.addEventListener('input', applyFilter);
@@ -1450,6 +1455,51 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                         }
                     }
                 }
+
+                // Unmark a registry purchase (clears name + message, leaves
+                // the item available on the public registry again).
+                document.querySelectorAll('.js-unmark-purchased').forEach(function(btn) {
+                    btn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        if (btn.classList.contains('is-busy')) return;
+                        const title = btn.dataset.itemTitle || 'this item';
+                        if (!window.confirm('Unmark "' + title + '" as purchased? This clears the purchaser name and message and returns the item to the public registry. Thank-you and received tracking are kept in case this was accidental.')) {
+                            return;
+                        }
+                        btn.classList.add('is-busy');
+                        const id = parseInt(btn.dataset.id, 10);
+                        const row = btn.closest('tr.gift-row');
+                        fetch('/api/unmark-registry-purchase.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ item_id: id })
+                        })
+                        .then(function(resp) { return resp.json().then(function(data) { return { ok: resp.ok, data: data }; }); })
+                        .then(function(result) {
+                            if (result.ok && result.data && result.data.success) {
+                                if (row && row.parentNode) {
+                                    row.style.transition = 'opacity 0.25s';
+                                    row.style.opacity = '0';
+                                    setTimeout(function() {
+                                        if (row.parentNode) row.parentNode.removeChild(row);
+                                        // Remove from the filtered row list so the
+                                        // visible-count stays accurate on re-filter.
+                                        const idx = rows.indexOf(row);
+                                        if (idx !== -1) rows.splice(idx, 1);
+                                        applyFilter();
+                                    }, 260);
+                                }
+                            } else {
+                                btn.classList.remove('is-busy');
+                                window.alert((result.data && result.data.error) || 'Could not unmark the purchase. Please try again.');
+                            }
+                        })
+                        .catch(function() {
+                            btn.classList.remove('is-busy');
+                            window.alert('Network error unmarking the purchase.');
+                        });
+                    });
+                });
 
                 document.querySelectorAll('.js-toggle-status').forEach(function(btn) {
                     btn.addEventListener('click', function(e) {
