@@ -626,6 +626,7 @@ function getSampleRegistryItems(): array
             'purchased' => 1,
             'purchased_by' => 'A Sample Guest',
             'purchase_message' => 'So excited for your getaway — enjoy every minute!',
+            'admin_note' => 'Mention their own honeymoon story when writing the thank-you.',
             'received' => 1,
             'received_at' => '2026-02-08 13:00:00',
             'thank_you_written' => 1,
