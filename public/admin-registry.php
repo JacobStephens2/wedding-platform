@@ -146,6 +146,40 @@ if (!$sampleMode && $authenticated && isset($_GET['delete'])) {
     }
 }
 
+// Handle admin marking an item as purchased with a name / optional message.
+// This is the admin-side counterpart to /api/mark-purchased.php on the
+// public registry. No Turnstile check — the request is already gated by
+// the admin session.
+if (!$sampleMode && $authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_mark_purchased'])) {
+    try {
+        $pdo = getDbConnection();
+        $markId = (int) ($_POST['item_id'] ?? 0);
+        $purchaserName = trim((string) ($_POST['purchaser_name'] ?? ''));
+        $purchaserMessage = trim((string) ($_POST['purchase_message'] ?? ''));
+        if (mb_strlen($purchaserMessage) > 2000) {
+            $purchaserMessage = mb_substr($purchaserMessage, 0, 2000);
+        }
+        if ($markId > 0) {
+            $stmt = $pdo->prepare("
+                UPDATE registry_items
+                SET purchased = 1,
+                    purchased_by = ?,
+                    purchase_message = ?
+                WHERE id = ?
+            ");
+            $stmt->execute([
+                $purchaserName !== '' ? $purchaserName : null,
+                $purchaserMessage !== '' ? $purchaserMessage : null,
+                $markId,
+            ]);
+            header('Location: /admin-registry?marked=' . $markId);
+            exit;
+        }
+    } catch (Exception $e) {
+        $error = 'Error marking item as purchased: ' . htmlspecialchars($e->getMessage());
+    }
+}
+
 // Handle toggling purchased status
 if (!$sampleMode && $authenticated && isset($_GET['toggle_purchased'])) {
     try {
@@ -1530,9 +1564,17 @@ $page_title = "Manage Registry - Jacob & Melissa";
                                                 <a href="/admin-registry?edit=<?php echo $item['id']; ?>" class="btn-small btn-edit">
                                                     Edit
                                                 </a>
-                                                <a href="/admin-registry?toggle_purchased=<?php echo $item['id']; ?>" class="btn-small btn-toggle">
-                                                    <?php echo $item['purchased'] ? 'Mark as Available' : 'Mark as Purchased'; ?>
-                                                </a>
+                                                <?php if ($item['purchased']): ?>
+                                                    <a href="/admin-registry?toggle_purchased=<?php echo $item['id']; ?>" class="btn-small btn-toggle">
+                                                        Mark as Available
+                                                    </a>
+                                                <?php else: ?>
+                                                    <button type="button" class="btn-small btn-toggle js-open-purchase-modal"
+                                                            data-item-id="<?php echo (int) $item['id']; ?>"
+                                                            data-item-title="<?php echo htmlspecialchars($item['title']); ?>">
+                                                        Mark as Purchased
+                                                    </button>
+                                                <?php endif; ?>
                                                 <a href="/admin-registry?toggle_most_wanted=<?php echo $item['id']; ?>" class="btn-small <?php echo !empty($item['most_wanted']) ? 'btn-most-wanted-active' : 'btn-most-wanted'; ?>">
                                                     <?php echo !empty($item['most_wanted']) ? '★ Most Wanted' : '☆ Most Wanted'; ?>
                                                 </a>
@@ -1551,6 +1593,70 @@ $page_title = "Manage Registry - Jacob & Melissa";
             </div>
         <?php endif; ?>
     </main>
+    <?php if ($authenticated): ?>
+    <!-- Admin-side mark-as-purchased modal (no Turnstile; already authenticated) -->
+    <div id="admin-purchase-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" id="admin-purchase-modal-close">&times;</span>
+            <h3>Mark Item as Purchased</h3>
+            <p id="admin-purchase-modal-item" style="font-family: 'Cinzel', serif; color: var(--color-dark); font-weight: bold; margin-bottom: 1rem;"></p>
+            <form method="POST" action="/admin-registry" id="admin-purchase-form">
+                <input type="hidden" name="admin_mark_purchased" value="1">
+                <input type="hidden" name="item_id" id="admin-purchase-item-id">
+                <div class="form-group">
+                    <label for="admin-purchaser-name">Purchaser Name (optional)</label>
+                    <input type="text" id="admin-purchaser-name" name="purchaser_name" maxlength="255" placeholder="Who it's from">
+                </div>
+                <div class="form-group">
+                    <label for="admin-purchaser-message">Message (optional)</label>
+                    <textarea id="admin-purchaser-message" name="purchase_message" rows="3" maxlength="2000" placeholder="Note that came with the gift"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="btn">Mark as Purchased</button>
+                    <button type="button" class="btn btn-secondary" id="admin-purchase-modal-cancel">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+        (function() {
+            const modal = document.getElementById('admin-purchase-modal');
+            if (!modal) return;
+            const idInput = document.getElementById('admin-purchase-item-id');
+            const nameInput = document.getElementById('admin-purchaser-name');
+            const messageInput = document.getElementById('admin-purchaser-message');
+            const titleEl = document.getElementById('admin-purchase-modal-item');
+            const closeBtn = document.getElementById('admin-purchase-modal-close');
+            const cancelBtn = document.getElementById('admin-purchase-modal-cancel');
+
+            function open(itemId, itemTitle) {
+                if (idInput) idInput.value = itemId;
+                if (titleEl) titleEl.textContent = itemTitle || '';
+                if (nameInput) nameInput.value = '';
+                if (messageInput) messageInput.value = '';
+                modal.style.display = 'block';
+                setTimeout(function() { if (nameInput) nameInput.focus(); }, 50);
+            }
+            function close() { modal.style.display = 'none'; }
+
+            document.querySelectorAll('.js-open-purchase-modal').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    open(btn.dataset.itemId, btn.dataset.itemTitle);
+                });
+            });
+
+            if (closeBtn) closeBtn.addEventListener('click', close);
+            if (cancelBtn) cancelBtn.addEventListener('click', close);
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) close();
+            });
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && modal.style.display === 'block') close();
+            });
+        })();
+    </script>
+    <?php endif; ?>
     <script>
         // Price band table fold/unfold
         (function() {
