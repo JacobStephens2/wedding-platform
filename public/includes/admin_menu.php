@@ -21,6 +21,7 @@ if (isAdminSampleMode() || isAdminAuthenticated()):
                 <li><a href="<?php echo htmlspecialchars(adminUrl('/admin-seating')); ?>">Seating Chart</a></li>
                 <li><a href="<?php echo htmlspecialchars(adminUrl('/admin-rehearsal-seating')); ?>">Rehearsal Seating</a></li>
                 <li><a href="<?php echo htmlspecialchars(adminUrl('/admin-registry')); ?>">Manage Registry</a></li>
+                <li><a href="<?php echo htmlspecialchars(adminUrl('/admin-gifts')); ?>">Manage Gifts</a></li>
                 <li><a href="<?php echo htmlspecialchars(adminUrl('/admin-house-fund')); ?>">Manage House Fund</a></li>
                 <li><a href="<?php echo htmlspecialchars(adminUrl('/admin-honeymoon-fund')); ?>">Manage Honeymoon Fund</a></li>
                 <li><a href="<?php echo htmlspecialchars(adminUrl('/admin-gallery')); ?>">Manage Gallery</a></li>

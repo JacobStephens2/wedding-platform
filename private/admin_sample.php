@@ -625,10 +625,68 @@ function getSampleRegistryItems(): array
             'price' => '150.00',
             'purchased' => 1,
             'purchased_by' => 'A Sample Guest',
+            'purchase_message' => 'So excited for your getaway — enjoy every minute!',
+            'thank_you_sent' => 0,
+            'thank_you_sent_at' => null,
+            'updated_at' => '2026-02-04 14:30:00',
             'created_at' => '2026-01-14 08:00:00',
             'published' => 1,
             'sort_order' => 3,
             'most_wanted' => 0,
+        ],
+        [
+            'id' => 304,
+            'title' => 'Everyday Ceramic Mugs',
+            'description' => 'Sample purchased item already thanked.',
+            'url' => 'https://example.test/registry/mugs',
+            'image_url' => '/images/house-fund.jpg',
+            'price' => '36.00',
+            'purchased' => 1,
+            'purchased_by' => 'The Sample Cousins',
+            'purchase_message' => null,
+            'thank_you_sent' => 1,
+            'thank_you_sent_at' => '2026-02-18 09:00:00',
+            'updated_at' => '2026-02-05 10:15:00',
+            'created_at' => '2026-01-18 08:00:00',
+            'published' => 1,
+            'sort_order' => 4,
+            'most_wanted' => 0,
+        ],
+    ];
+}
+
+function getSampleGifts(): array
+{
+    return [
+        [
+            'id' => 801,
+            'description' => 'Hand-lettered family recipe book',
+            'purchaser_name' => 'Aunt Sample',
+            'notes' => 'Mailed ahead of the wedding with a photo from their anniversary.',
+            'received_on' => '2026-03-10',
+            'thank_you_sent' => 0,
+            'thank_you_sent_at' => null,
+            'created_at' => '2026-03-10 12:00:00',
+        ],
+        [
+            'id' => 802,
+            'description' => 'Cash gift ($200)',
+            'purchaser_name' => 'Sample Grandparents',
+            'notes' => 'Tucked into a handwritten card on the wedding day.',
+            'received_on' => '2026-05-16',
+            'thank_you_sent' => 1,
+            'thank_you_sent_at' => '2026-05-28 15:30:00',
+            'created_at' => '2026-05-16 20:00:00',
+        ],
+        [
+            'id' => 803,
+            'description' => 'Handmade quilt',
+            'purchaser_name' => null,
+            'notes' => 'Arrived anonymously — ask mom if she knows who sent it.',
+            'received_on' => '2026-05-12',
+            'thank_you_sent' => 0,
+            'thank_you_sent_at' => null,
+            'created_at' => '2026-05-12 09:45:00',
         ],
     ];
 }
