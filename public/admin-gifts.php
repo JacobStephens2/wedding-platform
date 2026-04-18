@@ -825,78 +825,76 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                     <?php endif; ?>
                 </div>
 
-                <div class="admin-inner">
-                    <h2 class="section-title" id="manual-gifts">Off-Registry Gifts</h2>
-                    <div class="form-container">
-                        <?php if (empty($manualGifts)): ?>
-                            <p class="empty-state">No off-registry gifts recorded yet. Add one with the form above.</p>
-                        <?php else: ?>
-                            <div class="table-wrapper">
-                                <table class="gifts-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Status</th>
-                                            <th>Gift</th>
-                                            <th>From</th>
-                                            <th>Notes</th>
-                                            <th>Received</th>
-                                            <th>Thank-you</th>
-                                            <th>Actions</th>
+                <h2 class="section-title admin-inner" id="manual-gifts">Off-Registry Gifts</h2>
+                <div class="form-container admin-full">
+                    <?php if (empty($manualGifts)): ?>
+                        <p class="empty-state">No off-registry gifts recorded yet. Add one with the form above.</p>
+                    <?php else: ?>
+                        <div class="table-wrapper">
+                            <table class="gifts-table">
+                                <thead>
+                                    <tr>
+                                        <th>Status</th>
+                                        <th>Gift</th>
+                                        <th>From</th>
+                                        <th>Notes</th>
+                                        <th>Received</th>
+                                        <th>Thank-you</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($manualGifts as $g):
+                                        $written = !empty($g['thank_you_written']);
+                                        $sent = !empty($g['thank_you_sent']);
+                                        $completed = $written && $sent;
+                                    ?>
+                                        <tr class="<?php echo $completed ? 'thanked' : ''; ?>">
+                                            <td>
+                                                <?php if ($completed): ?>
+                                                    <span class="badge-thanks completed">Completed</span>
+                                                <?php elseif ($sent): ?>
+                                                    <span class="badge-thanks sent">Sent</span>
+                                                <?php elseif ($written): ?>
+                                                    <span class="badge-thanks written">Written</span>
+                                                <?php else: ?>
+                                                    <span class="badge-thanks pending">Pending</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="gift-title"><?php echo htmlspecialchars($g['description']); ?></td>
+                                            <td>
+                                                <?php if (!empty($g['purchaser_name'])): ?>
+                                                    <?php echo htmlspecialchars($g['purchaser_name']); ?>
+                                                <?php else: ?>
+                                                    <span class="no-name">(no name)</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td>
+                                                <?php if (!empty($g['notes'])): ?>
+                                                    <div class="gift-notes"><?php echo nl2br(htmlspecialchars($g['notes'])); ?></div>
+                                                <?php else: ?>
+                                                    —
+                                                <?php endif; ?>
+                                            </td>
+                                            <td><?php echo !empty($g['received_on']) ? htmlspecialchars(date('M j, Y', strtotime($g['received_on']))) : '—'; ?></td>
+                                            <td class="actions-cell">
+                                                <a href="/admin-gifts?toggle_gift_written=<?php echo (int) $g['id']; ?>#manual-gifts" class="btn-small <?php echo $written ? 'btn-thanks-active' : 'btn-thanks-written'; ?>">
+                                                    <?php echo $written ? '✓ Written' : 'Mark Written'; ?>
+                                                </a>
+                                                <a href="/admin-gifts?toggle_gift_sent=<?php echo (int) $g['id']; ?>#manual-gifts" class="btn-small <?php echo $sent ? 'btn-thanks-active' : 'btn-thanks-sent'; ?>">
+                                                    <?php echo $sent ? '✓ Sent' : 'Mark Sent'; ?>
+                                                </a>
+                                            </td>
+                                            <td class="actions-cell">
+                                                <a href="/admin-gifts?edit=<?php echo (int) $g['id']; ?>#add-gift" class="btn-small btn-edit">Edit</a>
+                                                <a href="/admin-gifts?delete=<?php echo (int) $g['id']; ?>#manual-gifts" class="btn-small btn-delete" onclick="return confirm('Delete this gift entry?');">Delete</a>
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($manualGifts as $g):
-                                            $written = !empty($g['thank_you_written']);
-                                            $sent = !empty($g['thank_you_sent']);
-                                            $completed = $written && $sent;
-                                        ?>
-                                            <tr class="<?php echo $completed ? 'thanked' : ''; ?>">
-                                                <td>
-                                                    <?php if ($completed): ?>
-                                                        <span class="badge-thanks completed">Completed</span>
-                                                    <?php elseif ($sent): ?>
-                                                        <span class="badge-thanks sent">Sent</span>
-                                                    <?php elseif ($written): ?>
-                                                        <span class="badge-thanks written">Written</span>
-                                                    <?php else: ?>
-                                                        <span class="badge-thanks pending">Pending</span>
-                                                    <?php endif; ?>
-                                                </td>
-                                                <td class="gift-title"><?php echo htmlspecialchars($g['description']); ?></td>
-                                                <td>
-                                                    <?php if (!empty($g['purchaser_name'])): ?>
-                                                        <?php echo htmlspecialchars($g['purchaser_name']); ?>
-                                                    <?php else: ?>
-                                                        <span class="no-name">(no name)</span>
-                                                    <?php endif; ?>
-                                                </td>
-                                                <td>
-                                                    <?php if (!empty($g['notes'])): ?>
-                                                        <div class="gift-notes"><?php echo nl2br(htmlspecialchars($g['notes'])); ?></div>
-                                                    <?php else: ?>
-                                                        —
-                                                    <?php endif; ?>
-                                                </td>
-                                                <td><?php echo !empty($g['received_on']) ? htmlspecialchars(date('M j, Y', strtotime($g['received_on']))) : '—'; ?></td>
-                                                <td class="actions-cell">
-                                                    <a href="/admin-gifts?toggle_gift_written=<?php echo (int) $g['id']; ?>#manual-gifts" class="btn-small <?php echo $written ? 'btn-thanks-active' : 'btn-thanks-written'; ?>">
-                                                        <?php echo $written ? '✓ Written' : 'Mark Written'; ?>
-                                                    </a>
-                                                    <a href="/admin-gifts?toggle_gift_sent=<?php echo (int) $g['id']; ?>#manual-gifts" class="btn-small <?php echo $sent ? 'btn-thanks-active' : 'btn-thanks-sent'; ?>">
-                                                        <?php echo $sent ? '✓ Sent' : 'Mark Sent'; ?>
-                                                    </a>
-                                                </td>
-                                                <td class="actions-cell">
-                                                    <a href="/admin-gifts?edit=<?php echo (int) $g['id']; ?>#add-gift" class="btn-small btn-edit">Edit</a>
-                                                    <a href="/admin-gifts?delete=<?php echo (int) $g['id']; ?>#manual-gifts" class="btn-small btn-delete" onclick="return confirm('Delete this gift entry?');">Delete</a>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        <?php endif; ?>
-                    </div>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
         </div>
