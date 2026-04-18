@@ -77,7 +77,7 @@ foreach ($registryToggleColumns as $key => $cols) {
                 $upd = $pdo->prepare("UPDATE registry_items SET $col = ?, $colAt = ?, updated_at = updated_at WHERE id = ?");
                 $upd->execute([$newValue, $stageAt, $id]);
             }
-            header('Location: /admin-gifts#registry-gifts');
+            header('Location: /admin-gifts#gifts-table');
             exit;
         } catch (Exception $e) {
             $error = 'Error updating status: ' . htmlspecialchars($e->getMessage());
@@ -106,7 +106,7 @@ foreach ($allowedStages as $stage) {
                 $upd = $pdo->prepare("UPDATE gifts SET $col = ?, $colAt = ? WHERE id = ?");
                 $upd->execute([$newValue, $stageAt, $id]);
             }
-            header('Location: /admin-gifts#manual-gifts');
+            header('Location: /admin-gifts#gifts-table');
             exit;
         } catch (Exception $e) {
             $error = 'Error updating thank-you status: ' . htmlspecialchars($e->getMessage());
@@ -120,7 +120,7 @@ if (!$sampleMode && $authenticated && isset($_GET['delete']) && is_numeric($_GET
         $pdo = getDbConnection();
         $stmt = $pdo->prepare("DELETE FROM gifts WHERE id = ?");
         $stmt->execute([(int) $_GET['delete']]);
-        header('Location: /admin-gifts?deleted=1#manual-gifts');
+        header('Location: /admin-gifts?deleted=1#gifts-table');
         exit;
     } catch (Exception $e) {
         $error = 'Error deleting gift: ' . htmlspecialchars($e->getMessage());
@@ -178,7 +178,7 @@ if (!$sampleMode && $authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && i
                         $sentAt,
                         (int) $giftId,
                     ]);
-                    header('Location: /admin-gifts?updated=1#manual-gifts');
+                    header('Location: /admin-gifts?updated=1#gifts-table');
                     exit;
                 }
             } else {
@@ -199,7 +199,7 @@ if (!$sampleMode && $authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && i
                     $thankYouSent,
                     $sentAt,
                 ]);
-                header('Location: /admin-gifts?added=1#manual-gifts');
+                header('Location: /admin-gifts?added=1#gifts-table');
                 exit;
             }
         }
@@ -344,6 +344,51 @@ function formatGiftDate(?string $raw, DateTimeZone $utcTz, DateTimeZone $display
         return htmlspecialchars($raw);
     }
 }
+
+// Normalize registry purchases and off-registry gifts into a single list
+// so they can be rendered in one unified table.
+$allGifts = [];
+foreach ($registryPurchases as $r) {
+    $allGifts[] = [
+        'source' => 'registry',
+        'id' => (int) $r['id'],
+        'title' => $r['title'] ?? '',
+        'from' => trim((string) ($r['purchased_by'] ?? '')),
+        'details' => (string) ($r['purchase_message'] ?? ''),
+        'price' => $r['price'] ?? null,
+        'date_display' => !empty($r['received_at'])
+            ? date('M j, Y', strtotime($r['received_at']))
+            : formatGiftDate($r['updated_at'] ?? null, $utcTz, $displayTz),
+        'received' => !empty($r['received']),
+        'received_at' => $r['received_at'] ?? null,
+        'written' => !empty($r['thank_you_written']),
+        'sent' => !empty($r['thank_you_sent']),
+    ];
+}
+foreach ($manualGifts as $g) {
+    $allGifts[] = [
+        'source' => 'offregistry',
+        'id' => (int) $g['id'],
+        'title' => $g['description'] ?? '',
+        'from' => trim((string) ($g['purchaser_name'] ?? '')),
+        'details' => (string) ($g['notes'] ?? ''),
+        'price' => null,
+        'date_display' => !empty($g['received_on']) ? date('M j, Y', strtotime($g['received_on'])) : '',
+        'received' => null, // not tracked as a toggle for off-registry gifts
+        'received_at' => $g['received_on'] ?? null,
+        'written' => !empty($g['thank_you_written']),
+        'sent' => !empty($g['thank_you_sent']),
+    ];
+}
+// Sort the combined list alphabetically by giver name (case-insensitive).
+// Entries without a name sink to the bottom, ties broken by title.
+usort($allGifts, function (array $a, array $b) {
+    if ($a['from'] === '' && $b['from'] !== '') return 1;
+    if ($a['from'] !== '' && $b['from'] === '') return -1;
+    $cmp = strcasecmp($a['from'], $b['from']);
+    if ($cmp !== 0) return $cmp;
+    return strcasecmp((string) $a['title'], (string) $b['title']);
+});
 
 $page_title = "Manage Gifts - Jacob & Melissa";
 ?>
@@ -608,6 +653,17 @@ $page_title = "Manage Gifts - Jacob & Melissa";
         .badge-thanks.sent { background-color: #5b8def; color: white; }
         .badge-thanks.written { background-color: #b08cd6; color: white; }
         .badge-thanks.pending { background-color: #f1c40f; color: #3b2b00; }
+        .badge-source {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-family: 'Cinzel', serif;
+            letter-spacing: 0.03em;
+            white-space: nowrap;
+        }
+        .badge-source.registry { background-color: var(--color-green); color: white; }
+        .badge-source.offregistry { background-color: var(--color-gold); color: white; }
         /* Inline-editable purchaser name input (mirrors admin-registry recent purchases) */
         .gift-name-input {
             width: 100%;
@@ -836,164 +892,124 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                     </details>
                 </div>
 
-                <h2 class="section-title admin-inner" id="registry-gifts">Registry Purchases</h2>
+                <h2 class="section-title admin-inner" id="gifts-table">Gifts</h2>
                 <div class="form-container admin-full admin-bleed">
-                    <?php if (empty($registryPurchases)): ?>
-                        <p class="empty-state">No registry items have been marked as purchased yet.</p>
+                    <?php if (empty($allGifts)): ?>
+                        <p class="empty-state">No gifts recorded yet. Guests can purchase from the registry, or add off-registry gifts with the form above.</p>
                     <?php else: ?>
                         <div class="gift-filter-bar">
-                            <label for="registry-filter">Search</label>
-                            <input type="search" id="registry-filter" placeholder="Filter by gift, purchaser, or message…" autocomplete="off">
-                            <span class="gift-filter-count" id="registry-filter-count"><?php echo count($registryPurchases); ?> of <?php echo count($registryPurchases); ?></span>
+                            <label for="gift-filter">Search</label>
+                            <input type="search" id="gift-filter" placeholder="Filter by gift, purchaser, message, or notes…" autocomplete="off">
+                            <span class="gift-filter-count" id="gift-filter-count"><?php echo count($allGifts); ?> of <?php echo count($allGifts); ?></span>
                         </div>
-                        <p class="gift-filter-empty" id="registry-filter-empty">No registry purchases match that search.</p>
+                        <p class="gift-filter-empty" id="gift-filter-empty">No gifts match that search.</p>
                         <div class="table-wrapper">
-                            <table class="gifts-table" id="registry-table">
+                            <table class="gifts-table" id="gifts-unified-table">
                                 <thead>
                                     <tr>
+                                        <th>Source</th>
                                         <th>Status</th>
                                         <th>From</th>
                                         <th>Gift</th>
-                                        <th>Message</th>
+                                        <th>Message / Notes</th>
                                         <th>Price</th>
-                                        <th>Purchased</th>
-                                        <th>Thank-you</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($registryPurchases as $r):
-                                        $received = !empty($r['received']);
-                                        $written = !empty($r['thank_you_written']);
-                                        $sent = !empty($r['thank_you_sent']);
-                                        $completed = $written && $sent;
-                                        $nameRaw = trim((string) ($r['purchased_by'] ?? ''));
-                                        $noName = $nameRaw === '';
-                                        $rowClasses = ['registry-row'];
-                                        if ($completed) $rowClasses[] = 'thanked';
-                                        elseif ($noName) $rowClasses[] = 'noname';
-                                        if (!$received) $rowClasses[] = 'awaiting-delivery';
-                                        $searchParts = array_filter([
-                                            $r['title'] ?? '',
-                                            $nameRaw,
-                                            $r['purchase_message'] ?? '',
-                                        ]);
-                                        $searchBlob = strtolower(trim(preg_replace('/\s+/', ' ', implode(' ', $searchParts))));
-                                    ?>
-                                        <tr class="<?php echo htmlspecialchars(implode(' ', $rowClasses)); ?>" data-search="<?php echo htmlspecialchars($searchBlob); ?>">
-                                            <td>
-                                                <?php if ($completed): ?>
-                                                    <span class="badge-thanks completed">Completed</span>
-                                                <?php elseif ($sent): ?>
-                                                    <span class="badge-thanks sent">Sent</span>
-                                                <?php elseif ($written): ?>
-                                                    <span class="badge-thanks written">Written</span>
-                                                <?php else: ?>
-                                                    <span class="badge-thanks pending">Pending</span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
-                                                <input type="text"
-                                                       class="gift-name-input<?php echo $noName ? ' gift-name-input-empty' : ''; ?>"
-                                                       value="<?php echo htmlspecialchars($nameRaw); ?>"
-                                                       placeholder="(add name)"
-                                                       maxlength="255"
-                                                       data-item-id="<?php echo (int) $r['id']; ?>"
-                                                       data-original="<?php echo htmlspecialchars($nameRaw); ?>"
-                                                       <?php echo $sampleMode ? 'readonly' : ''; ?>>
-                                                <span class="gift-name-status" aria-live="polite"></span>
-                                            </td>
-                                            <td class="gift-title"><?php echo htmlspecialchars($r['title']); ?></td>
-                                            <td>
-                                                <?php if (!empty($r['purchase_message'])): ?>
-                                                    <div class="gift-message">&ldquo;<?php echo nl2br(htmlspecialchars($r['purchase_message'])); ?>&rdquo;</div>
-                                                <?php else: ?>
-                                                    —
-                                                <?php endif; ?>
-                                            </td>
-                                            <td><?php echo !empty($r['price']) ? '$' . number_format((float) $r['price'], 2) : '—'; ?></td>
-                                            <td><?php echo htmlspecialchars(formatGiftDate($r['updated_at'] ?? null, $utcTz, $displayTz)); ?></td>
-                                            <td class="actions-cell">
-                                                <a href="/admin-gifts?toggle_registry_received=<?php echo (int) $r['id']; ?>#registry-gifts" class="btn-small <?php echo $received ? 'btn-thanks-active' : 'btn-received'; ?>" title="<?php echo $received && !empty($r['received_at']) ? 'Received ' . htmlspecialchars(date('M j, Y', strtotime($r['received_at']))) : 'Mark gift as received'; ?>">
-                                                    <?php echo $received ? '✓ Received' : 'Mark Received'; ?>
-                                                </a>
-                                                <a href="/admin-gifts?toggle_registry_written=<?php echo (int) $r['id']; ?>#registry-gifts" class="btn-small <?php echo $written ? 'btn-thanks-active' : 'btn-thanks-written'; ?>">
-                                                    <?php echo $written ? '✓ Written' : 'Mark Written'; ?>
-                                                </a>
-                                                <a href="/admin-gifts?toggle_registry_sent=<?php echo (int) $r['id']; ?>#registry-gifts" class="btn-small <?php echo $sent ? 'btn-thanks-active' : 'btn-thanks-sent'; ?>">
-                                                    <?php echo $sent ? '✓ Sent' : 'Mark Sent'; ?>
-                                                </a>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
-                </div>
-
-                <h2 class="section-title admin-inner" id="manual-gifts">Off-Registry Gifts</h2>
-                <div class="form-container admin-full">
-                    <?php if (empty($manualGifts)): ?>
-                        <p class="empty-state">No off-registry gifts recorded yet. Add one with the form above.</p>
-                    <?php else: ?>
-                        <div class="table-wrapper">
-                            <table class="gifts-table">
-                                <thead>
-                                    <tr>
-                                        <th>Status</th>
-                                        <th>Gift</th>
-                                        <th>From</th>
-                                        <th>Notes</th>
-                                        <th>Received</th>
+                                        <th>Date</th>
                                         <th>Thank-you</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($manualGifts as $g):
-                                        $written = !empty($g['thank_you_written']);
-                                        $sent = !empty($g['thank_you_sent']);
-                                        $completed = $written && $sent;
+                                    <?php foreach ($allGifts as $g):
+                                        $isRegistry = $g['source'] === 'registry';
+                                        $completed = $g['written'] && $g['sent'];
+                                        $noName = $g['from'] === '';
+                                        $rowClasses = ['gift-row', 'source-' . $g['source']];
+                                        if ($completed) $rowClasses[] = 'thanked';
+                                        elseif ($noName) $rowClasses[] = 'noname';
+                                        if ($isRegistry && !$g['received']) $rowClasses[] = 'awaiting-delivery';
+                                        $searchParts = array_filter([
+                                            $g['title'],
+                                            $g['from'],
+                                            $g['details'],
+                                            $isRegistry ? 'registry' : 'off-registry off registry',
+                                        ]);
+                                        $searchBlob = strtolower(trim(preg_replace('/\s+/', ' ', implode(' ', $searchParts))));
                                     ?>
-                                        <tr class="<?php echo $completed ? 'thanked' : ''; ?>">
+                                        <tr class="<?php echo htmlspecialchars(implode(' ', $rowClasses)); ?>" data-search="<?php echo htmlspecialchars($searchBlob); ?>">
+                                            <td>
+                                                <span class="badge-source <?php echo $isRegistry ? 'registry' : 'offregistry'; ?>">
+                                                    <?php echo $isRegistry ? 'Registry' : 'Off-Registry'; ?>
+                                                </span>
+                                            </td>
                                             <td>
                                                 <?php if ($completed): ?>
                                                     <span class="badge-thanks completed">Completed</span>
-                                                <?php elseif ($sent): ?>
+                                                <?php elseif ($g['sent']): ?>
                                                     <span class="badge-thanks sent">Sent</span>
-                                                <?php elseif ($written): ?>
+                                                <?php elseif ($g['written']): ?>
                                                     <span class="badge-thanks written">Written</span>
                                                 <?php else: ?>
                                                     <span class="badge-thanks pending">Pending</span>
                                                 <?php endif; ?>
                                             </td>
-                                            <td class="gift-title"><?php echo htmlspecialchars($g['description']); ?></td>
                                             <td>
-                                                <?php if (!empty($g['purchaser_name'])): ?>
-                                                    <?php echo htmlspecialchars($g['purchaser_name']); ?>
-                                                <?php else: ?>
+                                                <?php if ($isRegistry): ?>
+                                                    <input type="text"
+                                                           class="gift-name-input<?php echo $noName ? ' gift-name-input-empty' : ''; ?>"
+                                                           value="<?php echo htmlspecialchars($g['from']); ?>"
+                                                           placeholder="(add name)"
+                                                           maxlength="255"
+                                                           data-item-id="<?php echo (int) $g['id']; ?>"
+                                                           data-original="<?php echo htmlspecialchars($g['from']); ?>"
+                                                           <?php echo $sampleMode ? 'readonly' : ''; ?>>
+                                                    <span class="gift-name-status" aria-live="polite"></span>
+                                                <?php elseif ($noName): ?>
                                                     <span class="no-name">(no name)</span>
+                                                <?php else: ?>
+                                                    <?php echo htmlspecialchars($g['from']); ?>
                                                 <?php endif; ?>
                                             </td>
+                                            <td class="gift-title"><?php echo htmlspecialchars($g['title']); ?></td>
                                             <td>
-                                                <?php if (!empty($g['notes'])): ?>
-                                                    <div class="gift-notes"><?php echo nl2br(htmlspecialchars($g['notes'])); ?></div>
+                                                <?php if ($g['details'] !== ''): ?>
+                                                    <?php if ($isRegistry): ?>
+                                                        <div class="gift-message">&ldquo;<?php echo nl2br(htmlspecialchars($g['details'])); ?>&rdquo;</div>
+                                                    <?php else: ?>
+                                                        <div class="gift-notes"><?php echo nl2br(htmlspecialchars($g['details'])); ?></div>
+                                                    <?php endif; ?>
                                                 <?php else: ?>
                                                     —
                                                 <?php endif; ?>
                                             </td>
-                                            <td><?php echo !empty($g['received_on']) ? htmlspecialchars(date('M j, Y', strtotime($g['received_on']))) : '—'; ?></td>
+                                            <td><?php echo !empty($g['price']) ? '$' . number_format((float) $g['price'], 2) : '—'; ?></td>
+                                            <td><?php echo $g['date_display'] !== '' ? htmlspecialchars($g['date_display']) : '—'; ?></td>
                                             <td class="actions-cell">
-                                                <a href="/admin-gifts?toggle_gift_written=<?php echo (int) $g['id']; ?>#manual-gifts" class="btn-small <?php echo $written ? 'btn-thanks-active' : 'btn-thanks-written'; ?>">
-                                                    <?php echo $written ? '✓ Written' : 'Mark Written'; ?>
-                                                </a>
-                                                <a href="/admin-gifts?toggle_gift_sent=<?php echo (int) $g['id']; ?>#manual-gifts" class="btn-small <?php echo $sent ? 'btn-thanks-active' : 'btn-thanks-sent'; ?>">
-                                                    <?php echo $sent ? '✓ Sent' : 'Mark Sent'; ?>
-                                                </a>
+                                                <?php if ($isRegistry): ?>
+                                                    <a href="/admin-gifts?toggle_registry_received=<?php echo (int) $g['id']; ?>#gifts-table" class="btn-small <?php echo $g['received'] ? 'btn-thanks-active' : 'btn-received'; ?>" title="<?php echo $g['received'] && !empty($g['received_at']) ? 'Received ' . htmlspecialchars(date('M j, Y', strtotime($g['received_at']))) : 'Mark gift as received'; ?>">
+                                                        <?php echo $g['received'] ? '✓ Received' : 'Mark Received'; ?>
+                                                    </a>
+                                                    <a href="/admin-gifts?toggle_registry_written=<?php echo (int) $g['id']; ?>#gifts-table" class="btn-small <?php echo $g['written'] ? 'btn-thanks-active' : 'btn-thanks-written'; ?>">
+                                                        <?php echo $g['written'] ? '✓ Written' : 'Mark Written'; ?>
+                                                    </a>
+                                                    <a href="/admin-gifts?toggle_registry_sent=<?php echo (int) $g['id']; ?>#gifts-table" class="btn-small <?php echo $g['sent'] ? 'btn-thanks-active' : 'btn-thanks-sent'; ?>">
+                                                        <?php echo $g['sent'] ? '✓ Sent' : 'Mark Sent'; ?>
+                                                    </a>
+                                                <?php else: ?>
+                                                    <a href="/admin-gifts?toggle_gift_written=<?php echo (int) $g['id']; ?>#gifts-table" class="btn-small <?php echo $g['written'] ? 'btn-thanks-active' : 'btn-thanks-written'; ?>">
+                                                        <?php echo $g['written'] ? '✓ Written' : 'Mark Written'; ?>
+                                                    </a>
+                                                    <a href="/admin-gifts?toggle_gift_sent=<?php echo (int) $g['id']; ?>#gifts-table" class="btn-small <?php echo $g['sent'] ? 'btn-thanks-active' : 'btn-thanks-sent'; ?>">
+                                                        <?php echo $g['sent'] ? '✓ Sent' : 'Mark Sent'; ?>
+                                                    </a>
+                                                <?php endif; ?>
                                             </td>
                                             <td class="actions-cell">
-                                                <a href="/admin-gifts?edit=<?php echo (int) $g['id']; ?>#add-gift" class="btn-small btn-edit">Edit</a>
-                                                <a href="/admin-gifts?delete=<?php echo (int) $g['id']; ?>#manual-gifts" class="btn-small btn-delete" onclick="return confirm('Delete this gift entry?');">Delete</a>
+                                                <?php if (!$isRegistry): ?>
+                                                    <a href="/admin-gifts?edit=<?php echo (int) $g['id']; ?>#add-gift" class="btn-small btn-edit">Edit</a>
+                                                    <a href="/admin-gifts?delete=<?php echo (int) $g['id']; ?>#gifts-table" class="btn-small btn-delete" onclick="return confirm('Delete this gift entry?');">Delete</a>
+                                                <?php else: ?>
+                                                    —
+                                                <?php endif; ?>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -1032,16 +1048,16 @@ $page_title = "Manage Gifts - Jacob & Melissa";
             });
         })();
 
-        // Live filter for the Registry Purchases table. Matches against
-        // gift title, purchaser name, and purchase message (space-normalized
+        // Live filter for the unified gifts table. Matches against gift
+        // title, giver name, message/notes, and source (space-normalized
         // and lowercased in data-search).
         (function() {
-            const input = document.getElementById('registry-filter');
-            const table = document.getElementById('registry-table');
-            const count = document.getElementById('registry-filter-count');
-            const empty = document.getElementById('registry-filter-empty');
+            const input = document.getElementById('gift-filter');
+            const table = document.getElementById('gifts-unified-table');
+            const count = document.getElementById('gift-filter-count');
+            const empty = document.getElementById('gift-filter-empty');
             if (!input || !table) return;
-            const rows = Array.from(table.querySelectorAll('tbody tr.registry-row'));
+            const rows = Array.from(table.querySelectorAll('tbody tr.gift-row'));
             const total = rows.length;
 
             function applyFilter() {
