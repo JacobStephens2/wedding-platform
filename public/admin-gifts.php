@@ -355,16 +355,17 @@ foreach ($manualGifts as $g) {
 }
 $thanksPending = $totalGifts - $thanksCompleted;
 
-// Time zones for display
+// Time zones for display. Database TIMESTAMPs are stored in UTC
+// (server runs UTC), so convert to Eastern time for the couple.
 $utcTz = new DateTimeZone('UTC');
-$displayTz = new DateTimeZone(date_default_timezone_get() ?: 'America/New_York');
+$displayTz = new DateTimeZone('America/New_York');
 
-function formatGiftDate(?string $raw, DateTimeZone $utcTz, DateTimeZone $displayTz): string {
+function formatGiftDate(?string $raw, DateTimeZone $utcTz, DateTimeZone $displayTz, string $format = 'M j, Y g:i A'): string {
     if (!$raw) return '';
     try {
         $dt = new DateTime($raw, $utcTz);
         $dt->setTimezone($displayTz);
-        return $dt->format('M j, Y g:i A');
+        return $dt->format($format);
     } catch (Exception $e) {
         return htmlspecialchars($raw);
     }
@@ -383,7 +384,7 @@ foreach ($registryPurchases as $r) {
         'admin_note' => (string) ($r['admin_note'] ?? ''),
         'price' => $r['price'] ?? null,
         'date_display' => !empty($r['received_at'])
-            ? date('M j, Y', strtotime($r['received_at']))
+            ? formatGiftDate($r['received_at'], $utcTz, $displayTz, 'M j, Y')
             : formatGiftDate($r['updated_at'] ?? null, $utcTz, $displayTz),
         'received' => !empty($r['received']),
         'received_at' => $r['received_at'] ?? null,
@@ -668,6 +669,38 @@ $page_title = "Manage Gifts - Jacob & Melissa";
             color: var(--color-green);
             border-bottom-color: var(--color-green);
             outline: none;
+        }
+        .note-cell { padding: 0 !important; }
+        .note-cell-button {
+            display: block;
+            width: 100%;
+            min-height: 100%;
+            text-align: left;
+            background: none;
+            border: none;
+            padding: 0.85rem 1rem;
+            margin: 0;
+            font: inherit;
+            color: inherit;
+            text-decoration: none;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.15s;
+        }
+        .note-cell-button:hover,
+        .note-cell-button:focus {
+            background-color: rgba(127, 143, 101, 0.08);
+            outline: none;
+        }
+        .note-cell-placeholder {
+            color: var(--color-text-muted);
+            font-family: 'Crimson Text', serif;
+            font-style: italic;
+            text-transform: none;
+        }
+        .note-cell-button:hover .note-cell-placeholder,
+        .note-cell-button:focus .note-cell-placeholder {
+            color: var(--color-green);
         }
         .no-name { color: var(--color-text-muted); font-style: italic; }
         .actions-cell { white-space: nowrap; }
@@ -1126,19 +1159,39 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                                                     </a>
                                                 <?php endif; ?>
                                             </td>
-                                            <td>
-                                                <?php $hasDetails = $g['details'] !== ''; $hasAdminNote = $isRegistry && ($g['admin_note'] ?? '') !== ''; ?>
-                                                <?php if ($hasDetails || $hasAdminNote): ?>
-                                                    <?php if ($hasDetails && $isRegistry): ?>
-                                                        <div class="gift-message">&ldquo;<?php echo nl2br(htmlspecialchars($g['details'])); ?>&rdquo;</div>
-                                                    <?php elseif ($hasDetails): ?>
-                                                        <div class="gift-notes"><?php echo nl2br(htmlspecialchars($g['details'])); ?></div>
-                                                    <?php endif; ?>
-                                                    <?php if ($hasAdminNote): ?>
-                                                        <div class="gift-admin-note"><strong>Note:</strong> <?php echo nl2br(htmlspecialchars($g['admin_note'])); ?></div>
-                                                    <?php endif; ?>
+                                            <td class="note-cell">
+                                                <?php
+                                                    $hasDetails = $g['details'] !== '';
+                                                    $hasAdminNote = $isRegistry && ($g['admin_note'] ?? '') !== '';
+                                                    $noteTooltip = $isRegistry ? 'Click to add or edit an admin note' : 'Click to edit this gift';
+                                                ?>
+                                                <?php if ($isRegistry): ?>
+                                                    <button type="button" class="note-cell-button js-open-note-modal"
+                                                            data-item-id="<?php echo (int) $g['id']; ?>"
+                                                            data-item-title="<?php echo htmlspecialchars($g['title']); ?>"
+                                                            data-item-note="<?php echo htmlspecialchars($g['admin_note']); ?>"
+                                                            title="<?php echo htmlspecialchars($noteTooltip); ?>">
                                                 <?php else: ?>
-                                                    —
+                                                    <a href="/admin-gifts?edit=<?php echo (int) $g['id']; ?>#add-gift"
+                                                       class="note-cell-button"
+                                                       title="<?php echo htmlspecialchars($noteTooltip); ?>">
+                                                <?php endif; ?>
+                                                    <?php if ($hasDetails || $hasAdminNote): ?>
+                                                        <?php if ($hasDetails && $isRegistry): ?>
+                                                            <div class="gift-message">&ldquo;<?php echo nl2br(htmlspecialchars($g['details'])); ?>&rdquo;</div>
+                                                        <?php elseif ($hasDetails): ?>
+                                                            <div class="gift-notes"><?php echo nl2br(htmlspecialchars($g['details'])); ?></div>
+                                                        <?php endif; ?>
+                                                        <?php if ($hasAdminNote): ?>
+                                                            <div class="gift-admin-note"><strong>Note:</strong> <?php echo nl2br(htmlspecialchars($g['admin_note'])); ?></div>
+                                                        <?php endif; ?>
+                                                    <?php else: ?>
+                                                        <span class="note-cell-placeholder">+ Add note</span>
+                                                    <?php endif; ?>
+                                                <?php if ($isRegistry): ?>
+                                                    </button>
+                                                <?php else: ?>
+                                                    </a>
                                                 <?php endif; ?>
                                             </td>
                                             <td><?php echo !empty($g['price']) ? '$' . number_format((float) $g['price'], 2) : '—'; ?></td>
@@ -1150,7 +1203,7 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                                                        data-source="registry"
                                                        data-id="<?php echo (int) $g['id']; ?>"
                                                        data-field="received"
-                                                       title="<?php echo $g['received'] && !empty($g['received_at']) ? 'Received ' . htmlspecialchars(date('M j, Y', strtotime($g['received_at']))) : 'Mark gift as received'; ?>">
+                                                       title="<?php echo $g['received'] && !empty($g['received_at']) ? 'Received ' . htmlspecialchars(formatGiftDate($g['received_at'], $utcTz, $displayTz, 'M j, Y')) : 'Mark gift as received'; ?>">
                                                         <?php echo $g['received'] ? '✓ Received' : 'Mark Received'; ?>
                                                     </a>
                                                 <?php else: ?>
@@ -1423,19 +1476,13 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                     row.classList.toggle('awaiting-delivery', isRegistry && !received);
                 }
 
-                function applyButtonState(btn, field, active, atIso) {
+                function applyButtonState(btn, field, active, atDisplay) {
                     btn.classList.remove('btn-received', 'btn-thanks-written', 'btn-thanks-sent', 'btn-thanks-active');
                     if (active) {
                         btn.classList.add('btn-thanks-active');
                         if (field === 'received') {
                             btn.textContent = '✓ Received';
-                            if (atIso) {
-                                const d = new Date(atIso.replace(' ', 'T'));
-                                btn.title = isNaN(d.getTime()) ? 'Received' :
-                                    'Received ' + d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-                            } else {
-                                btn.title = 'Received';
-                            }
+                            btn.title = atDisplay ? 'Received ' + atDisplay : 'Received';
                         } else if (field === 'written') {
                             btn.textContent = '✓ Written';
                         } else if (field === 'sent') {
@@ -1521,7 +1568,7 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                             if (result.ok && result.data && result.data.success) {
                                 const active = !!result.data.active;
                                 const row = btn.closest('tr.gift-row');
-                                applyButtonState(btn, field, active, result.data.at);
+                                applyButtonState(btn, field, active, result.data.at_display);
                                 if (row) {
                                     row.dataset[field] = active ? 'yes' : 'no';
                                     row.dataset['sort' + field.charAt(0).toUpperCase() + field.slice(1)] = active ? '1' : '0';

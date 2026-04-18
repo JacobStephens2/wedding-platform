@@ -96,6 +96,19 @@ try {
         $upd->execute([$newValue, $stageAt, $id]);
     }
 
+    // $stageAt is recorded in UTC (server runs UTC). Pre-format to
+    // Eastern time so clients display the same zone as the PHP page.
+    $atDisplay = null;
+    if ($stageAt) {
+        try {
+            $dt = new DateTime($stageAt, new DateTimeZone('UTC'));
+            $dt->setTimezone(new DateTimeZone('America/New_York'));
+            $atDisplay = $dt->format('M j, Y');
+        } catch (Exception $e) {
+            $atDisplay = null;
+        }
+    }
+
     echo json_encode([
         'success' => true,
         'source' => $source,
@@ -103,6 +116,7 @@ try {
         'field' => $field,
         'active' => (bool) $newValue,
         'at' => $stageAt,
+        'at_display' => $atDisplay,
     ]);
 } catch (Exception $e) {
     error_log('toggle-gift-status error: ' . $e->getMessage());
