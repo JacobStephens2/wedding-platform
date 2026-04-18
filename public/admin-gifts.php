@@ -377,6 +377,63 @@ $page_title = "Manage Gifts - Jacob & Melissa";
         .admin-full {
             max-width: none;
         }
+        /* Full-bleed: break out of .page-container's 1200px max-width and
+           stretch to the viewport edges so the wide registry table can
+           display more columns without cramping. */
+        .admin-bleed {
+            width: 100vw;
+            margin-left: calc(50% - 50vw);
+            margin-right: calc(50% - 50vw);
+            max-width: none;
+            box-sizing: border-box;
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+        @media (min-width: 768px) {
+            .admin-bleed { padding-left: 1.5rem; padding-right: 1.5rem; }
+        }
+        .gift-filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+        .gift-filter-bar label {
+            font-family: 'Crimson Text', serif;
+            text-transform: none;
+            font-size: 1rem;
+            color: var(--color-text-secondary);
+        }
+        .gift-filter-bar input[type="search"] {
+            flex: 1;
+            min-width: 16rem;
+            padding: 0.6rem 0.85rem;
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            background-color: var(--color-surface);
+            color: inherit;
+            font: inherit;
+            font-family: 'Crimson Text', serif;
+        }
+        .gift-filter-bar input[type="search"]:focus {
+            outline: none;
+            border-color: var(--color-green);
+            box-shadow: 0 0 0 2px rgba(127, 143, 101, 0.25);
+        }
+        .gift-filter-count {
+            font-family: 'Crimson Text', serif;
+            color: var(--color-text-secondary);
+            font-size: 0.95rem;
+        }
+        .gift-filter-empty {
+            padding: 1rem;
+            font-family: 'Crimson Text', serif;
+            text-transform: none;
+            color: var(--color-text-secondary);
+            display: none;
+        }
+        .gift-filter-empty.visible { display: block; }
         .admin-header {
             display: flex;
             justify-content: space-between;
@@ -780,12 +837,18 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                 </div>
 
                 <h2 class="section-title admin-inner" id="registry-gifts">Registry Purchases</h2>
-                <div class="form-container admin-full">
+                <div class="form-container admin-full admin-bleed">
                     <?php if (empty($registryPurchases)): ?>
                         <p class="empty-state">No registry items have been marked as purchased yet.</p>
                     <?php else: ?>
+                        <div class="gift-filter-bar">
+                            <label for="registry-filter">Search</label>
+                            <input type="search" id="registry-filter" placeholder="Filter by gift, purchaser, or message…" autocomplete="off">
+                            <span class="gift-filter-count" id="registry-filter-count"><?php echo count($registryPurchases); ?> of <?php echo count($registryPurchases); ?></span>
+                        </div>
+                        <p class="gift-filter-empty" id="registry-filter-empty">No registry purchases match that search.</p>
                         <div class="table-wrapper">
-                            <table class="gifts-table">
+                            <table class="gifts-table" id="registry-table">
                                 <thead>
                                     <tr>
                                         <th>Status</th>
@@ -805,12 +868,18 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                                         $completed = $written && $sent;
                                         $nameRaw = trim((string) ($r['purchased_by'] ?? ''));
                                         $noName = $nameRaw === '';
-                                        $rowClasses = [];
+                                        $rowClasses = ['registry-row'];
                                         if ($completed) $rowClasses[] = 'thanked';
                                         elseif ($noName) $rowClasses[] = 'noname';
                                         if (!$received) $rowClasses[] = 'awaiting-delivery';
+                                        $searchParts = array_filter([
+                                            $r['title'] ?? '',
+                                            $nameRaw,
+                                            $r['purchase_message'] ?? '',
+                                        ]);
+                                        $searchBlob = strtolower(trim(preg_replace('/\s+/', ' ', implode(' ', $searchParts))));
                                     ?>
-                                        <tr class="<?php echo htmlspecialchars(implode(' ', $rowClasses)); ?>">
+                                        <tr class="<?php echo htmlspecialchars(implode(' ', $rowClasses)); ?>" data-search="<?php echo htmlspecialchars($searchBlob); ?>">
                                             <td>
                                                 <?php if ($completed): ?>
                                                     <span class="badge-thanks completed">Completed</span>
@@ -961,6 +1030,35 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                     localStorage.setItem(STORAGE_KEY, panel.open ? '1' : '0');
                 } catch (e) { /* ignore storage errors */ }
             });
+        })();
+
+        // Live filter for the Registry Purchases table. Matches against
+        // gift title, purchaser name, and purchase message (space-normalized
+        // and lowercased in data-search).
+        (function() {
+            const input = document.getElementById('registry-filter');
+            const table = document.getElementById('registry-table');
+            const count = document.getElementById('registry-filter-count');
+            const empty = document.getElementById('registry-filter-empty');
+            if (!input || !table) return;
+            const rows = Array.from(table.querySelectorAll('tbody tr.registry-row'));
+            const total = rows.length;
+
+            function applyFilter() {
+                const q = input.value.trim().toLowerCase();
+                let visible = 0;
+                rows.forEach(function(row) {
+                    const haystack = row.dataset.search || '';
+                    const match = q === '' || haystack.indexOf(q) !== -1;
+                    row.style.display = match ? '' : 'none';
+                    if (match) visible++;
+                });
+                if (count) count.textContent = visible + ' of ' + total;
+                if (empty) empty.classList.toggle('visible', visible === 0 && total > 0);
+            }
+
+            input.addEventListener('input', applyFilter);
+            applyFilter();
         })();
     </script>
     <?php endif; ?>
