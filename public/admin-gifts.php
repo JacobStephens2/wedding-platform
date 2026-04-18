@@ -722,7 +722,7 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                                     <div class="form-group">
                                         <label for="received_on">Received On (optional)</label>
                                         <input type="date" id="received_on" name="received_on"
-                                               value="<?php echo $editGift ? htmlspecialchars($editGift['received_on'] ?? '') : ''; ?>">
+                                               value="<?php echo $editGift ? htmlspecialchars($editGift['received_on'] ?? '') : date('Y-m-d'); ?>">
                                     </div>
                                 </div>
                                 <div class="form-group">
