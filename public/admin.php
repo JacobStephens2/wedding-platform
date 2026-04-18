@@ -134,6 +134,9 @@ $page_title = "Admin - Jacob & Melissa";
                         <a href="<?php echo htmlspecialchars(adminUrl('/admin-registry')); ?>">Manage Registry</a>
                     </li>
                     <li class="admin-menu-item">
+                        <a href="<?php echo htmlspecialchars(adminUrl('/admin-gifts')); ?>">Manage Gifts</a>
+                    </li>
+                    <li class="admin-menu-item">
                         <a href="<?php echo htmlspecialchars(adminUrl('/admin-house-fund')); ?>">Manage House Fund</a>
                     </li>
                     <li class="admin-menu-item">
