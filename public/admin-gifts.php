@@ -49,25 +49,30 @@ if (!$sampleMode && isset($_GET['logout'])) {
     exit;
 }
 
-// Allowed thank-you stages to toggle
-$allowedStages = ['written', 'sent'];
+// Column names on registry_items that the admin can toggle from this page.
+// Keyed by the ?toggle_registry_<key> query param.
+$registryToggleColumns = [
+    'received' => ['col' => 'received',          'col_at' => 'received_at'],
+    'written'  => ['col' => 'thank_you_written', 'col_at' => 'thank_you_written_at'],
+    'sent'     => ['col' => 'thank_you_sent',    'col_at' => 'thank_you_sent_at'],
+];
 
-// Handle toggling thank-you written/sent status for a registry purchase
-foreach ($allowedStages as $stage) {
-    $param = 'toggle_registry_' . $stage;
+// Handle toggling received / thank-you written / thank-you sent on a registry purchase
+foreach ($registryToggleColumns as $key => $cols) {
+    $param = 'toggle_registry_' . $key;
     if (!$sampleMode && $authenticated && isset($_GET[$param]) && is_numeric($_GET[$param])) {
         try {
             $pdo = getDbConnection();
             $id = (int) $_GET[$param];
-            $col = 'thank_you_' . $stage;
-            $colAt = $col . '_at';
+            $col = $cols['col'];
+            $colAt = $cols['col_at'];
             $stmt = $pdo->prepare("SELECT $col FROM registry_items WHERE id = ? AND purchased = 1");
             $stmt->execute([$id]);
             $row = $stmt->fetch();
             if ($row) {
                 $newValue = $row[$col] ? 0 : 1;
                 $stageAt = $newValue ? date('Y-m-d H:i:s') : null;
-                // Preserve updated_at so marking thank-you status doesn't jump the row
+                // Preserve updated_at so marking these fields doesn't jump the row
                 // in any updated_at-based sort used by other admin screens.
                 $upd = $pdo->prepare("UPDATE registry_items SET $col = ?, $colAt = ?, updated_at = updated_at WHERE id = ?");
                 $upd->execute([$newValue, $stageAt, $id]);
@@ -75,10 +80,13 @@ foreach ($allowedStages as $stage) {
             header('Location: /admin-gifts#registry-gifts');
             exit;
         } catch (Exception $e) {
-            $error = 'Error updating thank-you status: ' . htmlspecialchars($e->getMessage());
+            $error = 'Error updating status: ' . htmlspecialchars($e->getMessage());
         }
     }
 }
+
+// Allowed thank-you stages (used below for gift table toggles)
+$allowedStages = ['written', 'sent'];
 
 // Handle toggling thank-you written/sent status for a manual gift
 foreach ($allowedStages as $stage) {
@@ -240,6 +248,8 @@ if ($sampleMode) {
         if (!empty($item['purchased'])) {
             $registryPurchases[] = $item + [
                 'purchase_message' => $item['purchase_message'] ?? null,
+                'received' => $item['received'] ?? 0,
+                'received_at' => $item['received_at'] ?? null,
                 'thank_you_written' => $item['thank_you_written'] ?? 0,
                 'thank_you_written_at' => $item['thank_you_written_at'] ?? null,
                 'thank_you_sent' => $item['thank_you_sent'] ?? 0,
@@ -265,6 +275,7 @@ if ($sampleMode) {
         $pdo = getDbConnection();
         $stmt = $pdo->query("
             SELECT id, title, price, purchased_by, purchase_message,
+                   received, received_at,
                    thank_you_written, thank_you_written_at,
                    thank_you_sent, thank_you_sent_at, updated_at
             FROM registry_items
@@ -300,10 +311,17 @@ $totalGifts = count($registryPurchases) + count($manualGifts);
 $thanksCompleted = 0;
 $thanksWritten = 0;
 $thanksSent = 0;
+$registryReceived = 0;
+$registryAwaiting = 0;
 foreach ($registryPurchases as $r) {
     if (isGiftCompleted($r)) $thanksCompleted++;
     if (!empty($r['thank_you_written'])) $thanksWritten++;
     if (!empty($r['thank_you_sent'])) $thanksSent++;
+    if (!empty($r['received'])) {
+        $registryReceived++;
+    } else {
+        $registryAwaiting++;
+    }
 }
 foreach ($manualGifts as $g) {
     if (isGiftCompleted($g)) $thanksCompleted++;
@@ -490,6 +508,13 @@ $page_title = "Manage Gifts - Jacob & Melissa";
             color: white;
         }
         .btn-thanks-active:hover { background-color: #4b5563; }
+        .btn-received {
+            background-color: #b08cd6;
+            color: white;
+        }
+        .btn-received:hover { background-color: #916dbc; }
+        .gifts-table tr.awaiting-delivery { background-color: #fffdf3; }
+        [data-theme="dark"] .gifts-table tr.awaiting-delivery { background-color: rgba(241, 196, 15, 0.08); }
         .btn-edit {
             background-color: var(--color-green);
             color: white;
@@ -682,6 +707,10 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                             <span class="stat-label">Total gifts</span>
                         </div>
                         <div class="stat-card">
+                            <span class="stat-value"><?php echo (int) $registryAwaiting; ?></span>
+                            <span class="stat-label">Awaiting delivery</span>
+                        </div>
+                        <div class="stat-card">
                             <span class="stat-value"><?php echo (int) $thanksCompleted; ?></span>
                             <span class="stat-label">Thank-you completed</span>
                         </div>
@@ -770,13 +799,18 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                                 </thead>
                                 <tbody>
                                     <?php foreach ($registryPurchases as $r):
+                                        $received = !empty($r['received']);
                                         $written = !empty($r['thank_you_written']);
                                         $sent = !empty($r['thank_you_sent']);
                                         $completed = $written && $sent;
                                         $nameRaw = trim((string) ($r['purchased_by'] ?? ''));
                                         $noName = $nameRaw === '';
+                                        $rowClasses = [];
+                                        if ($completed) $rowClasses[] = 'thanked';
+                                        elseif ($noName) $rowClasses[] = 'noname';
+                                        if (!$received) $rowClasses[] = 'awaiting-delivery';
                                     ?>
-                                        <tr class="<?php echo $completed ? 'thanked' : ($noName ? 'noname' : ''); ?>">
+                                        <tr class="<?php echo htmlspecialchars(implode(' ', $rowClasses)); ?>">
                                             <td>
                                                 <?php if ($completed): ?>
                                                     <span class="badge-thanks completed">Completed</span>
@@ -810,6 +844,9 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                                             <td><?php echo !empty($r['price']) ? '$' . number_format((float) $r['price'], 2) : '—'; ?></td>
                                             <td><?php echo htmlspecialchars(formatGiftDate($r['updated_at'] ?? null, $utcTz, $displayTz)); ?></td>
                                             <td class="actions-cell">
+                                                <a href="/admin-gifts?toggle_registry_received=<?php echo (int) $r['id']; ?>#registry-gifts" class="btn-small <?php echo $received ? 'btn-thanks-active' : 'btn-received'; ?>" title="<?php echo $received && !empty($r['received_at']) ? 'Received ' . htmlspecialchars(date('M j, Y', strtotime($r['received_at']))) : 'Mark gift as received'; ?>">
+                                                    <?php echo $received ? '✓ Received' : 'Mark Received'; ?>
+                                                </a>
                                                 <a href="/admin-gifts?toggle_registry_written=<?php echo (int) $r['id']; ?>#registry-gifts" class="btn-small <?php echo $written ? 'btn-thanks-active' : 'btn-thanks-written'; ?>">
                                                     <?php echo $written ? '✓ Written' : 'Mark Written'; ?>
                                                 </a>
