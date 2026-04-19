@@ -942,6 +942,51 @@ $page_title = "Manage Gifts - Jacob & Melissa";
         .gift-name-status.status-error { color: #b02a37; }
         .gifts-table tr.noname { background-color: #fff6f6; }
         [data-theme="dark"] .gifts-table tr.noname { background-color: rgba(176, 42, 55, 0.15); }
+        .gift-value-wrapper {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.1rem;
+        }
+        .gift-value-prefix {
+            color: var(--color-text-secondary);
+            font-family: 'Crimson Text', serif;
+        }
+        .gift-value-input {
+            width: 5.5rem;
+            padding: 0.3rem 0.45rem;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            background-color: transparent;
+            color: inherit;
+            font: inherit;
+            font-family: 'Crimson Text', serif;
+            transition: border-color 0.2s, background-color 0.2s;
+            -moz-appearance: textfield;
+        }
+        .gift-value-input::-webkit-outer-spin-button,
+        .gift-value-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .gift-value-input:hover { border-color: var(--color-border); }
+        .gift-value-input:focus {
+            outline: none;
+            border-color: var(--color-green);
+            background-color: var(--color-surface);
+            box-shadow: 0 0 0 2px rgba(127, 143, 101, 0.25);
+        }
+        .gift-value-input[readonly] { cursor: default; }
+        .gift-value-status {
+            display: inline-block;
+            margin-left: 0.3rem;
+            font-size: 0.8rem;
+            font-family: 'Crimson Text', serif;
+            color: var(--color-text-secondary);
+            min-width: 3rem;
+        }
+        .gift-value-status.status-saving { color: var(--color-text-secondary); }
+        .gift-value-status.status-saved { color: #2d5016; }
+        .gift-value-status.status-error { color: #b02a37; }
         details.add-gift-panel {
             background-color: var(--color-surface);
             border-radius: 8px;
@@ -1352,7 +1397,30 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                                                     </a>
                                                 <?php endif; ?>
                                             </td>
-                                            <td><?php echo !empty($g['price']) ? '$' . number_format((float) $g['price'], 2) : '—'; ?></td>
+                                            <td class="price-cell">
+                                                <?php
+                                                    $priceDisplay = !empty($g['price']) ? '$' . number_format((float) $g['price'], 2) : '';
+                                                    $priceRaw = ($g['price'] !== null && $g['price'] !== '') ? number_format((float) $g['price'], 2, '.', '') : '';
+                                                ?>
+                                                <?php if ($isOffRegistry): ?>
+                                                    <span class="gift-value-wrapper">
+                                                        <span class="gift-value-prefix">$</span>
+                                                        <input type="number"
+                                                               class="gift-value-input<?php echo $priceDisplay === '' ? ' gift-value-input-empty' : ''; ?>"
+                                                               value="<?php echo htmlspecialchars($priceRaw); ?>"
+                                                               placeholder="0.00"
+                                                               step="0.01"
+                                                               min="0"
+                                                               inputmode="decimal"
+                                                               data-gift-id="<?php echo (int) $g['id']; ?>"
+                                                               data-original="<?php echo htmlspecialchars($priceRaw); ?>"
+                                                               <?php echo $sampleMode ? 'readonly' : ''; ?>>
+                                                        <span class="gift-value-status" aria-live="polite"></span>
+                                                    </span>
+                                                <?php else: ?>
+                                                    <?php echo $priceDisplay !== '' ? $priceDisplay : '—'; ?>
+                                                <?php endif; ?>
+                                            </td>
                                             <td><?php echo $g['date_display'] !== '' ? htmlspecialchars($g['date_display']) : '—'; ?></td>
                                             <td class="actions-cell">
                                                 <?php if ($isRegistry): ?>
@@ -1809,6 +1877,89 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                             input.classList.toggle('gift-name-input-empty', current === '');
                             const row = input.closest('tr');
                             if (row) row.classList.toggle('noname', current === '');
+                            setStatus('Saved ✓', 'status-saved');
+                            setTimeout(function() { setStatus('', ''); }, 2000);
+                        } else {
+                            const msg = (result.data && result.data.error) ? result.data.error : 'Error';
+                            setStatus(msg, 'status-error');
+                        }
+                    })
+                    .catch(function() {
+                        setStatus('Network error', 'status-error');
+                    });
+                }
+
+                input.addEventListener('blur', saveIfChanged);
+                input.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        input.blur();
+                    } else if (e.key === 'Escape') {
+                        input.value = input.dataset.original || '';
+                        input.blur();
+                        setStatus('', '');
+                    }
+                });
+            });
+        })();
+    </script>
+    <script>
+        // Inline edit of value on off-registry gifts in the unified table.
+        // Saves on blur / Enter, reverts on Escape.
+        (function() {
+            const inputs = document.querySelectorAll('.gift-value-input');
+            inputs.forEach(function(input) {
+                if (input.readOnly) return;
+                const wrapper = input.parentElement;
+                const status = wrapper ? wrapper.querySelector('.gift-value-status') : null;
+
+                function normalize(v) {
+                    const trimmed = (v || '').trim();
+                    if (trimmed === '') return '';
+                    const n = parseFloat(trimmed);
+                    if (isNaN(n) || n < 0) return null;
+                    return n.toFixed(2);
+                }
+
+                function setStatus(text, cls) {
+                    if (!status) return;
+                    status.textContent = text;
+                    status.className = 'gift-value-status' + (cls ? ' ' + cls : '');
+                }
+
+                function saveIfChanged() {
+                    const normalized = normalize(input.value);
+                    if (normalized === null) {
+                        setStatus('Invalid', 'status-error');
+                        return;
+                    }
+                    const original = (input.dataset.original || '').trim();
+                    if (normalized === original) {
+                        setStatus('', '');
+                        return;
+                    }
+                    setStatus('Saving…', 'status-saving');
+                    fetch('/api/update-gift-value.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            gift_id: parseInt(input.dataset.giftId, 10),
+                            value: normalized === '' ? null : parseFloat(normalized)
+                        })
+                    })
+                    .then(function(resp) {
+                        return resp.json().then(function(data) { return { ok: resp.ok, data: data }; });
+                    })
+                    .then(function(result) {
+                        if (result.ok && result.data && result.data.success) {
+                            input.dataset.original = normalized;
+                            input.value = normalized;
+                            input.classList.toggle('gift-value-input-empty', normalized === '');
+                            const row = input.closest('tr');
+                            if (row) {
+                                const sortVal = normalized === '' ? -1 : parseFloat(normalized);
+                                row.dataset.sortPrice = String(sortVal);
+                            }
                             setStatus('Saved ✓', 'status-saved');
                             setTimeout(function() { setStatus('', ''); }, 2000);
                         } else {
