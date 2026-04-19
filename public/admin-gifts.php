@@ -158,6 +158,10 @@ if (!$sampleMode && $authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && i
         $purchaserName = trim($_POST['purchaser_name'] ?? '');
         $notes = trim($_POST['notes'] ?? '');
         $receivedOn = trim($_POST['received_on'] ?? '');
+        $valueRaw = trim((string) ($_POST['value'] ?? ''));
+        // Accept "$1,234.56" etc. — strip anything that isn't a digit or decimal point
+        $valueClean = preg_replace('/[^0-9.]/', '', $valueRaw);
+        $valueValue = ($valueClean !== '' && is_numeric($valueClean)) ? (float) $valueClean : null;
         $thankYouWritten = isset($_POST['thank_you_written']) && $_POST['thank_you_written'] === '1' ? 1 : 0;
         $thankYouSent = isset($_POST['thank_you_sent']) && $_POST['thank_you_sent'] === '1' ? 1 : 0;
 
@@ -185,6 +189,7 @@ if (!$sampleMode && $authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && i
                     $upd = $pdo->prepare("
                         UPDATE gifts
                         SET description = ?, purchaser_name = ?, notes = ?, received_on = ?,
+                            value = ?,
                             thank_you_written = ?, thank_you_written_at = ?,
                             thank_you_sent = ?, thank_you_sent_at = ?
                         WHERE id = ?
@@ -194,6 +199,7 @@ if (!$sampleMode && $authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && i
                         $purchaserName !== '' ? $purchaserName : null,
                         $notes !== '' ? $notes : null,
                         $receivedOnValue,
+                        $valueValue,
                         $thankYouWritten,
                         $writtenAt,
                         $thankYouSent,
@@ -207,15 +213,16 @@ if (!$sampleMode && $authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && i
                 $writtenAt = $thankYouWritten ? date('Y-m-d H:i:s') : null;
                 $sentAt = $thankYouSent ? date('Y-m-d H:i:s') : null;
                 $ins = $pdo->prepare("
-                    INSERT INTO gifts (description, purchaser_name, notes, received_on,
+                    INSERT INTO gifts (description, purchaser_name, notes, received_on, value,
                         thank_you_written, thank_you_written_at, thank_you_sent, thank_you_sent_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ");
                 $ins->execute([
                     $description,
                     $purchaserName !== '' ? $purchaserName : null,
                     $notes !== '' ? $notes : null,
                     $receivedOnValue,
+                    $valueValue,
                     $thankYouWritten,
                     $writtenAt,
                     $thankYouSent,
@@ -313,7 +320,7 @@ if ($sampleMode) {
         $registryPurchases = $stmt->fetchAll();
 
         $stmt = $pdo->query("
-            SELECT id, description, purchaser_name, notes, received_on,
+            SELECT id, description, purchaser_name, notes, received_on, value,
                    thank_you_written, thank_you_written_at,
                    thank_you_sent, thank_you_sent_at, created_at
             FROM gifts
@@ -338,6 +345,7 @@ $thanksWritten = 0;
 $thanksSent = 0;
 $registryReceived = 0;
 $registryAwaiting = 0;
+$totalGiftValue = 0.0;
 foreach ($registryPurchases as $r) {
     if (isGiftCompleted($r)) $thanksCompleted++;
     if (!empty($r['thank_you_written'])) $thanksWritten++;
@@ -347,11 +355,17 @@ foreach ($registryPurchases as $r) {
     } else {
         $registryAwaiting++;
     }
+    if (isset($r['price']) && is_numeric($r['price'])) {
+        $totalGiftValue += (float) $r['price'];
+    }
 }
 foreach ($manualGifts as $g) {
     if (isGiftCompleted($g)) $thanksCompleted++;
     if (!empty($g['thank_you_written'])) $thanksWritten++;
     if (!empty($g['thank_you_sent'])) $thanksSent++;
+    if (isset($g['value']) && is_numeric($g['value'])) {
+        $totalGiftValue += (float) $g['value'];
+    }
 }
 $thanksPending = $totalGifts - $thanksCompleted;
 
@@ -974,6 +988,10 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                             <span class="stat-value"><?php echo (int) $thanksPending; ?></span>
                             <span class="stat-label">Outstanding</span>
                         </div>
+                        <div class="stat-card">
+                            <span class="stat-value">$<?php echo number_format($totalGiftValue, 2); ?></span>
+                            <span class="stat-label">Total gift value</span>
+                        </div>
                     </div>
 
                     <details class="add-gift-panel" id="add-gift" <?php echo $editGift ? 'open' : ''; ?>>
@@ -1000,6 +1018,12 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                                         <label for="received_on">Received On (optional)</label>
                                         <input type="date" id="received_on" name="received_on"
                                                value="<?php echo $editGift ? htmlspecialchars($editGift['received_on'] ?? '') : date('Y-m-d'); ?>">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="value">Value (optional)</label>
+                                        <input type="number" id="value" name="value" step="0.01" min="0"
+                                               value="<?php echo ($editGift && isset($editGift['value']) && $editGift['value'] !== null && $editGift['value'] !== '') ? htmlspecialchars(number_format((float) $editGift['value'], 2, '.', '')) : ''; ?>"
+                                               placeholder="e.g. 200.00">
                                     </div>
                                 </div>
                                 <div class="form-group">
