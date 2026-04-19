@@ -864,6 +864,11 @@ $page_title = "Manage Gifts - Jacob & Melissa";
         details.add-gift-panel .add-gift-body {
             padding: 1.5rem;
         }
+        details.add-gift-panel .add-gift-body input,
+        details.add-gift-panel .add-gift-body textarea,
+        details.add-gift-panel .add-gift-body select {
+            font-family: 'Crimson Text', serif;
+        }
         .form-row {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
