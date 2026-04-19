@@ -1983,6 +1983,13 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                         setStatus('', '');
                     }
                 });
+                // Prevent the scroll wheel from changing the value when the
+                // input is focused — otherwise users scrolling the page can
+                // accidentally edit an amount. Blurring also lets the page
+                // keep scrolling naturally.
+                input.addEventListener('wheel', function() {
+                    if (document.activeElement === input) input.blur();
+                }, { passive: true });
             });
         })();
     </script>
