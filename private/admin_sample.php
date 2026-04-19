@@ -734,18 +734,42 @@ function getSampleGifts(): array
 function getSampleHouseFundContributions(): array
 {
     return [
-        ['id' => 401, 'amount' => 125.00, 'contributor_name' => 'Sample Friend', 'created_at' => '2026-02-02 12:00:00'],
-        ['id' => 402, 'amount' => 250.00, 'contributor_name' => 'The Demo Family', 'created_at' => '2026-02-06 15:30:00'],
-        ['id' => 403, 'amount' => 75.00, 'contributor_name' => 'Anonymous Sample', 'created_at' => '2026-02-12 09:45:00'],
+        [
+            'id' => 401, 'amount' => 125.00, 'contributor_name' => 'Sample Friend', 'created_at' => '2026-02-02 12:00:00',
+            'thank_you_written' => 1, 'thank_you_written_at' => '2026-02-10 12:00:00',
+            'thank_you_sent' => 1, 'thank_you_sent_at' => '2026-02-15 12:00:00',
+        ],
+        [
+            'id' => 402, 'amount' => 250.00, 'contributor_name' => 'The Demo Family', 'created_at' => '2026-02-06 15:30:00',
+            'thank_you_written' => 0, 'thank_you_written_at' => null,
+            'thank_you_sent' => 0, 'thank_you_sent_at' => null,
+        ],
+        [
+            'id' => 403, 'amount' => 75.00, 'contributor_name' => 'Anonymous Sample', 'created_at' => '2026-02-12 09:45:00',
+            'thank_you_written' => 0, 'thank_you_written_at' => null,
+            'thank_you_sent' => 0, 'thank_you_sent_at' => null,
+        ],
     ];
 }
 
 function getSampleHoneymoonFundContributions(): array
 {
     return [
-        ['id' => 451, 'amount' => 180.00, 'contributor_name' => 'Portfolio Guest', 'created_at' => '2026-02-03 13:15:00'],
-        ['id' => 452, 'amount' => 95.00, 'contributor_name' => 'Demo Couple Friends', 'created_at' => '2026-02-09 18:00:00'],
-        ['id' => 453, 'amount' => 220.00, 'contributor_name' => 'Vacation Fund Sample', 'created_at' => '2026-02-14 11:20:00'],
+        [
+            'id' => 451, 'amount' => 180.00, 'contributor_name' => 'Portfolio Guest', 'created_at' => '2026-02-03 13:15:00',
+            'thank_you_written' => 1, 'thank_you_written_at' => '2026-02-11 13:15:00',
+            'thank_you_sent' => 0, 'thank_you_sent_at' => null,
+        ],
+        [
+            'id' => 452, 'amount' => 95.00, 'contributor_name' => 'Demo Couple Friends', 'created_at' => '2026-02-09 18:00:00',
+            'thank_you_written' => 0, 'thank_you_written_at' => null,
+            'thank_you_sent' => 0, 'thank_you_sent_at' => null,
+        ],
+        [
+            'id' => 453, 'amount' => 220.00, 'contributor_name' => 'Vacation Fund Sample', 'created_at' => '2026-02-14 11:20:00',
+            'thank_you_written' => 0, 'thank_you_written_at' => null,
+            'thank_you_sent' => 0, 'thank_you_sent_at' => null,
+        ],
     ];
 }
 
