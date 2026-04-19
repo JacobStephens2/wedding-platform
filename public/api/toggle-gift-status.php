@@ -1,11 +1,11 @@
 <?php
 /**
- * Toggle a received/written/sent flag on a registry purchase or
- * off-registry gift. Used by the gift manager page to flip status
+ * Toggle a received/written/sent flag on a registry purchase, off-registry
+ * gift, or fund contribution. Used by the gift manager page to flip status
  * without a full page reload.
  *
  * POST /api/toggle-gift-status
- * Body (JSON): { "source": "registry"|"offregistry", "id": 123, "field": "received"|"written"|"sent" }
+ * Body (JSON): { "source": "registry"|"offregistry"|"housefund"|"honeymoonfund", "id": 123, "field": "received"|"written"|"sent" }
  * Response: { success: true, active: bool, field: "received", id: 123, source: "registry" }
  */
 
@@ -48,14 +48,20 @@ if ($id <= 0) {
     echo json_encode(['success' => false, 'error' => 'Invalid id']);
     exit;
 }
-if ($source !== 'registry' && $source !== 'offregistry') {
+$fundTables = [
+    'housefund'     => 'house_fund_contributions',
+    'honeymoonfund' => 'honeymoon_fund_contributions',
+];
+$allowedSources = ['registry' => true, 'offregistry' => true]
+    + array_fill_keys(array_keys($fundTables), true);
+if (!isset($allowedSources[$source])) {
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Invalid source']);
     exit;
 }
-if ($source === 'offregistry' && $field === 'received') {
+if ($source !== 'registry' && $field === 'received') {
     http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'Off-registry gifts do not track a received flag']);
+    echo json_encode(['success' => false, 'error' => 'This source does not track a received flag']);
     exit;
 }
 
@@ -79,7 +85,7 @@ try {
         // updated_at-based sort orders used elsewhere in the admin area.
         $upd = $pdo->prepare("UPDATE registry_items SET $col = ?, $colAt = ?, updated_at = updated_at WHERE id = ?");
         $upd->execute([$newValue, $stageAt, $id]);
-    } else {
+    } elseif ($source === 'offregistry') {
         $col = 'thank_you_' . $field;
         $colAt = $col . '_at';
         $stmt = $pdo->prepare("SELECT $col FROM gifts WHERE id = ?");
@@ -93,6 +99,22 @@ try {
         $newValue = $row[$col] ? 0 : 1;
         $stageAt = $newValue ? date('Y-m-d H:i:s') : null;
         $upd = $pdo->prepare("UPDATE gifts SET $col = ?, $colAt = ? WHERE id = ?");
+        $upd->execute([$newValue, $stageAt, $id]);
+    } else {
+        $fundTable = $fundTables[$source];
+        $col = 'thank_you_' . $field;
+        $colAt = $col . '_at';
+        $stmt = $pdo->prepare("SELECT $col FROM $fundTable WHERE id = ?");
+        $stmt->execute([$id]);
+        $row = $stmt->fetch();
+        if (!$row) {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'error' => 'Contribution not found']);
+            exit;
+        }
+        $newValue = $row[$col] ? 0 : 1;
+        $stageAt = $newValue ? date('Y-m-d H:i:s') : null;
+        $upd = $pdo->prepare("UPDATE $fundTable SET $col = ?, $colAt = ? WHERE id = ?");
         $upd->execute([$newValue, $stageAt, $id]);
     }
 
