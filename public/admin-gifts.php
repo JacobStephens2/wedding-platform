@@ -406,7 +406,10 @@ $thanksWritten = 0;
 $thanksSent = 0;
 $registryReceived = 0;
 $registryAwaiting = 0;
-$totalGiftValue = 0.0;
+$registryValue = 0.0;
+$offRegistryValue = 0.0;
+$houseFundValue = 0.0;
+$honeymoonFundValue = 0.0;
 foreach ($registryPurchases as $r) {
     if (isGiftCompleted($r)) $thanksCompleted++;
     if (!empty($r['thank_you_written'])) $thanksWritten++;
@@ -417,7 +420,7 @@ foreach ($registryPurchases as $r) {
         $registryAwaiting++;
     }
     if (isset($r['price']) && is_numeric($r['price'])) {
-        $totalGiftValue += (float) $r['price'];
+        $registryValue += (float) $r['price'];
     }
 }
 foreach ($manualGifts as $g) {
@@ -425,17 +428,26 @@ foreach ($manualGifts as $g) {
     if (!empty($g['thank_you_written'])) $thanksWritten++;
     if (!empty($g['thank_you_sent'])) $thanksSent++;
     if (isset($g['value']) && is_numeric($g['value'])) {
-        $totalGiftValue += (float) $g['value'];
+        $offRegistryValue += (float) $g['value'];
     }
 }
-foreach (array_merge($houseFundContribs, $honeymoonFundContribs) as $f) {
+foreach ($houseFundContribs as $f) {
     if (isGiftCompleted($f)) $thanksCompleted++;
     if (!empty($f['thank_you_written'])) $thanksWritten++;
     if (!empty($f['thank_you_sent'])) $thanksSent++;
     if (isset($f['amount']) && is_numeric($f['amount'])) {
-        $totalGiftValue += (float) $f['amount'];
+        $houseFundValue += (float) $f['amount'];
     }
 }
+foreach ($honeymoonFundContribs as $f) {
+    if (isGiftCompleted($f)) $thanksCompleted++;
+    if (!empty($f['thank_you_written'])) $thanksWritten++;
+    if (!empty($f['thank_you_sent'])) $thanksSent++;
+    if (isset($f['amount']) && is_numeric($f['amount'])) {
+        $honeymoonFundValue += (float) $f['amount'];
+    }
+}
+$totalGiftValue = $registryValue + $offRegistryValue + $houseFundValue + $honeymoonFundValue;
 $thanksPending = $totalGifts - $thanksCompleted;
 
 // Time zones for display. Database TIMESTAMPs are stored in UTC
@@ -1131,6 +1143,18 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                         <div class="stat-card">
                             <span class="stat-value">$<?php echo number_format($totalGiftValue, 2); ?></span>
                             <span class="stat-label">Total gift value</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-value">$<?php echo number_format($registryValue, 2); ?></span>
+                            <span class="stat-label">Registry value</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-value">$<?php echo number_format($offRegistryValue, 2); ?></span>
+                            <span class="stat-label">Off-registry value</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-value">$<?php echo number_format($honeymoonFundValue, 2); ?></span>
+                            <span class="stat-label">Honeymoon fund value</span>
                         </div>
                     </div>
 
