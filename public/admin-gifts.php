@@ -432,9 +432,10 @@ foreach ($manualGifts as $g) {
     if (!empty($g['thank_you_written'])) $thanksWritten++;
     if (!empty($g['thank_you_sent'])) $thanksSent++;
     if (isset($g['value']) && is_numeric($g['value'])) {
-        $offRegistryValue += (float) $g['value'];
         if (!empty($g['is_cash'])) {
             $cashValue += (float) $g['value'];
+        } else {
+            $offRegistryValue += (float) $g['value'];
         }
     }
 }
