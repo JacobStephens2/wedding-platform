@@ -194,6 +194,7 @@ if (!$sampleMode && $authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && i
         // Accept "$1,234.56" etc. — strip anything that isn't a digit or decimal point
         $valueClean = preg_replace('/[^0-9.]/', '', $valueRaw);
         $valueValue = ($valueClean !== '' && is_numeric($valueClean)) ? (float) $valueClean : null;
+        $isCash = isset($_POST['is_cash']) && $_POST['is_cash'] === '1' ? 1 : 0;
         $thankYouWritten = isset($_POST['thank_you_written']) && $_POST['thank_you_written'] === '1' ? 1 : 0;
         $thankYouSent = isset($_POST['thank_you_sent']) && $_POST['thank_you_sent'] === '1' ? 1 : 0;
 
@@ -221,7 +222,7 @@ if (!$sampleMode && $authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && i
                     $upd = $pdo->prepare("
                         UPDATE gifts
                         SET description = ?, purchaser_name = ?, notes = ?, received_on = ?,
-                            value = ?,
+                            value = ?, is_cash = ?,
                             thank_you_written = ?, thank_you_written_at = ?,
                             thank_you_sent = ?, thank_you_sent_at = ?
                         WHERE id = ?
@@ -232,6 +233,7 @@ if (!$sampleMode && $authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && i
                         $notes !== '' ? $notes : null,
                         $receivedOnValue,
                         $valueValue,
+                        $isCash,
                         $thankYouWritten,
                         $writtenAt,
                         $thankYouSent,
@@ -245,9 +247,9 @@ if (!$sampleMode && $authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && i
                 $writtenAt = $thankYouWritten ? date('Y-m-d H:i:s') : null;
                 $sentAt = $thankYouSent ? date('Y-m-d H:i:s') : null;
                 $ins = $pdo->prepare("
-                    INSERT INTO gifts (description, purchaser_name, notes, received_on, value,
+                    INSERT INTO gifts (description, purchaser_name, notes, received_on, value, is_cash,
                         thank_you_written, thank_you_written_at, thank_you_sent, thank_you_sent_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ");
                 $ins->execute([
                     $description,
@@ -255,6 +257,7 @@ if (!$sampleMode && $authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && i
                     $notes !== '' ? $notes : null,
                     $receivedOnValue,
                     $valueValue,
+                    $isCash,
                     $thankYouWritten,
                     $writtenAt,
                     $thankYouSent,
@@ -356,7 +359,7 @@ if ($sampleMode) {
         $registryPurchases = $stmt->fetchAll();
 
         $stmt = $pdo->query("
-            SELECT id, description, purchaser_name, notes, received_on, value,
+            SELECT id, description, purchaser_name, notes, received_on, value, is_cash,
                    thank_you_written, thank_you_written_at,
                    thank_you_sent, thank_you_sent_at, created_at
             FROM gifts
@@ -410,6 +413,7 @@ $registryValue = 0.0;
 $offRegistryValue = 0.0;
 $houseFundValue = 0.0;
 $honeymoonFundValue = 0.0;
+$cashValue = 0.0;
 foreach ($registryPurchases as $r) {
     if (isGiftCompleted($r)) $thanksCompleted++;
     if (!empty($r['thank_you_written'])) $thanksWritten++;
@@ -429,6 +433,9 @@ foreach ($manualGifts as $g) {
     if (!empty($g['thank_you_sent'])) $thanksSent++;
     if (isset($g['value']) && is_numeric($g['value'])) {
         $offRegistryValue += (float) $g['value'];
+        if (!empty($g['is_cash'])) {
+            $cashValue += (float) $g['value'];
+        }
     }
 }
 foreach ($houseFundContribs as $f) {
@@ -1156,6 +1163,10 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                             <span class="stat-value">$<?php echo number_format($honeymoonFundValue, 2); ?></span>
                             <span class="stat-label">Honeymoon fund value</span>
                         </div>
+                        <div class="stat-card">
+                            <span class="stat-value">$<?php echo number_format($cashValue, 2); ?></span>
+                            <span class="stat-label">Cash gifts</span>
+                        </div>
                     </div>
 
                     <details class="add-gift-panel" id="add-gift" <?php echo $editGift ? 'open' : ''; ?>>
@@ -1195,6 +1206,10 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                                     <textarea id="notes" name="notes" rows="3" placeholder="Anything to remember when writing the thank-you card"><?php echo $editGift ? htmlspecialchars($editGift['notes'] ?? '') : ''; ?></textarea>
                                 </div>
                                 <div class="form-group">
+                                    <label class="checkbox-row">
+                                        <input type="checkbox" name="is_cash" value="1" <?php echo ($editGift && !empty($editGift['is_cash'])) ? 'checked' : ''; ?>>
+                                        Cash gift
+                                    </label>
                                     <label class="checkbox-row">
                                         <input type="checkbox" name="thank_you_written" value="1" <?php echo ($editGift && !empty($editGift['thank_you_written'])) ? 'checked' : ''; ?>>
                                         Thank-you card written
