@@ -497,7 +497,7 @@ foreach ($registryPurchases as $r) {
 }
 foreach ($manualGifts as $g) {
     $allGifts[] = [
-        'source' => 'offregistry',
+        'source' => !empty($g['is_cash']) ? 'cash' : 'offregistry',
         'id' => (int) $g['id'],
         'title' => $g['description'] ?? '',
         'from' => trim((string) ($g['purchaser_name'] ?? '')),
@@ -921,6 +921,7 @@ $page_title = "Manage Gifts - Jacob & Melissa";
         }
         .badge-source.registry { background-color: var(--color-green); color: white; }
         .badge-source.offregistry { background-color: var(--color-gold); color: white; }
+        .badge-source.cash { background-color: #2e8b57; color: white; }
         .badge-source.housefund { background-color: #5b8def; color: white; }
         .badge-source.honeymoonfund { background-color: #b08cd6; color: white; }
         /* Inline-editable purchaser name input (mirrors admin-registry recent purchases) */
@@ -1281,7 +1282,12 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                                 <tbody>
                                     <?php foreach ($allGifts as $g):
                                         $isRegistry = $g['source'] === 'registry';
-                                        $isOffRegistry = $g['source'] === 'offregistry';
+                                        $isCash = $g['source'] === 'cash';
+                                        // Off-registry behaviors (inline edit, edit/delete actions,
+                                        // toggle endpoints) apply to both plain off-registry gifts
+                                        // and cash-flagged off-registry gifts. The only thing that
+                                        // differs is the source badge.
+                                        $isOffRegistry = $g['source'] === 'offregistry' || $isCash;
                                         $isHouseFund = $g['source'] === 'housefund';
                                         $isHoneymoonFund = $g['source'] === 'honeymoonfund';
                                         $isFund = $isHouseFund || $isHoneymoonFund;
@@ -1292,7 +1298,8 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                                         elseif ($noName) $rowClasses[] = 'noname';
                                         if ($isRegistry && !$g['received']) $rowClasses[] = 'awaiting-delivery';
                                         $sourceSearchTag = 'registry';
-                                        if ($isOffRegistry) $sourceSearchTag = 'off-registry off registry';
+                                        if ($isCash) $sourceSearchTag = 'cash off-registry off registry';
+                                        elseif ($isOffRegistry) $sourceSearchTag = 'off-registry off registry';
                                         elseif ($isHouseFund) $sourceSearchTag = 'house fund housefund';
                                         elseif ($isHoneymoonFund) $sourceSearchTag = 'honeymoon fund honeymoonfund';
                                         $searchParts = array_filter([
@@ -1337,7 +1344,8 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                                                 <?php
                                                     $sourceBadgeClass = 'registry';
                                                     $sourceBadgeLabel = 'Registry';
-                                                    if ($isOffRegistry) { $sourceBadgeClass = 'offregistry'; $sourceBadgeLabel = 'Off-Registry'; }
+                                                    if ($isCash) { $sourceBadgeClass = 'cash'; $sourceBadgeLabel = 'Cash'; }
+                                                    elseif ($isOffRegistry) { $sourceBadgeClass = 'offregistry'; $sourceBadgeLabel = 'Off-Registry'; }
                                                     elseif ($isHouseFund) { $sourceBadgeClass = 'housefund'; $sourceBadgeLabel = 'House Fund'; }
                                                     elseif ($isHoneymoonFund) { $sourceBadgeClass = 'honeymoonfund'; $sourceBadgeLabel = 'Honeymoon Fund'; }
                                                 ?>
@@ -1487,7 +1495,7 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                                                 ?>
                                                 <a href="/admin-gifts?<?php echo $writtenHref; ?>=<?php echo (int) $g['id']; ?>#gifts-table"
                                                    class="btn-small js-toggle-status <?php echo $g['written'] ? 'btn-thanks-active' : 'btn-thanks-written'; ?>"
-                                                   data-source="<?php echo htmlspecialchars($g['source']); ?>"
+                                                   data-source="<?php echo htmlspecialchars($isCash ? 'offregistry' : $g['source']); ?>"
                                                    data-id="<?php echo (int) $g['id']; ?>"
                                                    data-field="written">
                                                     <?php echo $g['written'] ? '✓ Written' : 'Mark Written'; ?>
@@ -1502,7 +1510,7 @@ $page_title = "Manage Gifts - Jacob & Melissa";
                                                 ?>
                                                 <a href="/admin-gifts?<?php echo $sentHref; ?>=<?php echo (int) $g['id']; ?>#gifts-table"
                                                    class="btn-small js-toggle-status <?php echo $g['sent'] ? 'btn-thanks-active' : 'btn-thanks-sent'; ?>"
-                                                   data-source="<?php echo htmlspecialchars($g['source']); ?>"
+                                                   data-source="<?php echo htmlspecialchars($isCash ? 'offregistry' : $g['source']); ?>"
                                                    data-id="<?php echo (int) $g['id']; ?>"
                                                    data-field="sent">
                                                     <?php echo $g['sent'] ? '✓ Sent' : 'Mark Sent'; ?>
