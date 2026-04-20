@@ -455,7 +455,7 @@ foreach ($honeymoonFundContribs as $f) {
         $honeymoonFundValue += (float) $f['amount'];
     }
 }
-$totalGiftValue = $registryValue + $offRegistryValue + $houseFundValue + $honeymoonFundValue;
+$totalGiftValue = $registryValue + $offRegistryValue + $cashValue + $houseFundValue + $honeymoonFundValue;
 $thanksPending = $totalGifts - $thanksCompleted;
 
 // Time zones for display. Database TIMESTAMPs are stored in UTC
