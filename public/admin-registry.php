@@ -422,9 +422,54 @@ $page_title = "Manage Registry - Jacob & Melissa";
             box-shadow: 0 2px 10px var(--color-shadow);
             margin-bottom: 2rem;
         }
-        .add-item-form h2 {
+        .add-item-form-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0;
+            margin: 0;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font: inherit;
+            text-align: left;
+        }
+        .add-item-form-header h2 {
             color: var(--color-green);
-            margin-bottom: 1.5rem;
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        .add-item-form-toggle-icon {
+            display: inline-block;
+            width: 1.1rem;
+            height: 1.1rem;
+            border-right: 2px solid currentColor;
+            border-bottom: 2px solid currentColor;
+            color: var(--color-green);
+            transform: rotate(-135deg);
+            transition: transform 0.25s ease, color 0.2s ease;
+            flex-shrink: 0;
+            margin-left: 1rem;
+        }
+        .add-item-form-header:hover .add-item-form-toggle-icon,
+        .add-item-form-header:focus .add-item-form-toggle-icon,
+        .add-item-form-header:focus-visible .add-item-form-toggle-icon {
+            color: var(--color-gold);
+        }
+        .add-item-form-header:focus-visible {
+            outline: 2px solid var(--color-gold);
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+        .add-item-form-body {
+            margin-top: 1.5rem;
+        }
+        .add-item-form.collapsed .add-item-form-toggle-icon {
+            transform: rotate(45deg);
+        }
+        .add-item-form.collapsed .add-item-form-body {
+            display: none;
         }
         .items-list {
             background-color: var(--color-surface);
@@ -1455,8 +1500,12 @@ $page_title = "Manage Registry - Jacob & Melissa";
                     </div>
                 </div>
 
-                <div class="add-item-form">
-                    <h2 id="form-title"><?php echo $editItem ? 'Edit Registry Item' : 'Add New Registry Item'; ?></h2>
+                <div class="add-item-form" id="add-item-form-container">
+                    <button type="button" class="add-item-form-header" id="add-item-form-toggle" aria-expanded="true" aria-controls="add-item-form-body">
+                        <h2 id="form-title"><?php echo $editItem ? 'Edit Registry Item' : 'Add New Registry Item'; ?></h2>
+                        <span class="add-item-form-toggle-icon" aria-hidden="true"></span>
+                    </button>
+                    <div class="add-item-form-body" id="add-item-form-body">
                     <form method="POST" action="/admin-registry" id="item-form">
                         <?php if ($editItem): ?>
                             <input type="hidden" name="item_id" value="<?php echo htmlspecialchars($editItem['id']); ?>">
@@ -1504,8 +1553,9 @@ $page_title = "Manage Registry - Jacob & Melissa";
                             <?php endif; ?>
                         </div>
                     </form>
+                    </div>
                 </div>
-                
+
                 <div class="items-list">
                     <h2>Registry Items (<?php echo count($items); ?>)</h2>
                     <?php if (empty($items)): ?>
@@ -1658,6 +1708,39 @@ $page_title = "Manage Registry - Jacob & Melissa";
     </script>
     <?php endif; ?>
     <script>
+        // Add Item form fold/unfold
+        (function() {
+            const ADD_ITEM_COLLAPSED_KEY = 'admin-registry-add-item-collapsed';
+            const container = document.getElementById('add-item-form-container');
+            const toggle = document.getElementById('add-item-form-toggle');
+            const body = document.getElementById('add-item-form-body');
+            if (!container || !toggle || !body) return;
+
+            // Force expanded when editing an existing item so the form is visible.
+            const isEditing = container.querySelector('input[name="item_id"]') !== null;
+
+            function setCollapsed(collapsed) {
+                container.classList.toggle('collapsed', collapsed);
+                toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+                try {
+                    localStorage.setItem(ADD_ITEM_COLLAPSED_KEY, collapsed ? '1' : '0');
+                } catch (e) {}
+            }
+
+            function isCollapsed() {
+                try {
+                    return localStorage.getItem(ADD_ITEM_COLLAPSED_KEY) === '1';
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            setCollapsed(isEditing ? false : isCollapsed());
+            toggle.addEventListener('click', function() {
+                setCollapsed(!container.classList.contains('collapsed'));
+            });
+        })();
+
         // Price band table fold/unfold
         (function() {
             const PRICE_BAND_COLLAPSED_KEY = 'admin-registry-price-bands-collapsed';
