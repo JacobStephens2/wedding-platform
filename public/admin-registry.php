@@ -524,8 +524,19 @@ $page_title = "Manage Registry - Jacob & Melissa";
             display: block;
         }
         .items-list.sort-active .reorder-controls,
-        .items-list.sort-active .item-position {
+        .items-list.sort-active .item-position,
+        .items-list.filter-active .reorder-controls,
+        .items-list.filter-active .item-position {
             display: none;
+        }
+        .items-list-grid .item-card.filtered-out {
+            display: none;
+        }
+        .items-visible-count {
+            color: var(--color-text-secondary);
+            font-family: 'Crimson Text', serif;
+            font-size: 0.9rem;
+            margin-left: auto;
         }
         .items-list-grid {
             display: grid;
@@ -1615,6 +1626,13 @@ $page_title = "Manage Registry - Jacob & Melissa";
                                     <option value="available-first">Not purchased first</option>
                                 </select>
                             </div>
+                            <div class="control-group">
+                                <label>
+                                    <input type="checkbox" id="items-filter-available">
+                                    Show only not-purchased items
+                                </label>
+                            </div>
+                            <span class="items-visible-count" id="items-visible-count" aria-live="polite"></span>
                         </div>
                         <p class="sort-active-notice">Sort is overriding the saved order &mdash; switch back to &ldquo;Manual order&rdquo; to rearrange items.</p>
                         <form method="POST" action="/admin-registry" id="reorder-form">
@@ -1931,15 +1949,19 @@ $page_title = "Manage Registry - Jacob & Melissa";
             });
         })();
 
-        // Items list sort (client-side reordering of cards)
+        // Items list sort + filter (client-side, persisted)
         (function() {
             const SORT_KEY = 'admin-registry-items-sort';
+            const FILTER_KEY = 'admin-registry-items-filter-available';
             const list = document.getElementById('items-list');
-            const select = document.getElementById('items-sort');
+            const sortSelect = document.getElementById('items-sort');
+            const filterCheckbox = document.getElementById('items-filter-available');
             const grid = list ? list.querySelector('.items-list-grid') : null;
-            if (!list || !select || !grid) return;
+            const countEl = document.getElementById('items-visible-count');
+            if (!list || !sortSelect || !filterCheckbox || !grid) return;
 
             const cards = Array.from(grid.querySelectorAll('.item-card'));
+            const totalCount = cards.length;
 
             function applySort(mode) {
                 let ordered;
@@ -1959,18 +1981,45 @@ $page_title = "Manage Registry - Jacob & Melissa";
                 list.classList.toggle('sort-active', mode !== 'default');
             }
 
-            let initial = 'default';
+            function applyFilter(active) {
+                let visible = 0;
+                cards.forEach(function (card) {
+                    const hide = active && card.dataset.purchased === '1';
+                    card.classList.toggle('filtered-out', hide);
+                    if (!hide) visible++;
+                });
+                list.classList.toggle('filter-active', active);
+                if (countEl) {
+                    countEl.textContent = active
+                        ? 'Showing ' + visible + ' of ' + totalCount + ' items'
+                        : '';
+                }
+            }
+
+            let initialSort = 'default';
             try {
                 const saved = localStorage.getItem(SORT_KEY);
-                if (saved === 'available-first') initial = 'available-first';
+                if (saved === 'available-first') initialSort = 'available-first';
             } catch (e) {}
-            select.value = initial;
-            applySort(initial);
+            let initialFilter = false;
+            try {
+                initialFilter = localStorage.getItem(FILTER_KEY) === '1';
+            } catch (e) {}
 
-            select.addEventListener('change', function () {
-                const mode = select.value;
+            sortSelect.value = initialSort;
+            filterCheckbox.checked = initialFilter;
+            applySort(initialSort);
+            applyFilter(initialFilter);
+
+            sortSelect.addEventListener('change', function () {
+                const mode = sortSelect.value;
                 try { localStorage.setItem(SORT_KEY, mode); } catch (e) {}
                 applySort(mode);
+            });
+            filterCheckbox.addEventListener('change', function () {
+                const active = filterCheckbox.checked;
+                try { localStorage.setItem(FILTER_KEY, active ? '1' : '0'); } catch (e) {}
+                applyFilter(active);
             });
         })();
 
