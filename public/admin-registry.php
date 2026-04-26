@@ -481,6 +481,52 @@ $page_title = "Manage Registry - Jacob & Melissa";
             color: var(--color-green);
             margin-bottom: 1.5rem;
         }
+        .items-list-controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 1rem 1.5rem;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--color-border);
+        }
+        .items-list-controls .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .items-list-controls label {
+            color: var(--color-text-secondary);
+            font-family: 'Crimson Text', serif;
+            margin: 0;
+            font-size: 0.95rem;
+        }
+        .items-list-controls select {
+            padding: 0.4rem 0.6rem;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            font-family: 'Crimson Text', serif;
+            background-color: var(--color-surface);
+            color: var(--color-dark);
+        }
+        .sort-active-notice {
+            display: none;
+            margin: 0 0 1rem 0;
+            padding: 0.6rem 0.85rem;
+            background-color: var(--color-light);
+            border-left: 3px solid var(--color-gold);
+            border-radius: 4px;
+            font-size: 0.9rem;
+            color: var(--color-text-secondary);
+            font-family: 'Crimson Text', serif;
+        }
+        .items-list.sort-active .sort-active-notice {
+            display: block;
+        }
+        .items-list.sort-active .reorder-controls,
+        .items-list.sort-active .item-position {
+            display: none;
+        }
         .items-list-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -1556,11 +1602,21 @@ $page_title = "Manage Registry - Jacob & Melissa";
                     </div>
                 </div>
 
-                <div class="items-list">
+                <div class="items-list" id="items-list">
                     <h2>Registry Items (<?php echo count($items); ?>)</h2>
                     <?php if (empty($items)): ?>
                         <p>No registry items yet. Add one above!</p>
                     <?php else: ?>
+                        <div class="items-list-controls">
+                            <div class="control-group">
+                                <label for="items-sort">Sort:</label>
+                                <select id="items-sort">
+                                    <option value="default">Manual order</option>
+                                    <option value="available-first">Not purchased first</option>
+                                </select>
+                            </div>
+                        </div>
+                        <p class="sort-active-notice">Sort is overriding the saved order &mdash; switch back to &ldquo;Manual order&rdquo; to rearrange items.</p>
                         <form method="POST" action="/admin-registry" id="reorder-form">
                             <input type="hidden" name="bulk_reorder" value="1">
                             <div class="reorder-controls">
@@ -1570,7 +1626,7 @@ $page_title = "Manage Registry - Jacob & Melissa";
                             <div class="items-list-grid">
                                 <?php $position = 1; ?>
                                 <?php foreach ($items as $item): ?>
-                                    <div class="item-card <?php echo $item['purchased'] ? 'purchased' : ''; ?>">
+                                    <div class="item-card <?php echo $item['purchased'] ? 'purchased' : ''; ?>" data-purchased="<?php echo $item['purchased'] ? '1' : '0'; ?>" data-default-order="<?php echo $position; ?>">
                                         <div class="item-position">
                                             <label for="pos-<?php echo $item['id']; ?>">Position</label>
                                             <input type="number" name="positions[<?php echo $item['id']; ?>]" id="pos-<?php echo $item['id']; ?>" value="<?php echo $position; ?>" min="1" max="<?php echo count($items); ?>" class="position-input" data-original="<?php echo $position; ?>">
@@ -1872,6 +1928,49 @@ $page_title = "Manage Registry - Jacob & Melissa";
                         setStatus('', '');
                     }
                 });
+            });
+        })();
+
+        // Items list sort (client-side reordering of cards)
+        (function() {
+            const SORT_KEY = 'admin-registry-items-sort';
+            const list = document.getElementById('items-list');
+            const select = document.getElementById('items-sort');
+            const grid = list ? list.querySelector('.items-list-grid') : null;
+            if (!list || !select || !grid) return;
+
+            const cards = Array.from(grid.querySelectorAll('.item-card'));
+
+            function applySort(mode) {
+                let ordered;
+                if (mode === 'available-first') {
+                    ordered = cards.slice().sort(function (a, b) {
+                        const ap = a.dataset.purchased === '1' ? 1 : 0;
+                        const bp = b.dataset.purchased === '1' ? 1 : 0;
+                        if (ap !== bp) return ap - bp;
+                        return parseInt(a.dataset.defaultOrder, 10) - parseInt(b.dataset.defaultOrder, 10);
+                    });
+                } else {
+                    ordered = cards.slice().sort(function (a, b) {
+                        return parseInt(a.dataset.defaultOrder, 10) - parseInt(b.dataset.defaultOrder, 10);
+                    });
+                }
+                ordered.forEach(function (card) { grid.appendChild(card); });
+                list.classList.toggle('sort-active', mode !== 'default');
+            }
+
+            let initial = 'default';
+            try {
+                const saved = localStorage.getItem(SORT_KEY);
+                if (saved === 'available-first') initial = 'available-first';
+            } catch (e) {}
+            select.value = initial;
+            applySort(initial);
+
+            select.addEventListener('change', function () {
+                const mode = select.value;
+                try { localStorage.setItem(SORT_KEY, mode); } catch (e) {}
+                applySort(mode);
             });
         })();
 
