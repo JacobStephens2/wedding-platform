@@ -133,6 +133,23 @@ if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['act
         try {
             $pdo = getDbConnection();
             $recipients = fetchAudience($pdo, $audience);
+
+            // Apply per-recipient inclusion filter from the audience checkboxes.
+            // Marker hidden input distinguishes "user submitted an empty list (exclude everyone)"
+            // from "user never interacted with checkboxes (include everyone)".
+            $hasIncludeFilter = !empty($_POST['included_recipients_submitted'][$audience]);
+            if ($hasIncludeFilter) {
+                $rawIncluded = $_POST['included_recipients'][$audience] ?? [];
+                if (!is_array($rawIncluded)) $rawIncluded = [];
+                $includedSet = array_flip(array_map(
+                    fn($e) => strtolower(trim((string)$e)),
+                    $rawIncluded
+                ));
+                $recipients = array_values(array_filter($recipients, function ($r) use ($includedSet) {
+                    return isset($includedSet[strtolower(trim($r['email']))]);
+                }));
+            }
+
             $previewCount = count($recipients);
 
             if ($_POST['action'] === 'preview') {
@@ -212,7 +229,7 @@ if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['act
                             $audience,
                             $subject,
                             $body,
-                            $isHtml ? 1 : 0,
+                            0, // body column stores Markdown source; rendered to HTML on send
                             $replyTo !== '' ? $replyTo : null,
                             $previewCount,
                             $sent,
@@ -459,6 +476,33 @@ $page_title = "Announcements - Admin";
             user-select: none;
         }
         .audience-emails summary:hover { color: var(--color-gold); }
+        .audience-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0.75rem 0 0;
+            font-family: 'Crimson Text', serif;
+            font-size: 0.9rem;
+        }
+        .audience-actions .btn-link {
+            background: none;
+            border: 0;
+            padding: 0;
+            color: var(--color-green);
+            cursor: pointer;
+            font: inherit;
+            text-decoration: underline;
+        }
+        .audience-actions .btn-link:hover { color: var(--color-gold); }
+        .audience-actions .action-sep { color: var(--color-text-secondary); }
+        .audience-selected-count {
+            margin-left: auto;
+            color: var(--color-text-secondary);
+        }
+        .recipient-preview tr.is-excluded td:not(:first-child) {
+            color: var(--color-text-secondary);
+            text-decoration: line-through;
+        }
         .recipient-preview {
             max-height: 320px;
             overflow-y: auto;
@@ -572,6 +616,13 @@ $page_title = "Announcements - Admin";
                         $recipients = $audienceRecipients[$key] ?? [];
                         $count = count($recipients);
                         $emailsCsv = implode(', ', array_map(function($r) { return $r['email']; }, $recipients));
+
+                        // Restore prior checkbox state if user has submitted this audience already.
+                        $submittedIncluded = $_POST['included_recipients'][$key] ?? null;
+                        $hasSubmitted = is_array($submittedIncluded);
+                        $includedSet = $hasSubmitted
+                            ? array_flip(array_map(fn($e) => strtolower(trim((string)$e)), $submittedIncluded))
+                            : null;
                     ?>
                         <details class="audience-emails" data-audience="<?php echo htmlspecialchars($key); ?>"
                                  <?php echo $audience === $key ? '' : 'hidden'; ?>>
@@ -579,12 +630,42 @@ $page_title = "Announcements - Admin";
                             <?php if ($count === 0): ?>
                                 <p class="helper-text" style="margin-top:0.75rem;">No one matches this audience.</p>
                             <?php else: ?>
-                                <div class="recipient-preview" style="margin-top:0.75rem;">
+                                <!-- Marker: tells the server that checkbox state for this audience was submitted (so empty = no one selected, vs no marker = include everyone). -->
+                                <input type="hidden" name="included_recipients_submitted[<?php echo htmlspecialchars($key); ?>]" value="1">
+
+                                <div class="audience-actions">
+                                    <button type="button" class="btn-link" data-action="select-all" data-audience="<?php echo htmlspecialchars($key); ?>">Select all</button>
+                                    <span class="action-sep">·</span>
+                                    <button type="button" class="btn-link" data-action="select-none" data-audience="<?php echo htmlspecialchars($key); ?>">Select none</button>
+                                    <span class="audience-selected-count" data-audience-count="<?php echo htmlspecialchars($key); ?>"></span>
+                                </div>
+                                <div class="recipient-preview" style="margin-top:0.5rem;">
                                     <table>
-                                        <thead><tr><th>Name</th><th>Email</th></tr></thead>
-                                        <tbody>
-                                        <?php foreach ($recipients as $r): ?>
+                                        <thead>
                                             <tr>
+                                                <th style="width:2.2rem; text-align:center;">
+                                                    <input type="checkbox" class="audience-toggle-all"
+                                                           data-audience="<?php echo htmlspecialchars($key); ?>"
+                                                           aria-label="Toggle all in this audience">
+                                                </th>
+                                                <th>Name</th>
+                                                <th>Email</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        <?php foreach ($recipients as $r):
+                                            $emailLower = strtolower(trim($r['email']));
+                                            $checked = $hasSubmitted ? isset($includedSet[$emailLower]) : true;
+                                        ?>
+                                            <tr<?php echo $checked ? '' : ' class="is-excluded"'; ?>>
+                                                <td style="text-align:center;">
+                                                    <input type="checkbox"
+                                                           class="audience-recipient-toggle"
+                                                           data-audience="<?php echo htmlspecialchars($key); ?>"
+                                                           name="included_recipients[<?php echo htmlspecialchars($key); ?>][]"
+                                                           value="<?php echo htmlspecialchars($r['email']); ?>"
+                                                           <?php echo $checked ? 'checked' : ''; ?>>
+                                                </td>
                                                 <td><?php echo htmlspecialchars(trim($r['first_name'] . ' ' . $r['last_name'])); ?></td>
                                                 <td><?php echo htmlspecialchars($r['email']); ?></td>
                                             </tr>
@@ -736,6 +817,65 @@ $page_title = "Announcements - Admin";
                         }
                         sendBtn.disabled = true;
                         sendBtn.textContent = 'Sending… (do not close this tab)';
+                    });
+                })();
+
+                (function () {
+                    // Per-recipient include/exclude controls.
+                    function recipientCheckboxes(audience) {
+                        return document.querySelectorAll(
+                            '.audience-recipient-toggle[data-audience="' + audience + '"]'
+                        );
+                    }
+                    function updateCount(audience) {
+                        var boxes = recipientCheckboxes(audience);
+                        var total = boxes.length;
+                        var checked = 0;
+                        boxes.forEach(function (b) {
+                            if (b.checked) checked++;
+                            var row = b.closest('tr');
+                            if (row) row.classList.toggle('is-excluded', !b.checked);
+                        });
+                        var label = document.querySelector(
+                            '.audience-selected-count[data-audience-count="' + audience + '"]'
+                        );
+                        if (label) {
+                            label.textContent = checked + ' of ' + total + ' selected';
+                        }
+                        var master = document.querySelector(
+                            '.audience-toggle-all[data-audience="' + audience + '"]'
+                        );
+                        if (master) {
+                            master.checked = checked === total && total > 0;
+                            master.indeterminate = checked > 0 && checked < total;
+                        }
+                    }
+
+                    document.querySelectorAll('.audience-emails[data-audience]').forEach(function (panel) {
+                        var audience = panel.getAttribute('data-audience');
+                        updateCount(audience);
+                    });
+
+                    document.addEventListener('change', function (e) {
+                        if (e.target.classList && e.target.classList.contains('audience-recipient-toggle')) {
+                            updateCount(e.target.getAttribute('data-audience'));
+                        }
+                        if (e.target.classList && e.target.classList.contains('audience-toggle-all')) {
+                            var audience = e.target.getAttribute('data-audience');
+                            var state = e.target.checked;
+                            recipientCheckboxes(audience).forEach(function (b) { b.checked = state; });
+                            updateCount(audience);
+                        }
+                    });
+
+                    document.addEventListener('click', function (e) {
+                        var btn = e.target.closest && e.target.closest('.btn-link[data-action]');
+                        if (!btn) return;
+                        e.preventDefault();
+                        var audience = btn.getAttribute('data-audience');
+                        var checked = btn.getAttribute('data-action') === 'select-all';
+                        recipientCheckboxes(audience).forEach(function (b) { b.checked = checked; });
+                        updateCount(audience);
                     });
                 })();
 
