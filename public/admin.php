@@ -146,7 +146,7 @@ $page_title = "Admin - Jacob & Melissa";
                         <a href="<?php echo htmlspecialchars(adminUrl('/admin-honeymoon-fund')); ?>">Manage Honeymoon Fund</a>
                     </li>
                     <li class="admin-menu-item">
-                        <a href="<?php echo htmlspecialchars(adminUrl('/admin-email-blast')); ?>">Email Blast</a>
+                        <a href="<?php echo htmlspecialchars(adminUrl('/admin-announcements')); ?>">Announcements</a>
                     </li>
                 </ul>
             </div>
