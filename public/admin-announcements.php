@@ -103,24 +103,22 @@ function renderPersonalized(string $template, array $recipient): string {
 }
 
 $DEFAULT_SUBJECT = 'Our wedding photos and video are here!';
-$DEFAULT_BODY = "<p>Hi {{first_name}},</p>\n"
-    . "<p>Our wedding photos and the ceremony video are now up on the gallery: "
-    . "<a href=\"https://wedding.stephens.page/gallery\">https://wedding.stephens.page/gallery</a></p>\n"
-    . "<p>Love,<br>Jacob &amp; Melissa</p>";
+$DEFAULT_BODY = "Hi {{first_name}},\n\n"
+    . "Our wedding photos and the ceremony video are now up on the gallery: "
+    . "<https://wedding.stephens.page/gallery>\n\n"
+    . "Love,\nJacob & Melissa";
 
-function htmlToPlainText(string $html): string {
-    $text = preg_replace('#</p>\s*#i', "</p>\n\n", $html);
-    $text = preg_replace('#<br\s*/?>\s*#i', "\n", $text);
-    $text = preg_replace('#</(li|h\d|tr)>\s*#i', "</$1>\n", $text);
-    $text = strip_tags($text);
-    $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-    return trim(preg_replace("/\n{3,}/", "\n\n", $text));
+function renderMarkdownEmail(string $markdown): string {
+    $parsedown = new Parsedown();
+    $parsedown->setSafeMode(true);
+    return $parsedown->text($markdown);
 }
 
 $audience      = $_POST['audience']  ?? 'all_with_email';
 $subject       = $_POST['subject']   ?? $DEFAULT_SUBJECT;
 $body          = $_POST['body']      ?? $DEFAULT_BODY;
-// TinyMCE is the body editor, so all sends are HTML.
+// Body is authored in Markdown; we render to HTML on send and keep the
+// Markdown source as the plain-text alt body.
 $isHtml        = true;
 $replyTo       = trim($_POST['reply_to'] ?? '');
 $fromName      = trim($_POST['from_name'] ?? '') ?: 'Jacob and Melissa';
@@ -154,16 +152,15 @@ if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['act
                         'last_name'  => 'Recipient',
                         'email'      => $testEmail,
                     ];
-                    $renderedSubject = renderPersonalized($subject, $fakeRecipient);
-                    $renderedBody    = renderPersonalized($body, $fakeRecipient);
+                    $renderedSubject  = renderPersonalized($subject, $fakeRecipient);
+                    $renderedMarkdown = renderPersonalized($body, $fakeRecipient);
+                    $renderedHtml     = renderMarkdownEmail($renderedMarkdown);
                     $opts = [
-                        'isHtml'   => $isHtml,
+                        'isHtml'   => true,
                         'fromName' => $fromName,
+                        'altBody'  => $renderedMarkdown,
                     ];
-                    if ($isHtml) {
-                        $opts['altBody'] = htmlToPlainText($renderedBody);
-                    }
-                    $ok = sendEmail($testEmail, '[TEST] ' . $renderedSubject, $renderedBody,
+                    $ok = sendEmail($testEmail, '[TEST] ' . $renderedSubject, $renderedHtml,
                         $replyTo !== '' ? $replyTo : null, $opts);
                     if ($ok) {
                         $success = 'Test email sent to ' . htmlspecialchars($testEmail) . '.';
@@ -186,16 +183,15 @@ if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['act
                     $failed = 0;
                     $failedList = [];
                     foreach ($recipients as $r) {
-                        $renderedSubject = renderPersonalized($subject, $r);
-                        $renderedBody    = renderPersonalized($body, $r);
+                        $renderedSubject  = renderPersonalized($subject, $r);
+                        $renderedMarkdown = renderPersonalized($body, $r);
+                        $renderedHtml     = renderMarkdownEmail($renderedMarkdown);
                         $opts = [
-                            'isHtml'   => $isHtml,
+                            'isHtml'   => true,
                             'fromName' => $fromName,
+                            'altBody'  => $renderedMarkdown,
                         ];
-                        if ($isHtml) {
-                            $opts['altBody'] = htmlToPlainText($renderedBody);
-                        }
-                        $ok = sendEmail($r['email'], $renderedSubject, $renderedBody,
+                        $ok = sendEmail($r['email'], $renderedSubject, $renderedHtml,
                             $replyTo !== '' ? $replyTo : null, $opts);
                         if ($ok) {
                             $sent++;
@@ -289,10 +285,6 @@ $page_title = "Announcements - Admin";
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400&family=Beloved+Script&family=Crimson+Text:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
-    <?php if ($authenticated): ?>
-    <script src="https://cdn.tiny.cloud/1/of7soa5efvk6f1u5gph7pzfxps9iiv31xhq5b18i737t8c8k/tinymce/8/tinymce.min.js"
-            referrerpolicy="origin" crossorigin="anonymous"></script>
-    <?php endif; ?>
     <style>
         .blast-container {
             max-width: 1100px;
@@ -383,6 +375,41 @@ $page_title = "Announcements - Admin";
             font-size: 0.95rem;
             line-height: 1.45;
             resize: vertical;
+        }
+        .md-editor {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            align-items: stretch;
+        }
+        .md-editor textarea {
+            min-height: 320px;
+            margin: 0;
+        }
+        .md-preview {
+            min-height: 320px;
+            padding: 0.85rem 1rem;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background: var(--color-bg);
+            font-family: 'Crimson Text', Georgia, serif;
+            font-size: 1rem;
+            line-height: 1.5;
+            color: var(--color-dark);
+            overflow-y: auto;
+        }
+        .md-preview p { margin: 0 0 0.85rem; }
+        .md-preview p:last-child { margin-bottom: 0; }
+        .md-preview a { color: var(--color-green); }
+        .md-preview ul, .md-preview ol { margin: 0 0 0.85rem 1.25rem; padding: 0; }
+        .md-preview blockquote {
+            margin: 0 0 0.85rem;
+            padding-left: 0.85rem;
+            border-left: 3px solid var(--color-border);
+            color: var(--color-text-secondary);
+        }
+        @media (max-width: 720px) {
+            .md-editor { grid-template-columns: 1fr; }
         }
         .helper-text {
             font-family: 'Crimson Text', serif;
@@ -593,12 +620,14 @@ $page_title = "Announcements - Admin";
                            value="<?php echo htmlspecialchars($subject); ?>"
                            placeholder="Our wedding photos and video are here!">
 
-                    <label for="body" style="margin-top:1rem;">Body</label>
-                    <textarea id="body" name="body"><?php echo htmlspecialchars($body); ?></textarea>
+                    <label for="body" style="margin-top:1rem;">Body <small style="font-weight:400; color:var(--color-text-secondary);">(Markdown — paragraphs, **bold**, *italic*, [links](https://...), lists, &gt; quotes)</small></label>
+                    <div class="md-editor">
+                        <textarea id="body" name="body" spellcheck="true"><?php echo htmlspecialchars($body); ?></textarea>
+                        <div class="md-preview" id="body-preview" aria-live="polite"><?php echo renderMarkdownEmail($body); ?></div>
+                    </div>
                     <p class="helper-text token-hint">
-                        Personalization: insert <strong>First name</strong> or <strong>Last name</strong> from the toolbar's
-                        merge-tags menu — they render as <code>{{first_name}}</code>/<code>{{last_name}}</code> and get
-                        replaced per recipient when the email is sent.
+                        Personalization: type <code>{{first_name}}</code> or <code>{{last_name}}</code> anywhere in the body —
+                        they'll be replaced per recipient when the email is sent.
                     </p>
                 </div>
 
@@ -710,41 +739,42 @@ $page_title = "Announcements - Admin";
                     });
                 })();
 
-                if (window.tinymce) {
-                    tinymce.init({
-                        selector: 'textarea#body',
-                        height: 420,
-                        menubar: 'edit view insert format',
-                        branding: false,
-                        plugins: [
-                            'autolink', 'charmap', 'emoticons', 'link', 'lists', 'searchreplace', 'wordcount',
-                            'mergetags', 'autocorrect', 'typography', 'inlinecss', 'advcode'
-                        ],
-                        toolbar: 'undo redo | blocks | bold italic underline | link mergetags | ' +
-                                 'numlist bullist indent outdent | emoticons charmap | removeformat | code',
-                        mergetags_list: [
-                            { value: 'first_name', title: 'First name' },
-                            { value: 'last_name',  title: 'Last name' }
-                        ],
-                        mergetags_prefix: '{{',
-                        mergetags_suffix: '}}',
-                        // Email-safe whitelist: anything else gets stripped/cleaned on paste.
-                        valid_elements:
-                            'p[style],br,strong/b,em/i,u,s,del,' +
-                            'a[href|title|target|rel],' +
-                            'ul,ol,li[style],' +
-                            'h1[style],h2[style],h3[style],h4[style],' +
-                            'blockquote[style],hr,' +
-                            'span[style],' +
-                            'img[src|alt|title|width|height|style]',
-                        extended_valid_elements: 'a[href|title|target=_blank|rel=noopener noreferrer]',
-                        // Force plain paragraphs on Enter; no fancy div wrapping.
-                        forced_root_block: 'p',
-                        // Open links from inside the editor in a new tab by default.
-                        link_default_target: '_blank',
-                        link_default_protocol: 'https'
-                    });
-                }
+                (function () {
+                    var bodyEl = document.getElementById('body');
+                    var preview = document.getElementById('body-preview');
+                    if (!bodyEl || !preview) return;
+                    var timer = null;
+                    var inflight = null;
+
+                    function render() {
+                        if (inflight) inflight.abort();
+                        var controller = new AbortController();
+                        inflight = controller;
+                        fetch('/api/markdown-preview', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ markdown: bodyEl.value }),
+                            signal: controller.signal,
+                            credentials: 'same-origin'
+                        })
+                        .then(function (r) { return r.ok ? r.json() : Promise.reject(r); })
+                        .then(function (data) {
+                            preview.innerHTML = data.html || '<em style="color:var(--color-text-secondary);">Empty.</em>';
+                        })
+                        .catch(function (err) {
+                            if (err && err.name === 'AbortError') return;
+                            preview.innerHTML = '<em style="color:#b03030;">Preview failed.</em>';
+                        });
+                    }
+
+                    function schedule() {
+                        if (timer) clearTimeout(timer);
+                        timer = setTimeout(render, 250);
+                    }
+
+                    bodyEl.addEventListener('input', schedule);
+                    render();
+                })();
             </script>
         <?php endif; ?>
     </main>
