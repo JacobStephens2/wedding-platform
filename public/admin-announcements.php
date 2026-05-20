@@ -259,10 +259,11 @@ if ($authenticated && !$sampleMode) {
     try {
         $pdo = getDbConnection();
         $history = $pdo->query("
-            SELECT id, audience, subject, recipient_count, sent_count, failed_count, sent_at, body_is_html
+            SELECT id, audience, subject, body, body_is_html, reply_to,
+                   recipient_count, sent_count, failed_count, failed_recipients, sent_at
             FROM email_blasts
             ORDER BY sent_at DESC
-            LIMIT 20
+            LIMIT 50
         ")->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
         // Table may not exist yet — silently skip.
@@ -525,14 +526,71 @@ $page_title = "Announcements - Admin";
             position: sticky;
             top: 0;
         }
-        .history-table { width: 100%; border-collapse: collapse; font-family: 'Crimson Text', serif; }
-        .history-table th, .history-table td {
-            text-align: left;
-            padding: 0.55rem 0.75rem;
-            border-bottom: 1px solid var(--color-border);
+        .history-list {
+            list-style: none;
+            padding: 0;
+            margin: 0.75rem 0 0;
+        }
+        .history-item {
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            background: var(--color-bg);
+        }
+        .history-item details > summary {
+            list-style: none;
+            display: grid;
+            grid-template-columns: 11rem auto 1fr auto;
+            gap: 0.75rem;
+            align-items: center;
+            padding: 0.7rem 0.9rem;
+            cursor: pointer;
+            font-family: 'Crimson Text', serif;
             font-size: 0.95rem;
         }
-        .history-table th { background: var(--color-bg); }
+        .history-item details > summary::-webkit-details-marker { display: none; }
+        .history-item details[open] > summary { border-bottom: 1px solid var(--color-border); }
+        .history-when { color: var(--color-text-secondary); white-space: nowrap; }
+        .history-subject { font-weight: 600; color: var(--color-dark); }
+        .history-stats { color: var(--color-text-secondary); white-space: nowrap; font-size: 0.9rem; }
+        .history-failed { color: #b03030; font-weight: 600; }
+        .history-detail {
+            padding: 0.9rem 1rem 1rem;
+            font-family: 'Crimson Text', serif;
+        }
+        .history-body-rendered {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            padding: 0.85rem 1rem;
+            font-size: 1rem;
+            line-height: 1.5;
+            color: var(--color-dark);
+        }
+        .history-body-rendered p { margin: 0 0 0.85rem; }
+        .history-body-rendered p:last-child { margin-bottom: 0; }
+        .history-body-rendered a { color: var(--color-green); }
+        .history-failed-list { margin-top: 0.85rem; }
+        .history-failed-list summary {
+            cursor: pointer;
+            color: #b03030;
+            font-family: 'Crimson Text', serif;
+        }
+        .history-failed-list pre {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            margin: 0.5rem 0 0;
+        }
+        @media (max-width: 720px) {
+            .history-item details > summary {
+                grid-template-columns: 1fr;
+                gap: 0.35rem;
+            }
+        }
         .audience-tag {
             display: inline-block;
             background: var(--color-bg);
@@ -758,33 +816,55 @@ $page_title = "Announcements - Admin";
                 </div>
             <?php endif; ?>
 
-            <?php if (!empty($history)): ?>
-                <div class="blast-card">
-                    <h2>Recent blasts</h2>
-                    <table class="history-table">
-                        <thead>
-                            <tr>
-                                <th>When</th>
-                                <th>Audience</th>
-                                <th>Subject</th>
-                                <th>Sent</th>
-                                <th>Failed</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        <?php foreach ($history as $h): ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars(date('M j, Y g:i a', strtotime($h['sent_at']))); ?></td>
-                                <td><span class="audience-tag"><?php echo htmlspecialchars($AUDIENCES[$h['audience']] ?? $h['audience']); ?></span></td>
-                                <td><?php echo htmlspecialchars($h['subject']); ?><?php echo $h['body_is_html'] ? ' <small style="color:var(--color-text-secondary);">(HTML)</small>' : ''; ?></td>
-                                <td><?php echo (int)$h['sent_count']; ?> / <?php echo (int)$h['recipient_count']; ?></td>
-                                <td><?php echo (int)$h['failed_count']; ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            <?php endif; ?>
+            <div class="blast-card">
+                <h2>Email history</h2>
+                <?php if (empty($history)): ?>
+                    <p class="helper-text">No emails sent yet. Past blasts will appear here.</p>
+                <?php else: ?>
+                    <p class="helper-text">Showing the <?php echo count($history); ?> most recent blast<?php echo count($history) === 1 ? '' : 's'; ?>. Click a row to see the body and any failed recipients.</p>
+                    <ul class="history-list">
+                    <?php foreach ($history as $h):
+                        if ($h['body_is_html']) {
+                            $renderedBody = $h['body'];
+                        } else {
+                            $parsedown = new Parsedown();
+                            $parsedown->setSafeMode(true);
+                            $renderedBody = $parsedown->text((string)$h['body']);
+                        }
+                        $failedRows = trim((string)$h['failed_recipients']);
+                    ?>
+                        <li class="history-item">
+                            <details>
+                                <summary>
+                                    <span class="history-when"><?php echo htmlspecialchars(date('M j, Y g:i a', strtotime($h['sent_at']))); ?></span>
+                                    <span class="audience-tag"><?php echo htmlspecialchars($AUDIENCES[$h['audience']] ?? $h['audience']); ?></span>
+                                    <span class="history-subject"><?php echo htmlspecialchars($h['subject']); ?></span>
+                                    <span class="history-stats">
+                                        <?php echo (int)$h['sent_count']; ?>/<?php echo (int)$h['recipient_count']; ?> sent<?php
+                                        if ((int)$h['failed_count'] > 0) {
+                                            echo ' · <span class="history-failed">' . (int)$h['failed_count'] . ' failed</span>';
+                                        }
+                                        ?>
+                                    </span>
+                                </summary>
+                                <div class="history-detail">
+                                    <?php if (!empty($h['reply_to'])): ?>
+                                        <p class="helper-text">Reply-To: <code><?php echo htmlspecialchars($h['reply_to']); ?></code></p>
+                                    <?php endif; ?>
+                                    <div class="history-body-rendered"><?php echo $renderedBody; ?></div>
+                                    <?php if ($failedRows !== ''): ?>
+                                        <details class="history-failed-list">
+                                            <summary>Failed recipients (<?php echo (int)$h['failed_count']; ?>)</summary>
+                                            <pre><?php echo htmlspecialchars($failedRows); ?></pre>
+                                        </details>
+                                    <?php endif; ?>
+                                </div>
+                            </details>
+                        </li>
+                    <?php endforeach; ?>
+                    </ul>
+                <?php endif; ?>
+            </div>
 
             <script>
                 (function () {
