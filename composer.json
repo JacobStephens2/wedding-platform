@@ -4,7 +4,8 @@
     "require": {
         "php": ">=8.3",
         "vlucas/phpdotenv": "^5.5",
-        "phpmailer/phpmailer": "^6.9"
+        "phpmailer/phpmailer": "^6.9",
+        "erusev/parsedown": "^1.8"
     },
     "autoload": {
         "psr-4": {
@@ -12,9 +13,3 @@
         }
     }
 }
-
-
-
-
-
-
