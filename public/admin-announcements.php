@@ -241,21 +241,14 @@ if ($authenticated && !$sampleMode) {
 }
 
 $audienceCounts = [];
+$audienceRecipients = [];
 if ($authenticated) {
     try {
         $pdo = getDbConnection();
         foreach (array_keys($AUDIENCES) as $key) {
-            $sql = audienceSql($key);
-            $rows = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
-            $seen = [];
-            $count = 0;
-            foreach ($rows as $r) {
-                $k = strtolower(trim($r['email']));
-                if ($k === '' || isset($seen[$k])) continue;
-                $seen[$k] = true;
-                $count++;
-            }
-            $audienceCounts[$key] = $count;
+            $recipients = fetchAudience($pdo, $key);
+            $audienceRecipients[$key] = $recipients;
+            $audienceCounts[$key] = count($recipients);
         }
     } catch (Exception $e) {
         // ignore
@@ -407,6 +400,18 @@ $page_title = "Announcements - Admin";
         .btn-secondary:hover { background: var(--color-gold); }
         .btn-danger { background: #b03030; }
         .btn-danger:hover { background: #8a2424; }
+        .audience-emails {
+            margin-top: 1rem;
+            border-top: 1px solid var(--color-border);
+            padding-top: 0.85rem;
+        }
+        .audience-emails summary {
+            cursor: pointer;
+            font-family: 'Crimson Text', serif;
+            color: var(--color-green);
+            user-select: none;
+        }
+        .audience-emails summary:hover { color: var(--color-gold); }
         .recipient-preview {
             max-height: 320px;
             overflow-y: auto;
@@ -515,6 +520,36 @@ $page_title = "Announcements - Admin";
                         <?php endforeach; ?>
                     </div>
                     <p class="helper-text">Only guests with an email on file are counted. Plus-ones share their primary guest's email.</p>
+
+                    <?php foreach ($AUDIENCES as $key => $label):
+                        $recipients = $audienceRecipients[$key] ?? [];
+                        $count = count($recipients);
+                        $emailsCsv = implode(', ', array_map(function($r) { return $r['email']; }, $recipients));
+                    ?>
+                        <details class="audience-emails" data-audience="<?php echo htmlspecialchars($key); ?>"
+                                 <?php echo $audience === $key ? '' : 'hidden'; ?>>
+                            <summary>View email addresses in this audience (<?php echo (int)$count; ?>)</summary>
+                            <?php if ($count === 0): ?>
+                                <p class="helper-text" style="margin-top:0.75rem;">No one matches this audience.</p>
+                            <?php else: ?>
+                                <div class="recipient-preview" style="margin-top:0.75rem;">
+                                    <table>
+                                        <thead><tr><th>Name</th><th>Email</th></tr></thead>
+                                        <tbody>
+                                        <?php foreach ($recipients as $r): ?>
+                                            <tr>
+                                                <td><?php echo htmlspecialchars(trim($r['first_name'] . ' ' . $r['last_name'])); ?></td>
+                                                <td><?php echo htmlspecialchars($r['email']); ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <label style="margin-top:0.85rem;">Comma-separated email list (for copy/paste)</label>
+                                <textarea readonly onclick="this.select()" style="min-height:80px; font-size:0.85rem;"><?php echo htmlspecialchars($emailsCsv); ?></textarea>
+                            <?php endif; ?>
+                        </details>
+                    <?php endforeach; ?>
                 </div>
 
                 <div class="blast-card">
@@ -630,9 +665,15 @@ $page_title = "Announcements - Admin";
                     var form = document.getElementById('blast-form');
                     var sendBtn = document.getElementById('send-blast-btn');
                     var radios = form.querySelectorAll('input[name="audience"]');
+                    var detailsBlocks = document.querySelectorAll('.audience-emails');
                     function updateSelected() {
+                        var selectedKey = null;
                         radios.forEach(function (r) {
                             r.closest('.audience-option').classList.toggle('is-selected', r.checked);
+                            if (r.checked) selectedKey = r.value;
+                        });
+                        detailsBlocks.forEach(function (d) {
+                            d.hidden = d.getAttribute('data-audience') !== selectedKey;
                         });
                     }
                     radios.forEach(function (r) { r.addEventListener('change', updateSelected); });
