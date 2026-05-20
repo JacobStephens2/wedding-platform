@@ -114,6 +114,45 @@ function renderMarkdownEmail(string $markdown): string {
     return $parsedown->text($markdown);
 }
 
+// Draft tracking — survives across submissions via a hidden input.
+$draftId = null;
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['draft_id']) && $_POST['draft_id'] !== '') {
+        $draftId = (int)$_POST['draft_id'];
+    }
+} elseif (isset($_GET['draft'])) {
+    $draftId = (int)$_GET['draft'];
+}
+
+$loadedDraftIncluded = null;
+
+// If we arrived via GET ?draft=<id> (or a redirect from save), hydrate the form
+// fields from the stored draft. POST submissions take precedence over draft state.
+if ($draftId && $authenticated && !$sampleMode && $_SERVER['REQUEST_METHOD'] === 'GET') {
+    try {
+        $pdo = getDbConnection();
+        $stmt = $pdo->prepare("SELECT * FROM announcement_drafts WHERE id = ?");
+        $stmt->execute([$draftId]);
+        $loaded = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($loaded) {
+            $_POST['audience']  = $loaded['audience'];
+            $_POST['subject']   = $loaded['subject'];
+            $_POST['body']      = $loaded['body'];
+            $_POST['from_name'] = $loaded['from_name'] ?? '';
+            $_POST['reply_to']  = $loaded['reply_to'] ?? '';
+            $includedDecoded = json_decode((string)($loaded['included_emails'] ?? ''), true);
+            if (is_array($includedDecoded)) {
+                $loadedDraftIncluded = $includedDecoded;
+            }
+            $infoMessage = 'Loaded draft from ' . date('M j, Y g:i a', strtotime($loaded['updated_at'])) . '.';
+        } else {
+            $draftId = null;
+        }
+    } catch (Exception $e) {
+        $draftId = null;
+    }
+}
+
 $audience      = $_POST['audience']  ?? 'all_with_email';
 $subject       = $_POST['subject']   ?? $DEFAULT_SUBJECT;
 $body          = $_POST['body']      ?? $DEFAULT_BODY;
@@ -125,6 +164,66 @@ $fromName      = trim($_POST['from_name'] ?? '') ?: 'Jacob and Melissa';
 $testEmail     = trim($_POST['test_email'] ?? '');
 $recipientsPreview = null;
 $previewCount = null;
+
+// Draft save/delete actions (handled before preview/test/send so they can short-circuit).
+if ($authenticated && !$sampleMode && $_SERVER['REQUEST_METHOD'] === 'POST'
+    && isset($_POST['action']) && in_array($_POST['action'], ['save_draft', 'delete_draft'], true)
+    && isset($AUDIENCES[$audience])) {
+    try {
+        $pdo = getDbConnection();
+        if ($_POST['action'] === 'delete_draft') {
+            $targetId = (int)($_POST['draft_id'] ?? 0);
+            if ($targetId > 0) {
+                $stmt = $pdo->prepare("DELETE FROM announcement_drafts WHERE id = ?");
+                $stmt->execute([$targetId]);
+            }
+            // Drop draft context so the form resets.
+            header('Location: /admin-announcements?draft_deleted=1');
+            exit;
+        } else { // save_draft
+            $hasIncludeFilter = !empty($_POST['included_recipients_submitted'][$audience]);
+            $includedJson = null;
+            if ($hasIncludeFilter) {
+                $rawIncluded = $_POST['included_recipients'][$audience] ?? [];
+                if (!is_array($rawIncluded)) $rawIncluded = [];
+                $includedJson = json_encode(array_values(array_unique(array_map(
+                    fn($e) => strtolower(trim((string)$e)),
+                    $rawIncluded
+                ))));
+            }
+            if ($draftId) {
+                $stmt = $pdo->prepare("
+                    UPDATE announcement_drafts
+                    SET audience = ?, subject = ?, body = ?, from_name = ?, reply_to = ?, included_emails = ?
+                    WHERE id = ?
+                ");
+                $stmt->execute([$audience, $subject, $body, $fromName, $replyTo ?: null, $includedJson, $draftId]);
+                header('Location: /admin-announcements?draft=' . $draftId . '&draft_saved=1');
+                exit;
+            } else {
+                $stmt = $pdo->prepare("
+                    INSERT INTO announcement_drafts (audience, subject, body, from_name, reply_to, included_emails)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ");
+                $stmt->execute([$audience, $subject, $body, $fromName, $replyTo ?: null, $includedJson]);
+                $newId = (int)$pdo->lastInsertId();
+                header('Location: /admin-announcements?draft=' . $newId . '&draft_saved=1');
+                exit;
+            }
+        }
+    } catch (Exception $e) {
+        $error = 'Draft action failed: ' . htmlspecialchars($e->getMessage());
+    }
+}
+
+// Post-redirect notice flags.
+if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'GET') {
+    if (isset($_GET['draft_saved'])) {
+        $success = 'Draft saved.';
+    } elseif (isset($_GET['draft_deleted'])) {
+        $success = 'Draft deleted.';
+    }
+}
 
 if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if (!isset($AUDIENCES[$audience])) {
@@ -255,6 +354,7 @@ if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['act
 }
 
 $history = [];
+$drafts = [];
 if ($authenticated && !$sampleMode) {
     try {
         $pdo = getDbConnection();
@@ -264,6 +364,17 @@ if ($authenticated && !$sampleMode) {
             FROM email_blasts
             ORDER BY sent_at DESC
             LIMIT 50
+        ")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        // Table may not exist yet — silently skip.
+    }
+    try {
+        $pdo = getDbConnection();
+        $drafts = $pdo->query("
+            SELECT id, audience, subject, updated_at
+            FROM announcement_drafts
+            ORDER BY updated_at DESC
+            LIMIT 20
         ")->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
         // Table may not exist yet — silently skip.
@@ -465,6 +576,65 @@ $page_title = "Announcements - Admin";
         .btn-secondary:hover { background: var(--color-gold); }
         .btn-danger { background: #b03030; }
         .btn-danger:hover { background: #8a2424; }
+        .btn-outline {
+            background: transparent;
+            color: var(--color-green);
+            border: 1px solid var(--color-green);
+        }
+        .btn-outline:hover { background: rgba(46, 80, 22, 0.08); color: var(--color-green); }
+        .drafts-list {
+            list-style: none;
+            padding: 0;
+            margin: 0.75rem 0 0;
+        }
+        .draft-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.6rem 0.85rem;
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            background: var(--color-bg);
+        }
+        .draft-row.is-current { border-color: var(--color-green); }
+        .draft-link {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr auto auto auto;
+            gap: 0.75rem;
+            align-items: center;
+            color: var(--color-dark);
+            text-decoration: none;
+            font-family: 'Crimson Text', serif;
+            font-size: 0.95rem;
+        }
+        .draft-link:hover .draft-subject { color: var(--color-green); }
+        .draft-subject { font-weight: 600; }
+        .draft-when { color: var(--color-text-secondary); font-size: 0.9rem; white-space: nowrap; }
+        .draft-badge {
+            background: var(--color-green);
+            color: white;
+            font-size: 0.75rem;
+            padding: 0.1rem 0.45rem;
+            border-radius: 999px;
+            letter-spacing: 0.04em;
+        }
+        .draft-delete-form { margin: 0; }
+        .btn-link-danger {
+            background: none;
+            border: 0;
+            padding: 0;
+            color: #b03030;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.9rem;
+            text-decoration: underline;
+        }
+        .btn-link-danger:hover { color: #8a2424; }
+        @media (max-width: 720px) {
+            .draft-link { grid-template-columns: 1fr; gap: 0.25rem; }
+        }
         .audience-emails {
             margin-top: 1rem;
             border-top: 1px solid var(--color-border);
@@ -650,7 +820,44 @@ $page_title = "Announcements - Admin";
                 <div class="alert alert-info"><p><?php echo htmlspecialchars($infoMessage); ?></p></div>
             <?php endif; ?>
 
+            <?php if (!empty($drafts)): ?>
+                <div class="blast-card">
+                    <h2>Drafts</h2>
+                    <ul class="drafts-list">
+                        <?php foreach ($drafts as $d):
+                            $isCurrent = $draftId && (int)$d['id'] === (int)$draftId;
+                        ?>
+                            <li class="draft-row<?php echo $isCurrent ? ' is-current' : ''; ?>">
+                                <a class="draft-link" href="/admin-announcements?draft=<?php echo (int)$d['id']; ?>">
+                                    <span class="draft-subject">
+                                        <?php echo $d['subject'] !== ''
+                                            ? htmlspecialchars($d['subject'])
+                                            : '<em style="color:var(--color-text-secondary);">(no subject)</em>'; ?>
+                                    </span>
+                                    <span class="audience-tag"><?php echo htmlspecialchars($AUDIENCES[$d['audience']] ?? $d['audience']); ?></span>
+                                    <span class="draft-when">Saved <?php echo htmlspecialchars(date('M j, Y g:i a', strtotime($d['updated_at']))); ?></span>
+                                    <?php if ($isCurrent): ?><span class="draft-badge">editing</span><?php endif; ?>
+                                </a>
+                                <form method="POST" action="/admin-announcements" class="draft-delete-form"
+                                      onsubmit="return confirm('Delete this draft? This cannot be undone.');">
+                                    <input type="hidden" name="action" value="delete_draft">
+                                    <input type="hidden" name="draft_id" value="<?php echo (int)$d['id']; ?>">
+                                    <input type="hidden" name="audience" value="<?php echo htmlspecialchars($d['audience']); ?>">
+                                    <button type="submit" class="btn-link btn-link-danger" aria-label="Delete draft">Delete</button>
+                                </form>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
+
             <form method="POST" action="/admin-announcements<?php echo $sampleMode ? '?sample=1' : ''; ?>" id="blast-form">
+                <input type="hidden" name="draft_id" value="<?php echo $draftId ? (int)$draftId : ''; ?>">
+                <?php if ($draftId): ?>
+                    <div class="alert alert-info" style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
+                        <span>Editing draft <strong>#<?php echo (int)$draftId; ?></strong>. Saving will overwrite it. <a href="/admin-announcements">Start a new draft</a> instead.</span>
+                    </div>
+                <?php endif; ?>
                 <div class="blast-card">
                     <h2>1. Pick an audience</h2>
                     <div class="audience-grid">
@@ -675,9 +882,14 @@ $page_title = "Announcements - Admin";
                         $count = count($recipients);
                         $emailsCsv = implode(', ', array_map(function($r) { return $r['email']; }, $recipients));
 
-                        // Restore prior checkbox state if user has submitted this audience already.
+                        // Restore prior checkbox state if user has submitted this audience already,
+                        // OR if we're loading a draft whose audience matches this panel.
                         $submittedIncluded = $_POST['included_recipients'][$key] ?? null;
                         $hasSubmitted = is_array($submittedIncluded);
+                        if (!$hasSubmitted && $loadedDraftIncluded !== null && $key === $audience) {
+                            $submittedIncluded = $loadedDraftIncluded;
+                            $hasSubmitted = true;
+                        }
                         $includedSet = $hasSubmitted
                             ? array_flip(array_map(fn($e) => strtolower(trim((string)$e)), $submittedIncluded))
                             : null;
@@ -782,6 +994,9 @@ $page_title = "Announcements - Admin";
                         </div>
                     </div>
                     <div class="btn-row">
+                        <button type="submit" name="action" value="save_draft" class="btn btn-outline" id="save-draft-btn">
+                            <?php echo $draftId ? 'Update draft' : 'Save as draft'; ?>
+                        </button>
                         <button type="submit" name="action" value="preview" class="btn btn-secondary">Preview recipients</button>
                         <button type="submit" name="action" value="test_send" class="btn btn-secondary">Send test only</button>
                         <button type="submit" name="action" value="send_blast" class="btn btn-danger" id="send-blast-btn">
