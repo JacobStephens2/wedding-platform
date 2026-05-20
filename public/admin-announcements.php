@@ -714,36 +714,35 @@ $page_title = "Announcements - Admin";
                     tinymce.init({
                         selector: 'textarea#body',
                         height: 420,
-                        menubar: 'edit view insert format tools',
+                        menubar: 'edit view insert format',
                         branding: false,
                         plugins: [
-                            'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'link', 'lists',
-                            'media', 'searchreplace', 'table', 'visualblocks', 'wordcount',
-                            'checklist', 'mediaembed', 'casechange', 'formatpainter', 'pageembed',
-                            'a11ychecker', 'tinymcespellchecker', 'permanentpen', 'powerpaste',
-                            'advtable', 'advcode', 'advtemplate', 'tinymceai', 'uploadcare', 'mentions',
-                            'tinycomments', 'tableofcontents', 'footnotes', 'mergetags', 'autocorrect',
-                            'typography', 'inlinecss', 'markdown', 'importword', 'exportword', 'exportpdf'
+                            'autolink', 'charmap', 'emoticons', 'link', 'lists', 'searchreplace', 'wordcount',
+                            'mergetags', 'autocorrect', 'typography', 'inlinecss', 'advcode'
                         ],
-                        toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | ' +
-                                 'link image media table mergetags | align lineheight | ' +
-                                 'checklist numlist bullist indent outdent | emoticons charmap | removeformat | code',
+                        toolbar: 'undo redo | blocks | bold italic underline | link mergetags | ' +
+                                 'numlist bullist indent outdent | emoticons charmap | removeformat | code',
                         mergetags_list: [
                             { value: 'first_name', title: 'First name' },
                             { value: 'last_name',  title: 'Last name' }
                         ],
                         mergetags_prefix: '{{',
                         mergetags_suffix: '}}',
-                        tinycomments_mode: 'embedded',
-                        tinycomments_author: 'Admin',
-                        tinymceai_token_provider: async () => {
-                            await fetch('https://demo.api.tiny.cloud/1/of7soa5efvk6f1u5gph7pzfxps9iiv31xhq5b18i737t8c8k/auth/random',
-                                { method: 'POST', credentials: 'include' });
-                            return { token: await fetch(
-                                'https://demo.api.tiny.cloud/1/of7soa5efvk6f1u5gph7pzfxps9iiv31xhq5b18i737t8c8k/jwt/tinymceai',
-                                { credentials: 'include' }).then(r => r.text()) };
-                        },
-                        uploadcare_public_key: 'e03c328690b69cd5b1f5'
+                        // Email-safe whitelist: anything else gets stripped/cleaned on paste.
+                        valid_elements:
+                            'p[style],br,strong/b,em/i,u,s,del,' +
+                            'a[href|title|target|rel],' +
+                            'ul,ol,li[style],' +
+                            'h1[style],h2[style],h3[style],h4[style],' +
+                            'blockquote[style],hr,' +
+                            'span[style],' +
+                            'img[src|alt|title|width|height|style]',
+                        extended_valid_elements: 'a[href|title|target=_blank|rel=noopener noreferrer]',
+                        // Force plain paragraphs on Enter; no fancy div wrapping.
+                        forced_root_block: 'p',
+                        // Open links from inside the editor in a new tab by default.
+                        link_default_target: '_blank',
+                        link_default_protocol: 'https'
                     });
                 }
             </script>
