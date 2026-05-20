@@ -25,6 +25,7 @@ if (isAdminSampleMode() || isAdminAuthenticated()):
                 <li><a href="<?php echo htmlspecialchars(adminUrl('/admin-house-fund')); ?>">Manage House Fund</a></li>
                 <li><a href="<?php echo htmlspecialchars(adminUrl('/admin-honeymoon-fund')); ?>">Manage Honeymoon Fund</a></li>
                 <li><a href="<?php echo htmlspecialchars(adminUrl('/admin-gallery')); ?>">Manage Gallery</a></li>
+                <li><a href="<?php echo htmlspecialchars(adminUrl('/admin-email-blast')); ?>">Email Blast</a></li>
                 <li><a href="<?php echo htmlspecialchars(isAdminSampleMode() ? '/admin' : '/admin?logout=1'); ?>"<?php echo isAdminSampleMode() ? ' data-sample-ignore="true"' : ''; ?>><?php echo isAdminSampleMode() ? 'Exit Sample Mode' : 'Logout'; ?></a></li>
                 <li>
                     <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode" style="color: white;">
