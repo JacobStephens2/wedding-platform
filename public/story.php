@@ -174,7 +174,7 @@ function renderBlockImages(array $photos): string {
     </section>
 
     <section class="story-section">
-        <h2>Photos &amp; Video</h2>
+        <h2>Wedding Photos &amp; Video</h2>
         <div class="featured-galleries" aria-label="Featured galleries">
             <a class="featured-card" href="https://baronephoto.pic-time.com/client/jasonmelissa/gallery?inviteToken=AAAAAMwAAAAHmY4IMZZirXjlVnb1WMV4Lw,,&amp;inviteptoken2=AAAAAJcAAAAJmicE83IkZpTwK9b6o7Cspw,,&amp;s=%7B%22blockId%22%3A%22gb_103483103%22%2C%22itemId%22%3A11902344563%2C%22fullScreen%22%3Afalse%7D"
                target="_blank" rel="noopener">
