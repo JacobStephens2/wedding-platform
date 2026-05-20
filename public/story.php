@@ -172,7 +172,112 @@ function renderBlockImages(array $photos): string {
         <?php echo renderBlockImages($storyPhotos['divine_mercy'] ?? []); ?>
         <p style="margin-top: 2rem;"><em>It&rsquo;s been quite the journey of faith and hope. God has been present every step of the way. We still love dancing and being very involved in our parish community, and are excited to be preparing for our sacramental wedding. Jacob entered the Catholic Church in fullness on Divine Mercy Sunday, 2025, and our wedding date is set for the eve of Divine Mercy Sunday, 2026. God has made us new and continues to make us new and give us new life and new hearts, and we see His beauty and His hand in our Easter Octave wedding&nbsp;date.</em></p>
     </section>
+
+    <section class="story-section">
+        <h2>Photos &amp; Video</h2>
+        <div class="featured-galleries" aria-label="Featured galleries">
+            <a class="featured-card" href="https://baronephoto.pic-time.com/client/jasonmelissa/gallery?inviteToken=AAAAAMwAAAAHmY4IMZZirXjlVnb1WMV4Lw,,&amp;inviteptoken2=AAAAAJcAAAAJmicE83IkZpTwK9b6o7Cspw,,&amp;s=%7B%22blockId%22%3A%22gb_103483103%22%2C%22itemId%22%3A11902344563%2C%22fullScreen%22%3Afalse%7D"
+               target="_blank" rel="noopener">
+                <div class="featured-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 7h4l2-3h6l2 3h4v13H3z"/>
+                        <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                </div>
+                <h3>Wedding Photo Gallery</h3>
+                <p>The full set of photos from our wedding day, hosted by Barone Photo.</p>
+                <span class="featured-cta">View the full gallery &rarr;</span>
+            </a>
+
+            <a class="featured-card" href="https://baronephoto.pic-time.com/client/bwportraitsjacobmelissa/gallery?ptat=AAAAAAIBAABa2GXe-gp4DBjRNYJ3qh8D9Yh0ygjq10fR_tKNeQ,,&amp;inviteptoken2=AAAAABUBAAB6MSBxUrIu5TH4WE_efiRjIA,,"
+               target="_blank" rel="noopener">
+                <div class="featured-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M12 3v18"/>
+                        <path d="M12 3a9 9 0 010 18z" fill="currentColor" stroke="none"/>
+                    </svg>
+                </div>
+                <h3>Black &amp; White Portraits</h3>
+                <p>A curated set of black-and-white portraits from our wedding.</p>
+                <span class="featured-cta">View the B&amp;W set &rarr;</span>
+            </a>
+
+            <a class="featured-card" href="https://vimeo.com/1190695875/e325e0040b" target="_blank" rel="noopener">
+                <div class="featured-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2.5" y="5" width="19" height="14" rx="2"/>
+                        <path d="M10 9l5 3-5 3z" fill="currentColor" stroke="none"/>
+                    </svg>
+                </div>
+                <h3>Wedding Video</h3>
+                <p>Watch the film of our ceremony and reception.</p>
+                <span class="featured-cta">Watch on Vimeo &rarr;</span>
+            </a>
+        </div>
+    </section>
 </main>
+
+<style>
+    .story-section .featured-galleries {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 1.25rem;
+        margin: 1rem 0 0;
+        padding: 0;
+    }
+    .story-section .featured-card {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.65rem;
+        padding: 1.5rem 1.5rem 1.75rem;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 10px;
+        box-shadow: 0 2px 10px var(--color-shadow);
+        text-decoration: none;
+        color: var(--color-dark);
+        transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    }
+    .story-section .featured-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 28px var(--color-shadow-hover);
+        border-color: var(--color-green);
+    }
+    .story-section .featured-icon {
+        color: var(--color-green);
+        background: rgba(46, 80, 22, 0.08);
+        border-radius: 50%;
+        width: 56px;
+        height: 56px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .story-section .featured-card h3 {
+        font-family: 'Cinzel', serif;
+        font-size: 1.15rem;
+        margin: 0.25rem 0 0;
+        color: var(--color-green);
+        letter-spacing: 0.04em;
+    }
+    .story-section .featured-card p {
+        margin: 0;
+        font-family: 'Crimson Text', serif;
+        font-size: 1rem;
+        line-height: 1.45;
+        color: var(--color-text-secondary, #555);
+    }
+    .story-section .featured-cta {
+        margin-top: auto;
+        font-family: 'Cinzel', serif;
+        font-size: 0.85rem;
+        letter-spacing: 0.05em;
+        color: var(--color-green);
+    }
+    .story-section .featured-card:hover .featured-cta { color: var(--color-gold); }
+</style>
 
 <!-- Lightbox Modal -->
 <div id="lightbox" class="lightbox">
