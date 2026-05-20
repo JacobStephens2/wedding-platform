@@ -102,9 +102,14 @@ function renderPersonalized(string $template, array $recipient): string {
     );
 }
 
+$DEFAULT_SUBJECT = 'Our wedding photos and video are here!';
+$DEFAULT_BODY = "Hi {{first_name}},\n\n"
+    . "Our wedding photos and the ceremony video are now up on the gallery: https://wedding.stephens.page/gallery\n\n"
+    . "Love,\nJacob & Melissa";
+
 $audience      = $_POST['audience']  ?? 'all_with_email';
-$subject       = $_POST['subject']   ?? '';
-$body          = $_POST['body']      ?? '';
+$subject       = $_POST['subject']   ?? $DEFAULT_SUBJECT;
+$body          = $_POST['body']      ?? $DEFAULT_BODY;
 $isHtml        = !empty($_POST['is_html']);
 $replyTo       = trim($_POST['reply_to'] ?? '');
 $fromName      = trim($_POST['from_name'] ?? '') ?: 'Jacob and Melissa';
