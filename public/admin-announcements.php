@@ -30,7 +30,7 @@ if (!$sampleMode && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin
 
 if (!$sampleMode && isset($_GET['logout'])) {
     session_destroy();
-    header('Location: /admin-email-blast');
+    header('Location: /admin-announcements');
     exit;
 }
 
@@ -262,7 +262,7 @@ if ($authenticated) {
     }
 }
 
-$page_title = "Email Blast - Admin";
+$page_title = "Announcements - Admin";
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -465,7 +465,7 @@ $page_title = "Email Blast - Admin";
 <body>
     <?php include __DIR__ . '/includes/admin_menu.php'; ?>
     <main class="blast-container">
-        <?php renderAdminSampleBanner('Email Blast Sample Mode'); ?>
+        <?php renderAdminSampleBanner('Announcements Sample Mode'); ?>
 
         <?php if (!$authenticated): ?>
             <div class="blast-card" style="max-width: 480px; margin: 4rem auto;">
@@ -473,7 +473,7 @@ $page_title = "Email Blast - Admin";
                 <?php if ($error): ?>
                     <div class="alert alert-error"><p><?php echo htmlspecialchars($error); ?></p></div>
                 <?php endif; ?>
-                <form method="POST" action="/admin-email-blast">
+                <form method="POST" action="/admin-announcements">
                     <input type="hidden" name="admin_login" value="1">
                     <label for="password">Password</label>
                     <input type="password" id="password" name="password" required autofocus>
@@ -481,7 +481,10 @@ $page_title = "Email Blast - Admin";
                 </form>
             </div>
         <?php else: ?>
-            <h1 class="page-title" style="text-align:center; margin-bottom: 1.5rem;">Email Blast</h1>
+            <h1 class="page-title" style="text-align:center; margin-bottom: 1.5rem;">Announcements</h1>
+            <p style="text-align:center; font-family:'Crimson Text', serif; color: var(--color-text-secondary); margin: -0.5rem 0 1.5rem;">
+                Send an email to a chosen group of guests.
+            </p>
 
             <?php if ($error): ?>
                 <div class="alert alert-error"><p><?php echo htmlspecialchars($error); ?></p></div>
@@ -493,7 +496,7 @@ $page_title = "Email Blast - Admin";
                 <div class="alert alert-info"><p><?php echo htmlspecialchars($infoMessage); ?></p></div>
             <?php endif; ?>
 
-            <form method="POST" action="/admin-email-blast<?php echo $sampleMode ? '?sample=1' : ''; ?>" id="blast-form">
+            <form method="POST" action="/admin-announcements<?php echo $sampleMode ? '?sample=1' : ''; ?>" id="blast-form">
                 <div class="blast-card">
                     <h2>1. Pick an audience</h2>
                     <div class="audience-grid">
