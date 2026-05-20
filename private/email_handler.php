@@ -8,10 +8,10 @@ use PHPMailer\PHPMailer\Exception;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-function sendEmail($to, $subject, $body, $replyTo = null) {
+function sendEmail($to, $subject, $body, $replyTo = null, array $options = []) {
     try {
         $mail = new PHPMailer(true);
-        
+
         // Server settings
         $mail->isSMTP();
         $mail->Host = $_ENV['MANDRILL_SMTP_HOST'];
@@ -20,12 +20,12 @@ function sendEmail($to, $subject, $body, $replyTo = null) {
         $mail->Password = $_ENV['MANDRILL_SMTP_PASS'];
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port = intval($_ENV['MANDRILL_SMTP_PORT'] ?? 587);
-        
+
         // Use verified sending domain from Mandrill
         // MANDRILL_FROM_EMAIL should be set to a verified domain email in Mandrill
         // This is required to avoid "unsigned" rejections
         $fromEmail = $_ENV['MANDRILL_FROM_EMAIL'] ?? $_ENV['FROM_EMAIL'] ?? null;
-        
+
         if (empty($fromEmail)) {
             // Fallback: try to construct from verified domain if MANDRILL_VERIFIED_DOMAIN is set
             $verifiedDomain = $_ENV['MANDRILL_VERIFIED_DOMAIN'] ?? null;
@@ -37,20 +37,25 @@ function sendEmail($to, $subject, $body, $replyTo = null) {
                 error_log("Warning: Using unverified FROM email address. Set MANDRILL_FROM_EMAIL or MANDRILL_VERIFIED_DOMAIN in .env to use a verified domain.");
             }
         }
-        
-        $mail->setFrom($fromEmail, 'Wedding Website');
+
+        $fromName = $options['fromName'] ?? ($_ENV['SMTP_FROM_NAME'] ?? 'Jacob and Melissa');
+        $mail->setFrom($fromEmail, $fromName);
         $mail->addAddress($to);
-        
+
         if ($replyTo) {
             $mail->addReplyTo($replyTo);
         }
-        
+
         // Content
         $mail->CharSet = 'UTF-8';
-        $mail->isHTML(false);
+        $isHtml = !empty($options['isHtml']);
+        $mail->isHTML($isHtml);
         $mail->Subject = $subject;
         $mail->Body = $body;
-        
+        if ($isHtml && !empty($options['altBody'])) {
+            $mail->AltBody = $options['altBody'];
+        }
+
         $mail->send();
         return true;
     } catch (Exception $e) {
