@@ -4,6 +4,8 @@ vendor/*
 *.jpg
 !public/images/house-fund.jpg
 !public/images/honeymoon-fund.jpg
+!public/images/wedding-bw-highlight.jpg
+!public/images/wedding-color-highlight.jpg
 *.mov
 *.mp4
 private/cron_state/*
