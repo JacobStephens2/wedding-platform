@@ -103,14 +103,25 @@ function renderPersonalized(string $template, array $recipient): string {
 }
 
 $DEFAULT_SUBJECT = 'Our wedding photos and video are here!';
-$DEFAULT_BODY = "Hi {{first_name}},\n\n"
-    . "Our wedding photos and the ceremony video are now up on the gallery: https://wedding.stephens.page/gallery\n\n"
-    . "Love,\nJacob & Melissa";
+$DEFAULT_BODY = "<p>Hi {{first_name}},</p>\n"
+    . "<p>Our wedding photos and the ceremony video are now up on the gallery: "
+    . "<a href=\"https://wedding.stephens.page/gallery\">https://wedding.stephens.page/gallery</a></p>\n"
+    . "<p>Love,<br>Jacob &amp; Melissa</p>";
+
+function htmlToPlainText(string $html): string {
+    $text = preg_replace('#</p>\s*#i', "</p>\n\n", $html);
+    $text = preg_replace('#<br\s*/?>\s*#i', "\n", $text);
+    $text = preg_replace('#</(li|h\d|tr)>\s*#i', "</$1>\n", $text);
+    $text = strip_tags($text);
+    $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    return trim(preg_replace("/\n{3,}/", "\n\n", $text));
+}
 
 $audience      = $_POST['audience']  ?? 'all_with_email';
 $subject       = $_POST['subject']   ?? $DEFAULT_SUBJECT;
 $body          = $_POST['body']      ?? $DEFAULT_BODY;
-$isHtml        = !empty($_POST['is_html']);
+// TinyMCE is the body editor, so all sends are HTML.
+$isHtml        = true;
 $replyTo       = trim($_POST['reply_to'] ?? '');
 $fromName      = trim($_POST['from_name'] ?? '') ?: 'Jacob and Melissa';
 $testEmail     = trim($_POST['test_email'] ?? '');
@@ -150,7 +161,7 @@ if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['act
                         'fromName' => $fromName,
                     ];
                     if ($isHtml) {
-                        $opts['altBody'] = trim(strip_tags($renderedBody));
+                        $opts['altBody'] = htmlToPlainText($renderedBody);
                     }
                     $ok = sendEmail($testEmail, '[TEST] ' . $renderedSubject, $renderedBody,
                         $replyTo !== '' ? $replyTo : null, $opts);
@@ -182,7 +193,7 @@ if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['act
                             'fromName' => $fromName,
                         ];
                         if ($isHtml) {
-                            $opts['altBody'] = trim(strip_tags($renderedBody));
+                            $opts['altBody'] = htmlToPlainText($renderedBody);
                         }
                         $ok = sendEmail($r['email'], $renderedSubject, $renderedBody,
                             $replyTo !== '' ? $replyTo : null, $opts);
@@ -278,6 +289,10 @@ $page_title = "Announcements - Admin";
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400&family=Beloved+Script&family=Crimson+Text:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+    <?php if ($authenticated): ?>
+    <script src="https://cdn.tiny.cloud/1/of7soa5efvk6f1u5gph7pzfxps9iiv31xhq5b18i737t8c8k/tinymce/8/tinymce.min.js"
+            referrerpolicy="origin" crossorigin="anonymous"></script>
+    <?php endif; ?>
     <style>
         .blast-container {
             max-width: 1100px;
@@ -579,16 +594,12 @@ $page_title = "Announcements - Admin";
                            placeholder="Our wedding photos and video are here!">
 
                     <label for="body" style="margin-top:1rem;">Body</label>
-                    <textarea id="body" name="body" placeholder="Hi {{first_name}},&#10;&#10;Our wedding photos and the ceremony video are now up on the gallery: https://wedding.stephens.page/gallery&#10;&#10;Love,&#10;Jacob &amp; Melissa"><?php echo htmlspecialchars($body); ?></textarea>
+                    <textarea id="body" name="body"><?php echo htmlspecialchars($body); ?></textarea>
                     <p class="helper-text token-hint">
-                        Personalization: use <code>{{first_name}}</code> or <code>{{last_name}}</code> — they'll be replaced per recipient.
+                        Personalization: insert <strong>First name</strong> or <strong>Last name</strong> from the toolbar's
+                        merge-tags menu — they render as <code>{{first_name}}</code>/<code>{{last_name}}</code> and get
+                        replaced per recipient when the email is sent.
                     </p>
-                    <div class="checkbox-row">
-                        <input type="checkbox" id="is_html" name="is_html" value="1" <?php echo $isHtml ? 'checked' : ''; ?>>
-                        <label for="is_html" style="display:inline; margin:0; font-weight:400;">
-                            Body is HTML (links, formatting). When off, the body is sent as plain text.
-                        </label>
-                    </div>
                 </div>
 
                 <div class="blast-card">
@@ -698,6 +709,43 @@ $page_title = "Announcements - Admin";
                         sendBtn.textContent = 'Sending… (do not close this tab)';
                     });
                 })();
+
+                if (window.tinymce) {
+                    tinymce.init({
+                        selector: 'textarea#body',
+                        height: 420,
+                        menubar: 'edit view insert format tools',
+                        branding: false,
+                        plugins: [
+                            'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'link', 'lists',
+                            'media', 'searchreplace', 'table', 'visualblocks', 'wordcount',
+                            'checklist', 'mediaembed', 'casechange', 'formatpainter', 'pageembed',
+                            'a11ychecker', 'tinymcespellchecker', 'permanentpen', 'powerpaste',
+                            'advtable', 'advcode', 'advtemplate', 'tinymceai', 'uploadcare', 'mentions',
+                            'tinycomments', 'tableofcontents', 'footnotes', 'mergetags', 'autocorrect',
+                            'typography', 'inlinecss', 'markdown', 'importword', 'exportword', 'exportpdf'
+                        ],
+                        toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | ' +
+                                 'link image media table mergetags | align lineheight | ' +
+                                 'checklist numlist bullist indent outdent | emoticons charmap | removeformat | code',
+                        mergetags_list: [
+                            { value: 'first_name', title: 'First name' },
+                            { value: 'last_name',  title: 'Last name' }
+                        ],
+                        mergetags_prefix: '{{',
+                        mergetags_suffix: '}}',
+                        tinycomments_mode: 'embedded',
+                        tinycomments_author: 'Admin',
+                        tinymceai_token_provider: async () => {
+                            await fetch('https://demo.api.tiny.cloud/1/of7soa5efvk6f1u5gph7pzfxps9iiv31xhq5b18i737t8c8k/auth/random',
+                                { method: 'POST', credentials: 'include' });
+                            return { token: await fetch(
+                                'https://demo.api.tiny.cloud/1/of7soa5efvk6f1u5gph7pzfxps9iiv31xhq5b18i737t8c8k/jwt/tinymceai',
+                                { credentials: 'include' }).then(r => r.text()) };
+                        },
+                        uploadcare_public_key: 'e03c328690b69cd5b1f5'
+                    });
+                }
             </script>
         <?php endif; ?>
     </main>
