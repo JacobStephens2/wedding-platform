@@ -114,6 +114,40 @@ function renderMarkdownEmail(string $markdown): string {
     return $parsedown->text($markdown);
 }
 
+/**
+ * Parse the custom-recipients textarea into [{first_name, last_name, email}, ...].
+ * Accepts one entry per line (or comma-separated). Each entry is either
+ * "email@example.com" or "First Last <email@example.com>". Invalid lines are
+ * silently dropped; duplicates (by lowercase email) are collapsed.
+ */
+function parseCustomRecipients(string $raw): array {
+    $tokens = preg_split('/[\r\n,]+/', $raw) ?: [];
+    $out = [];
+    $seen = [];
+    foreach ($tokens as $token) {
+        $token = trim($token);
+        if ($token === '') continue;
+        $first = '';
+        $last  = '';
+        $email = $token;
+        if (preg_match('/^(.*?)\s*<\s*([^>]+?)\s*>\s*$/', $token, $m)) {
+            $namePart = trim($m[1], " \t\"'");
+            $email = trim($m[2]);
+            if ($namePart !== '') {
+                $parts = preg_split('/\s+/', $namePart, 2);
+                $first = $parts[0] ?? '';
+                $last  = $parts[1] ?? '';
+            }
+        }
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) continue;
+        $key = strtolower($email);
+        if (isset($seen[$key])) continue;
+        $seen[$key] = true;
+        $out[] = ['first_name' => $first, 'last_name' => $last, 'email' => $email];
+    }
+    return $out;
+}
+
 // Draft tracking — survives across submissions via a hidden input.
 $draftId = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -135,11 +169,12 @@ if ($draftId && $authenticated && !$sampleMode && $_SERVER['REQUEST_METHOD'] ===
         $stmt->execute([$draftId]);
         $loaded = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($loaded) {
-            $_POST['audience']  = $loaded['audience'];
-            $_POST['subject']   = $loaded['subject'];
-            $_POST['body']      = $loaded['body'];
-            $_POST['from_name'] = $loaded['from_name'] ?? '';
-            $_POST['reply_to']  = $loaded['reply_to'] ?? '';
+            $_POST['audience']          = $loaded['audience'];
+            $_POST['subject']           = $loaded['subject'];
+            $_POST['body']              = $loaded['body'];
+            $_POST['from_name']         = $loaded['from_name'] ?? '';
+            $_POST['reply_to']          = $loaded['reply_to'] ?? '';
+            $_POST['custom_recipients'] = $loaded['custom_recipients'] ?? '';
             $includedDecoded = json_decode((string)($loaded['included_emails'] ?? ''), true);
             if (is_array($includedDecoded)) {
                 $loadedDraftIncluded = $includedDecoded;
@@ -162,6 +197,8 @@ $isHtml        = true;
 $replyTo       = trim($_POST['reply_to'] ?? '');
 $fromName      = trim($_POST['from_name'] ?? '') ?: 'Jacob and Melissa';
 $testEmail     = trim($_POST['test_email'] ?? '');
+$customRecipientsRaw = (string)($_POST['custom_recipients'] ?? '');
+$customRecipientsParsed = parseCustomRecipients($customRecipientsRaw);
 $recipientsPreview = null;
 $previewCount = null;
 
@@ -191,21 +228,23 @@ if ($authenticated && !$sampleMode && $_SERVER['REQUEST_METHOD'] === 'POST'
                     $rawIncluded
                 ))));
             }
+            $customForStorage = trim($customRecipientsRaw) !== '' ? $customRecipientsRaw : null;
             if ($draftId) {
                 $stmt = $pdo->prepare("
                     UPDATE announcement_drafts
-                    SET audience = ?, subject = ?, body = ?, from_name = ?, reply_to = ?, included_emails = ?
+                    SET audience = ?, subject = ?, body = ?, from_name = ?, reply_to = ?,
+                        included_emails = ?, custom_recipients = ?
                     WHERE id = ?
                 ");
-                $stmt->execute([$audience, $subject, $body, $fromName, $replyTo ?: null, $includedJson, $draftId]);
+                $stmt->execute([$audience, $subject, $body, $fromName, $replyTo ?: null, $includedJson, $customForStorage, $draftId]);
                 header('Location: /admin-announcements?draft=' . $draftId . '&draft_saved=1');
                 exit;
             } else {
                 $stmt = $pdo->prepare("
-                    INSERT INTO announcement_drafts (audience, subject, body, from_name, reply_to, included_emails)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT INTO announcement_drafts (audience, subject, body, from_name, reply_to, included_emails, custom_recipients)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                 ");
-                $stmt->execute([$audience, $subject, $body, $fromName, $replyTo ?: null, $includedJson]);
+                $stmt->execute([$audience, $subject, $body, $fromName, $replyTo ?: null, $includedJson, $customForStorage]);
                 $newId = (int)$pdo->lastInsertId();
                 header('Location: /admin-announcements?draft=' . $newId . '&draft_saved=1');
                 exit;
@@ -247,6 +286,21 @@ if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['act
                 $recipients = array_values(array_filter($recipients, function ($r) use ($includedSet) {
                     return isset($includedSet[strtolower(trim($r['email']))]);
                 }));
+            }
+
+            // Append custom recipients (admin-typed), deduped by email against the audience.
+            if (!empty($customRecipientsParsed)) {
+                $audienceEmailSet = array_flip(array_map(
+                    fn($r) => strtolower(trim($r['email'])),
+                    $recipients
+                ));
+                foreach ($customRecipientsParsed as $cr) {
+                    $key = strtolower(trim($cr['email']));
+                    if (!isset($audienceEmailSet[$key])) {
+                        $recipients[] = $cr;
+                        $audienceEmailSet[$key] = true;
+                    }
+                }
             }
 
             $previewCount = count($recipients);
@@ -321,8 +375,8 @@ if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['act
                     try {
                         $logStmt = $pdo->prepare("
                             INSERT INTO email_blasts (audience, subject, body, body_is_html, reply_to,
-                                recipient_count, sent_count, failed_count, failed_recipients)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                recipient_count, sent_count, failed_count, failed_recipients, custom_recipients)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ");
                         $logStmt->execute([
                             $audience,
@@ -334,6 +388,7 @@ if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['act
                             $sent,
                             $failed,
                             $failed > 0 ? implode("\n", $failedList) : null,
+                            trim($customRecipientsRaw) !== '' ? $customRecipientsRaw : null,
                         ]);
                     } catch (Exception $e) {
                         error_log('email_blasts log insert failed: ' . $e->getMessage());
@@ -360,7 +415,8 @@ if ($authenticated && !$sampleMode) {
         $pdo = getDbConnection();
         $history = $pdo->query("
             SELECT id, audience, subject, body, body_is_html, reply_to,
-                   recipient_count, sent_count, failed_count, failed_recipients, sent_at
+                   recipient_count, sent_count, failed_count, failed_recipients,
+                   custom_recipients, sent_at
             FROM email_blasts
             ORDER BY sent_at DESC
             LIMIT 50
@@ -980,6 +1036,20 @@ $page_title = "Announcements - Admin";
                         Personalization: type <code>{{first_name}}</code> or <code>{{last_name}}</code> anywhere in the body —
                         they'll be replaced per recipient when the email is sent.
                     </p>
+
+                    <label for="custom_recipients" style="margin-top:1rem;">Additional recipients (optional)</label>
+                    <textarea id="custom_recipients" name="custom_recipients" spellcheck="false"
+                              placeholder="one per line, or comma-separated&#10;email@example.com&#10;First Last <other@example.com>"
+                              style="min-height:90px;"><?php echo htmlspecialchars($customRecipientsRaw); ?></textarea>
+                    <p class="helper-text">
+                        Each line can be either <code>email@example.com</code> or
+                        <code>First Last &lt;email@example.com&gt;</code>. These are added on top of the audience above
+                        and de-duplicated by email. Without a name, <code>{{first_name}}</code> falls back to "Friend".
+                        <?php if (!empty($customRecipientsParsed)): ?>
+                            <br><strong><?php echo count($customRecipientsParsed); ?></strong> valid address<?php
+                                echo count($customRecipientsParsed) === 1 ? '' : 'es'; ?> recognized.
+                        <?php endif; ?>
+                    </p>
                 </div>
 
                 <div class="blast-card">
@@ -1067,6 +1137,16 @@ $page_title = "Announcements - Admin";
                                         <p class="helper-text">Reply-To: <code><?php echo htmlspecialchars($h['reply_to']); ?></code></p>
                                     <?php endif; ?>
                                     <div class="history-body-rendered"><?php echo $renderedBody; ?></div>
+                                    <?php
+                                        $customRows = trim((string)($h['custom_recipients'] ?? ''));
+                                        if ($customRows !== ''):
+                                            $parsedCustom = parseCustomRecipients($customRows);
+                                    ?>
+                                        <details class="history-failed-list" style="margin-top:0.85rem;">
+                                            <summary style="color: var(--color-text-secondary);">Additional recipients (<?php echo count($parsedCustom); ?>)</summary>
+                                            <pre><?php echo htmlspecialchars($customRows); ?></pre>
+                                        </details>
+                                    <?php endif; ?>
                                     <?php if ($failedRows !== ''): ?>
                                         <details class="history-failed-list">
                                             <summary>Failed recipients (<?php echo (int)$h['failed_count']; ?>)</summary>
