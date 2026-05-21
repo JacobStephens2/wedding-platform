@@ -34,7 +34,7 @@ if (!$sampleMode && isset($_GET['logout'])) {
     exit;
 }
 
-$AUDIENCES = [
+$GUEST_AUDIENCES = [
     'all_with_email'    => 'All invited guests with email',
     'rsvp_yes'          => "RSVP'd Yes (any event)",
     'attending_ceremony'=> 'Attending Ceremony',
@@ -43,8 +43,17 @@ $AUDIENCES = [
     'no_response'       => 'No RSVP response yet',
     'rehearsal_invited' => 'Rehearsal-invited guests',
 ];
+$CUSTOM_NEW_AUDIENCE = ['custom' => 'Custom recipients only'];
+
+// $AUDIENCES = guest audiences + saved custom audiences + 'custom' option (assembled below).
+$AUDIENCES = $GUEST_AUDIENCES;
+
+function isCustomAudienceKey(string $audience): bool {
+    return $audience === 'custom' || preg_match('/^custom_\d+$/', $audience) === 1;
+}
 
 function audienceSql(string $audience): ?string {
+    if (isCustomAudienceKey($audience)) return null;
     switch ($audience) {
         case 'all_with_email':
             return "SELECT first_name, last_name, email FROM guests
@@ -148,6 +157,38 @@ function parseCustomRecipients(string $raw): array {
     return $out;
 }
 
+// Load saved custom audiences from the DB and merge into $AUDIENCES so they're
+// indistinguishable from built-ins for validation, rendering, and history labels.
+$savedAudiences = [];
+if ($authenticated && !$sampleMode) {
+    try {
+        $pdo = getDbConnection();
+        $savedAudiences = $pdo->query("
+            SELECT id, name, custom_recipients, updated_at
+            FROM custom_audiences
+            ORDER BY name COLLATE utf8mb4_general_ci, id
+        ")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        $savedAudiences = [];
+    }
+    foreach ($savedAudiences as $sa) {
+        $AUDIENCES['custom_' . $sa['id']] = $sa['name'];
+    }
+}
+$AUDIENCES = $AUDIENCES + $CUSTOM_NEW_AUDIENCE; // 'custom' always appears last.
+
+$savedAudiencesByKey = [];
+foreach ($savedAudiences as $sa) {
+    $savedAudiencesByKey['custom_' . $sa['id']] = $sa;
+}
+
+// Allow ?audience=<key> on GET to preselect an audience (used by the saved-audience
+// links in the picker and by the post-save redirect).
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['audience'])
+    && isset($AUDIENCES[$_GET['audience']]) && !isset($_POST['audience'])) {
+    $_POST['audience'] = $_GET['audience'];
+}
+
 // Draft tracking — survives across submissions via a hidden input.
 $draftId = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -198,7 +239,19 @@ $replyTo       = trim($_POST['reply_to'] ?? '');
 $fromName      = trim($_POST['from_name'] ?? '') ?: 'Jacob and Melissa';
 $testEmail     = trim($_POST['test_email'] ?? '');
 $customRecipientsRaw = (string)($_POST['custom_recipients'] ?? '');
+// If a saved custom audience is selected on initial GET and the user hasn't typed
+// anything yet, preload the textarea with the saved audience's contents.
+if ($_SERVER['REQUEST_METHOD'] === 'GET'
+    && $customRecipientsRaw === ''
+    && isset($savedAudiencesByKey[$audience])) {
+    $customRecipientsRaw = (string)$savedAudiencesByKey[$audience]['custom_recipients'];
+}
 $customRecipientsParsed = parseCustomRecipients($customRecipientsRaw);
+
+// Track which saved audience the form is currently bound to so the "Save audience"
+// section can switch between "Save as new" and "Update '<name>'".
+$activeSavedAudience = $savedAudiencesByKey[$audience] ?? null;
+$audienceName = trim((string)($_POST['audience_name'] ?? ($activeSavedAudience['name'] ?? '')));
 $recipientsPreview = null;
 $previewCount = null;
 
@@ -255,12 +308,64 @@ if ($authenticated && !$sampleMode && $_SERVER['REQUEST_METHOD'] === 'POST'
     }
 }
 
+// Saved-audience delete (its own per-button submit, fires before the action switch).
+if ($authenticated && !$sampleMode && $_SERVER['REQUEST_METHOD'] === 'POST'
+    && isset($_POST['delete_audience_id']) && ctype_digit((string)$_POST['delete_audience_id'])) {
+    try {
+        $pdo = getDbConnection();
+        $stmt = $pdo->prepare("DELETE FROM custom_audiences WHERE id = ?");
+        $stmt->execute([(int)$_POST['delete_audience_id']]);
+        header('Location: /admin-announcements?audience_deleted=1');
+        exit;
+    } catch (Exception $e) {
+        $error = 'Audience delete failed: ' . htmlspecialchars($e->getMessage());
+    }
+}
+
+// Saved-audience save/update.
+if ($authenticated && !$sampleMode && $_SERVER['REQUEST_METHOD'] === 'POST'
+    && isset($_POST['action']) && $_POST['action'] === 'save_audience') {
+    try {
+        $pdo = getDbConnection();
+        $name = trim((string)($_POST['audience_name'] ?? ''));
+        if ($name === '') {
+            $error = 'Give the audience a name before saving.';
+        } elseif (trim($customRecipientsRaw) === '') {
+            $error = 'Type at least one email address before saving as an audience.';
+        } else {
+            $existingId = $activeSavedAudience['id'] ?? null;
+            if ($existingId) {
+                $stmt = $pdo->prepare("
+                    UPDATE custom_audiences SET name = ?, custom_recipients = ? WHERE id = ?
+                ");
+                $stmt->execute([$name, $customRecipientsRaw, $existingId]);
+                header('Location: /admin-announcements?audience=custom_' . (int)$existingId . '&audience_saved=1');
+                exit;
+            } else {
+                $stmt = $pdo->prepare("
+                    INSERT INTO custom_audiences (name, custom_recipients) VALUES (?, ?)
+                ");
+                $stmt->execute([$name, $customRecipientsRaw]);
+                $newId = (int)$pdo->lastInsertId();
+                header('Location: /admin-announcements?audience=custom_' . $newId . '&audience_saved=1');
+                exit;
+            }
+        }
+    } catch (Exception $e) {
+        $error = 'Audience save failed: ' . htmlspecialchars($e->getMessage());
+    }
+}
+
 // Post-redirect notice flags.
 if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'GET') {
     if (isset($_GET['draft_saved'])) {
         $success = 'Draft saved.';
     } elseif (isset($_GET['draft_deleted'])) {
         $success = 'Draft deleted.';
+    } elseif (isset($_GET['audience_saved'])) {
+        $success = 'Audience saved.';
+    } elseif (isset($_GET['audience_deleted'])) {
+        $success = 'Audience deleted.';
     }
 }
 
@@ -691,6 +796,52 @@ $page_title = "Announcements - Admin";
         @media (max-width: 720px) {
             .draft-link { grid-template-columns: 1fr; gap: 0.25rem; }
         }
+        .audience-subhead {
+            font-family: 'Cinzel', serif;
+            font-size: 0.85rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--color-text-secondary);
+            margin: 1.25rem 0 0.5rem;
+        }
+        .audience-option-row {
+            display: flex;
+            gap: 0.4rem;
+            align-items: stretch;
+        }
+        .audience-option-row .audience-option { flex: 1; }
+        .audience-delete-btn {
+            background: transparent;
+            border: 1px solid var(--color-border);
+            color: var(--color-text-secondary);
+            border-radius: 6px;
+            padding: 0 0.6rem;
+            cursor: pointer;
+            font-size: 1.1rem;
+            line-height: 1;
+            transition: color 0.2s, border-color 0.2s, background-color 0.2s;
+        }
+        .audience-delete-btn:hover {
+            color: #b03030;
+            border-color: #b03030;
+            background: rgba(176, 48, 48, 0.06);
+        }
+        .save-audience-row {
+            display: flex;
+            gap: 0.6rem;
+            align-items: end;
+            flex-wrap: wrap;
+            margin-top: 0.85rem;
+            padding: 0.85rem 1rem;
+            background: var(--color-bg);
+            border: 1px dashed var(--color-border);
+            border-radius: 6px;
+        }
+        .save-audience-row label {
+            font-family: 'Crimson Text', serif;
+            font-weight: 600;
+            white-space: nowrap;
+        }
         .audience-emails {
             margin-top: 1rem;
             border-top: 1px solid var(--color-border);
@@ -917,7 +1068,7 @@ $page_title = "Announcements - Admin";
                 <div class="blast-card">
                     <h2>1. Pick an audience</h2>
                     <div class="audience-grid">
-                        <?php foreach ($AUDIENCES as $key => $label):
+                        <?php foreach ($GUEST_AUDIENCES as $key => $label):
                             $count = $audienceCounts[$key] ?? null;
                             $selected = $audience === $key;
                         ?>
@@ -931,7 +1082,42 @@ $page_title = "Announcements - Admin";
                             </label>
                         <?php endforeach; ?>
                     </div>
-                    <p class="helper-text">Only guests with an email on file are counted. Plus-ones share their primary guest's email.</p>
+
+                    <?php if (!empty($savedAudiences)): ?>
+                        <h3 class="audience-subhead">Saved audiences</h3>
+                        <div class="audience-grid">
+                            <?php foreach ($savedAudiences as $sa):
+                                $key = 'custom_' . $sa['id'];
+                                $count = count(parseCustomRecipients((string)$sa['custom_recipients']));
+                                $selected = $audience === $key;
+                            ?>
+                                <div class="audience-option-row">
+                                    <label class="audience-option<?php echo $selected ? ' is-selected' : ''; ?>">
+                                        <input type="radio" name="audience" value="<?php echo htmlspecialchars($key); ?>"
+                                               <?php echo $selected ? 'checked' : ''; ?>>
+                                        <span><?php echo htmlspecialchars($sa['name']); ?></span>
+                                        <span class="count-badge"><?php echo (int)$count; ?></span>
+                                    </label>
+                                    <button type="submit" name="delete_audience_id" value="<?php echo (int)$sa['id']; ?>"
+                                            class="audience-delete-btn" formnovalidate
+                                            onclick="return confirm('Delete saved audience &quot;<?php echo htmlspecialchars(addslashes($sa['name']), ENT_QUOTES); ?>&quot;? This cannot be undone.');"
+                                            aria-label="Delete <?php echo htmlspecialchars($sa['name']); ?>">&times;</button>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <h3 class="audience-subhead">Type your own</h3>
+                    <div class="audience-grid">
+                        <?php $key = 'custom'; $selected = $audience === $key; ?>
+                        <label class="audience-option<?php echo $selected ? ' is-selected' : ''; ?>">
+                            <input type="radio" name="audience" value="<?php echo htmlspecialchars($key); ?>"
+                                   <?php echo $selected ? 'checked' : ''; ?>>
+                            <span>Custom recipients only</span>
+                            <span class="count-badge"><?php echo isCustomAudienceKey($audience) ? count($customRecipientsParsed) : 0; ?></span>
+                        </label>
+                    </div>
+                    <p class="helper-text">Guest audiences count only guests with an email on file. Plus-ones share their primary guest's email. Choose "Custom recipients only" to type your own list, or pick a Saved audience to reuse one you've stored before.</p>
 
                     <?php foreach ($AUDIENCES as $key => $label):
                         $recipients = $audienceRecipients[$key] ?? [];
@@ -954,7 +1140,13 @@ $page_title = "Announcements - Admin";
                                  <?php echo $audience === $key ? '' : 'hidden'; ?>>
                             <summary>View email addresses in this audience (<?php echo (int)$count; ?>)</summary>
                             <?php if ($count === 0): ?>
-                                <p class="helper-text" style="margin-top:0.75rem;">No one matches this audience.</p>
+                                <p class="helper-text" style="margin-top:0.75rem;">
+                                    <?php if (isCustomAudienceKey($key)): ?>
+                                        This audience sends only to the addresses in the <strong>Recipients</strong> field below.
+                                    <?php else: ?>
+                                        No one matches this audience.
+                                    <?php endif; ?>
+                                </p>
                             <?php else: ?>
                                 <!-- Marker: tells the server that checkbox state for this audience was submitted (so empty = no one selected, vs no marker = include everyone). -->
                                 <input type="hidden" name="included_recipients_submitted[<?php echo htmlspecialchars($key); ?>]" value="1">
@@ -1037,19 +1229,45 @@ $page_title = "Announcements - Admin";
                         they'll be replaced per recipient when the email is sent.
                     </p>
 
-                    <label for="custom_recipients" style="margin-top:1rem;">Additional recipients (optional)</label>
+                    <?php $isCustomAud = isCustomAudienceKey($audience); ?>
+                    <label for="custom_recipients" style="margin-top:1rem;">
+                        <?php echo $isCustomAud ? 'Recipients' : 'Additional recipients (optional)'; ?>
+                    </label>
                     <textarea id="custom_recipients" name="custom_recipients" spellcheck="false"
                               placeholder="one per line, or comma-separated&#10;email@example.com&#10;First Last <other@example.com>"
                               style="min-height:90px;"><?php echo htmlspecialchars($customRecipientsRaw); ?></textarea>
                     <p class="helper-text">
                         Each line can be either <code>email@example.com</code> or
-                        <code>First Last &lt;email@example.com&gt;</code>. These are added on top of the audience above
-                        and de-duplicated by email. Without a name, <code>{{first_name}}</code> falls back to "Friend".
+                        <code>First Last &lt;email@example.com&gt;</code>.
+                        <?php if ($isCustomAud): ?>
+                            This audience sends only to the addresses you type here.
+                        <?php else: ?>
+                            These are added on top of the audience above and de-duplicated by email.
+                        <?php endif; ?>
+                        Without a name, <code>{{first_name}}</code> falls back to "Friend".
                         <?php if (!empty($customRecipientsParsed)): ?>
                             <br><strong><?php echo count($customRecipientsParsed); ?></strong> valid address<?php
                                 echo count($customRecipientsParsed) === 1 ? '' : 'es'; ?> recognized.
                         <?php endif; ?>
                     </p>
+
+                    <?php if ($isCustomAud): ?>
+                        <div class="save-audience-row">
+                            <label for="audience_name" style="margin:0;">Audience name</label>
+                            <input type="text" id="audience_name" name="audience_name"
+                                   value="<?php echo htmlspecialchars($audienceName); ?>"
+                                   placeholder="e.g., Bridal party, Out-of-town family"
+                                   style="flex:1; min-width:14rem;">
+                            <button type="submit" name="action" value="save_audience" class="btn btn-outline" formnovalidate>
+                                <?php echo $activeSavedAudience
+                                    ? 'Update "' . htmlspecialchars($activeSavedAudience['name']) . '"'
+                                    : 'Save as audience'; ?>
+                            </button>
+                        </div>
+                        <p class="helper-text">
+                            Saved audiences show up in the picker above so you can reuse them on future announcements.
+                        </p>
+                    <?php endif; ?>
                 </div>
 
                 <div class="blast-card">
