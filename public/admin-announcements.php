@@ -1094,6 +1094,8 @@ $page_title = "Announcements - Admin";
                                 <div class="audience-option-row">
                                     <label class="audience-option<?php echo $selected ? ' is-selected' : ''; ?>">
                                         <input type="radio" name="audience" value="<?php echo htmlspecialchars($key); ?>"
+                                               data-saved-name="<?php echo htmlspecialchars($sa['name']); ?>"
+                                               data-saved-emails="<?php echo htmlspecialchars($sa['custom_recipients']); ?>"
                                                <?php echo $selected ? 'checked' : ''; ?>>
                                         <span><?php echo htmlspecialchars($sa['name']); ?></span>
                                         <span class="count-badge"><?php echo (int)$count; ?></span>
@@ -1230,7 +1232,7 @@ $page_title = "Announcements - Admin";
                     </p>
 
                     <?php $isCustomAud = isCustomAudienceKey($audience); ?>
-                    <label for="custom_recipients" style="margin-top:1rem;">
+                    <label for="custom_recipients" id="custom_recipients_label" style="margin-top:1rem;">
                         <?php echo $isCustomAud ? 'Recipients' : 'Additional recipients (optional)'; ?>
                     </label>
                     <textarea id="custom_recipients" name="custom_recipients" spellcheck="false"
@@ -1239,11 +1241,12 @@ $page_title = "Announcements - Admin";
                     <p class="helper-text">
                         Each line can be either <code>email@example.com</code> or
                         <code>First Last &lt;email@example.com&gt;</code>.
-                        <?php if ($isCustomAud): ?>
-                            This audience sends only to the addresses you type here.
-                        <?php else: ?>
+                        <span id="recipients-helper-guest"<?php echo $isCustomAud ? ' hidden' : ''; ?>>
                             These are added on top of the audience above and de-duplicated by email.
-                        <?php endif; ?>
+                        </span>
+                        <span id="recipients-helper-custom"<?php echo $isCustomAud ? '' : ' hidden'; ?>>
+                            This audience sends only to the addresses you type here.
+                        </span>
                         Without a name, <code>{{first_name}}</code> falls back to "Friend".
                         <?php if (!empty($customRecipientsParsed)): ?>
                             <br><strong><?php echo count($customRecipientsParsed); ?></strong> valid address<?php
@@ -1251,23 +1254,21 @@ $page_title = "Announcements - Admin";
                         <?php endif; ?>
                     </p>
 
-                    <?php if ($isCustomAud): ?>
-                        <div class="save-audience-row">
-                            <label for="audience_name" style="margin:0;">Audience name</label>
-                            <input type="text" id="audience_name" name="audience_name"
-                                   value="<?php echo htmlspecialchars($audienceName); ?>"
-                                   placeholder="e.g., Bridal party, Out-of-town family"
-                                   style="flex:1; min-width:14rem;">
-                            <button type="submit" name="action" value="save_audience" class="btn btn-outline" formnovalidate>
-                                <?php echo $activeSavedAudience
-                                    ? 'Update "' . htmlspecialchars($activeSavedAudience['name']) . '"'
-                                    : 'Save as audience'; ?>
-                            </button>
-                        </div>
-                        <p class="helper-text">
-                            Saved audiences show up in the picker above so you can reuse them on future announcements.
-                        </p>
-                    <?php endif; ?>
+                    <div class="save-audience-row" id="save-audience-row"<?php echo $isCustomAud ? '' : ' hidden'; ?>>
+                        <label for="audience_name" style="margin:0;">Audience name</label>
+                        <input type="text" id="audience_name" name="audience_name"
+                               value="<?php echo htmlspecialchars($audienceName); ?>"
+                               placeholder="e.g., Bridal party, Out-of-town family"
+                               style="flex:1; min-width:14rem;">
+                        <button type="submit" name="action" value="save_audience" id="save-audience-btn" class="btn btn-outline" formnovalidate>
+                            <?php echo $activeSavedAudience
+                                ? 'Update "' . htmlspecialchars($activeSavedAudience['name']) . '"'
+                                : 'Save as audience'; ?>
+                        </button>
+                    </div>
+                    <p class="helper-text" id="save-audience-helper"<?php echo $isCustomAud ? '' : ' hidden'; ?>>
+                        Saved audiences show up in the picker above so you can reuse them on future announcements.
+                    </p>
                 </div>
 
                 <div class="blast-card">
@@ -1385,15 +1386,53 @@ $page_title = "Announcements - Admin";
                     var sendBtn = document.getElementById('send-blast-btn');
                     var radios = form.querySelectorAll('input[name="audience"]');
                     var detailsBlocks = document.querySelectorAll('.audience-emails');
-                    function updateSelected() {
+                    var labelEl = document.getElementById('custom_recipients_label');
+                    var helperGuest = document.getElementById('recipients-helper-guest');
+                    var helperCustom = document.getElementById('recipients-helper-custom');
+                    var saveRow = document.getElementById('save-audience-row');
+                    var saveHelper = document.getElementById('save-audience-helper');
+                    var saveBtn = document.getElementById('save-audience-btn');
+                    var nameInput = document.getElementById('audience_name');
+                    var recipientsTA = document.getElementById('custom_recipients');
+
+                    function isCustomKey(v) { return v === 'custom' || /^custom_\d+$/.test(v); }
+
+                    function applyAudienceMode(checkedRadio) {
+                        if (!checkedRadio) return;
+                        var value = checkedRadio.value;
+                        var custom = isCustomKey(value);
+                        if (labelEl)    labelEl.textContent = custom ? 'Recipients' : 'Additional recipients (optional)';
+                        if (helperGuest) helperGuest.hidden = custom;
+                        if (helperCustom) helperCustom.hidden = !custom;
+                        if (saveRow)     saveRow.hidden = !custom;
+                        if (saveHelper)  saveHelper.hidden = !custom;
+                    }
+
+                    function updateSelected(e) {
                         var selectedKey = null;
+                        var checkedRadio = null;
                         radios.forEach(function (r) {
                             r.closest('.audience-option').classList.toggle('is-selected', r.checked);
-                            if (r.checked) selectedKey = r.value;
+                            if (r.checked) { selectedKey = r.value; checkedRadio = r; }
                         });
                         detailsBlocks.forEach(function (d) {
                             d.hidden = d.getAttribute('data-audience') !== selectedKey;
                         });
+                        applyAudienceMode(checkedRadio);
+
+                        // Only mutate the recipients textarea / name when the user actually
+                        // clicked an audience radio — never on initial load.
+                        if (!e) return;
+                        if (selectedKey === 'custom') {
+                            if (nameInput) nameInput.value = '';
+                            if (saveBtn) saveBtn.textContent = 'Save as audience';
+                        } else if (/^custom_\d+$/.test(selectedKey) && checkedRadio) {
+                            var savedName = checkedRadio.getAttribute('data-saved-name') || '';
+                            var savedEmails = checkedRadio.getAttribute('data-saved-emails') || '';
+                            if (recipientsTA) recipientsTA.value = savedEmails;
+                            if (nameInput) nameInput.value = savedName;
+                            if (saveBtn) saveBtn.textContent = 'Update "' + savedName + '"';
+                        }
                     }
                     radios.forEach(function (r) { r.addEventListener('change', updateSelected); });
 
