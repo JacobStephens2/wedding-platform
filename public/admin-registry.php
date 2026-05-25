@@ -1702,9 +1702,11 @@ $page_title = "Manage Registry - Jacob & Melissa";
                                                 <a href="/admin-registry?toggle_most_wanted=<?php echo $item['id']; ?>" class="btn-small <?php echo !empty($item['most_wanted']) ? 'btn-most-wanted-active' : 'btn-most-wanted'; ?>">
                                                     <?php echo !empty($item['most_wanted']) ? '★ Most Wanted' : '☆ Most Wanted'; ?>
                                                 </a>
-                                                <a href="/admin-registry?delete=<?php echo $item['id']; ?>" class="btn-small btn-delete" onclick="return confirm('Are you sure you want to delete this item?');">
+                                                <button type="button" class="btn-small btn-delete js-delete-item"
+                                                        data-item-id="<?php echo (int) $item['id']; ?>"
+                                                        data-item-title="<?php echo htmlspecialchars($item['title']); ?>">
                                                     Delete
-                                                </a>
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -1777,6 +1779,57 @@ $page_title = "Manage Registry - Jacob & Melissa";
             });
             document.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape' && modal.style.display === 'block') close();
+            });
+        })();
+
+        // Inline delete: remove the item card without a full page reload so
+        // the admin doesn't lose scroll position when pruning the list.
+        (function() {
+            document.querySelectorAll('.js-delete-item').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    const itemId = parseInt(btn.dataset.itemId, 10);
+                    const title = btn.dataset.itemTitle || 'this item';
+                    if (!itemId) return;
+                    if (!confirm('Delete "' + title + '"? This cannot be undone.')) return;
+
+                    btn.disabled = true;
+                    const originalText = btn.textContent;
+                    btn.textContent = 'Deleting…';
+
+                    fetch('/api/delete-registry-item.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ item_id: itemId })
+                    })
+                    .then(function(resp) {
+                        return resp.json().then(function(data) { return { ok: resp.ok, data: data }; });
+                    })
+                    .then(function(result) {
+                        if (result.ok && result.data && result.data.success) {
+                            const card = btn.closest('.item-card');
+                            if (card) {
+                                card.style.transition = 'opacity 150ms ease';
+                                card.style.opacity = '0';
+                                setTimeout(function() {
+                                    card.remove();
+                                    document.dispatchEvent(new CustomEvent('registry-item-removed', {
+                                        detail: { itemId: itemId }
+                                    }));
+                                }, 150);
+                            }
+                        } else {
+                            const msg = (result.data && result.data.error) ? result.data.error : 'Delete failed';
+                            alert(msg);
+                            btn.disabled = false;
+                            btn.textContent = originalText;
+                        }
+                    })
+                    .catch(function() {
+                        alert('Network error — could not delete item');
+                        btn.disabled = false;
+                        btn.textContent = originalText;
+                    });
+                });
             });
         })();
     </script>
@@ -1960,8 +2013,8 @@ $page_title = "Manage Registry - Jacob & Melissa";
             const countEl = document.getElementById('items-visible-count');
             if (!list || !sortSelect || !filterCheckbox || !grid) return;
 
-            const cards = Array.from(grid.querySelectorAll('.item-card'));
-            const totalCount = cards.length;
+            let cards = Array.from(grid.querySelectorAll('.item-card'));
+            let totalCount = cards.length;
 
             function applySort(mode) {
                 let ordered;
@@ -2020,6 +2073,14 @@ $page_title = "Manage Registry - Jacob & Melissa";
                 const active = filterCheckbox.checked;
                 try { localStorage.setItem(FILTER_KEY, active ? '1' : '0'); } catch (e) {}
                 applyFilter(active);
+            });
+
+            // Re-sync after a card is removed in place (e.g., delete) so the
+            // filter count stays accurate without a page reload.
+            document.addEventListener('registry-item-removed', function () {
+                cards = Array.from(grid.querySelectorAll('.item-card'));
+                totalCount = cards.length;
+                applyFilter(filterCheckbox.checked);
             });
         })();
 
