@@ -481,9 +481,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (returnPromptYes) {
         returnPromptYes.addEventListener('click', function() {
             if (pendingItemId) {
-                // Open the purchase modal for this item
+                // Capture before closeReturnPromptModal clears pendingItemId.
+                const itemId = pendingItemId;
                 closeReturnPromptModal();
-                openModal(pendingItemId);
+                openModal(itemId);
             }
         });
     }
