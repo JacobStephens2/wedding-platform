@@ -17,29 +17,18 @@ try {
 <main class="page-container">
     <h1 class="page-title">Gallery</h1>
 
-    <section class="featured-galleries" aria-label="Featured galleries">
-        <a class="featured-card" href="https://baronephoto.pic-time.com/client/jasonmelissa/gallery?inviteToken=AAAAAMwAAAAHmY4IMZZirXjlVnb1WMV4Lw,,&amp;inviteptoken2=AAAAAJcAAAAJmicE83IkZpTwK9b6o7Cspw,,&amp;s=%7B%22blockId%22%3A%22gb_103483103%22%2C%22itemId%22%3A11902344563%2C%22fullScreen%22%3Afalse%7D"
-           target="_blank" rel="noopener">
-            <img class="featured-photo" src="/images/wedding-color-highlight.jpg" alt="Jacob and Melissa on their wedding day" loading="lazy">
-            <div class="featured-body">
-                <h2>Wedding Photo Gallery</h2>
-                <p>The full set of photos from our wedding day, hosted by Barone Photo.</p>
-                <span class="featured-cta">View the full gallery &rarr;</span>
-            </div>
-        </a>
+    <nav class="gallery-quicklinks" aria-label="Jump to">
+        <span class="gallery-quicklinks-label">Jump to:</span>
+        <a href="https://baronephoto.pic-time.com/client/jasonmelissa/gallery?inviteToken=AAAAAMwAAAAHmY4IMZZirXjlVnb1WMV4Lw,,&amp;inviteptoken2=AAAAAJcAAAAJmicE83IkZpTwK9b6o7Cspw,,&amp;s=%7B%22blockId%22%3A%22gb_103483103%22%2C%22itemId%22%3A11902344563%2C%22fullScreen%22%3Afalse%7D"
+           target="_blank" rel="noopener">Full gallery</a>
+        <span class="gallery-quicklinks-sep" aria-hidden="true">&middot;</span>
+        <a href="https://baronephoto.pic-time.com/client/bwportraitsjacobmelissa/gallery?ptat=AAAAAAIBAABa2GXe-gp4DBjRNYJ3qh8D9Yh0ygjq10fR_tKNeQ,,&amp;inviteptoken2=AAAAABUBAAB6MSBxUrIu5TH4WE_efiRjIA,,"
+           target="_blank" rel="noopener">B&amp;W portraits</a>
+        <span class="gallery-quicklinks-sep" aria-hidden="true">&middot;</span>
+        <a href="#wedding-video">Wedding video</a>
+    </nav>
 
-        <a class="featured-card" href="https://baronephoto.pic-time.com/client/bwportraitsjacobmelissa/gallery?ptat=AAAAAAIBAABa2GXe-gp4DBjRNYJ3qh8D9Yh0ygjq10fR_tKNeQ,,&amp;inviteptoken2=AAAAABUBAAB6MSBxUrIu5TH4WE_efiRjIA,,"
-           target="_blank" rel="noopener">
-            <img class="featured-photo" src="/images/wedding-bw-highlight.jpg" alt="Black-and-white portrait of Jacob and Melissa" loading="lazy">
-            <div class="featured-body">
-                <h2>Black &amp; White Portraits</h2>
-                <p>A curated set of black-and-white portraits from our wedding.</p>
-                <span class="featured-cta">View the B&amp;W set &rarr;</span>
-            </div>
-        </a>
-    </section>
-
-    <section class="wedding-video" aria-label="Wedding video">
+    <section id="wedding-video" class="wedding-video" aria-label="Wedding video">
         <h2 class="gallery-section-heading">Wedding Video</h2>
         <div class="video-embed">
             <iframe src="https://player.vimeo.com/video/1190695875?h=e325e0040b"
@@ -70,6 +59,29 @@ try {
         </div>
         <?php endforeach; ?>
     </div>
+
+    <h2 class="gallery-section-heading gallery-outro-heading">Want more?</h2>
+    <section class="featured-galleries" aria-label="More from the day">
+        <a class="featured-card" href="https://baronephoto.pic-time.com/client/jasonmelissa/gallery?inviteToken=AAAAAMwAAAAHmY4IMZZirXjlVnb1WMV4Lw,,&amp;inviteptoken2=AAAAAJcAAAAJmicE83IkZpTwK9b6o7Cspw,,&amp;s=%7B%22blockId%22%3A%22gb_103483103%22%2C%22itemId%22%3A11902344563%2C%22fullScreen%22%3Afalse%7D"
+           target="_blank" rel="noopener">
+            <img class="featured-photo" src="/images/wedding-color-highlight.jpg" alt="Jacob and Melissa on their wedding day" loading="lazy">
+            <div class="featured-body">
+                <h2>Wedding Photo Gallery</h2>
+                <p>The full set of photos from our wedding day, hosted by Barone Photo.</p>
+                <span class="featured-cta">View the full gallery &rarr;</span>
+            </div>
+        </a>
+
+        <a class="featured-card" href="https://baronephoto.pic-time.com/client/bwportraitsjacobmelissa/gallery?ptat=AAAAAAIBAABa2GXe-gp4DBjRNYJ3qh8D9Yh0ygjq10fR_tKNeQ,,&amp;inviteptoken2=AAAAABUBAAB6MSBxUrIu5TH4WE_efiRjIA,,"
+           target="_blank" rel="noopener">
+            <img class="featured-photo" src="/images/wedding-bw-highlight.jpg" alt="Black-and-white portrait of Jacob and Melissa" loading="lazy">
+            <div class="featured-body">
+                <h2>Black &amp; White Portraits</h2>
+                <p>A curated set of black-and-white portraits from our wedding.</p>
+                <span class="featured-cta">View the B&amp;W set &rarr;</span>
+            </div>
+        </a>
+    </section>
 </main>
 
 <!-- Lightbox Modal -->
@@ -79,6 +91,44 @@ try {
 </div>
 
 <style>
+    .gallery-quicklinks {
+        max-width: 1100px;
+        margin: 0 auto 2rem;
+        padding: 0.75rem 1rem;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem 0.75rem;
+        font-family: 'Crimson Text', serif;
+        font-size: 1rem;
+        text-align: center;
+    }
+    .gallery-quicklinks-label {
+        font-family: 'Cinzel', serif;
+        font-size: 0.78rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--color-text-secondary, #555);
+    }
+    .gallery-quicklinks a {
+        color: var(--color-green);
+        text-decoration: none;
+        border-bottom: 1px solid transparent;
+        transition: color 0.2s ease, border-color 0.2s ease;
+    }
+    .gallery-quicklinks a:hover {
+        color: var(--color-gold);
+        border-bottom-color: var(--color-gold);
+    }
+    .gallery-quicklinks-sep {
+        color: var(--color-text-secondary, #999);
+    }
+
+    .gallery-outro-heading {
+        margin-top: 1rem;
+    }
+
     .featured-galleries {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
