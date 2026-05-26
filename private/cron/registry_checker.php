@@ -121,6 +121,20 @@ try {
         FROM registry_items
     ");
     $counts = $stmt->fetch() ?: [];
+
+    // Admin kill-switch toggled from /admin-registry. Defaults to enabled when
+    // the row is missing so existing installs keep their alerts.
+    $alertEnabled = true;
+    try {
+        $settingStmt = $pdo->prepare("SELECT setting_value FROM site_settings WHERE setting_key = 'registry_low_alert_enabled'");
+        $settingStmt->execute();
+        $settingRow = $settingStmt->fetch();
+        if ($settingRow) {
+            $alertEnabled = $settingRow['setting_value'] === '1';
+        }
+    } catch (Exception $e) {
+        // site_settings table may not exist on a fresh install; treat as enabled
+    }
 } catch (Exception $e) {
     fwrite(STDERR, "Registry checker: DB query failed: " . $e->getMessage() . "\n");
     exit(4);
@@ -139,7 +153,7 @@ $lastSentAt = $prevState['last_sent_at'] ?? null;
 $hours = hoursSince($lastSentAt);
 $cooldownPassed = ($hours === null) ? true : ($hours >= $cooldownHours);
 
-$shouldSend = $isLow && (!$wasLow || $cooldownPassed);
+$shouldSend = $alertEnabled && $isLow && (!$wasLow || $cooldownPassed);
 
 // Compose email if needed
 if ($shouldSend) {
@@ -189,7 +203,11 @@ if ($shouldSend) {
         }
     }
 } else {
-    echo "Registry checker: OK (available={$availablePublished}, threshold={$threshold}).\n";
+    if (!$alertEnabled && $isLow) {
+        echo "Registry checker: alert disabled by admin toggle (available={$availablePublished}, threshold={$threshold}).\n";
+    } else {
+        echo "Registry checker: OK (available={$availablePublished}, threshold={$threshold}).\n";
+    }
 }
 
 // Always update last_checked_at (even when not sending), so logs/state are useful.

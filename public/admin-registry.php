@@ -229,6 +229,26 @@ if (!$sampleMode && $authenticated && isset($_GET['toggle_most_wanted'])) {
     }
 }
 
+// Handle toggling the low-availability email alert. After the wedding the
+// registry is intentionally allowed to deplete, and the daily cron alert
+// becomes noise — admins flip this off here.
+if (!$sampleMode && $authenticated && isset($_GET['toggle_low_alert'])) {
+    try {
+        $pdo = getDbConnection();
+        $stmt = $pdo->prepare("SELECT setting_value FROM site_settings WHERE setting_key = 'registry_low_alert_enabled'");
+        $stmt->execute();
+        $row = $stmt->fetch();
+        $current = $row ? $row['setting_value'] : '1';
+        $newValue = $current === '1' ? '0' : '1';
+        $pdo->prepare("INSERT INTO site_settings (setting_key, setting_value) VALUES ('registry_low_alert_enabled', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$newValue, $newValue]);
+        $success = $newValue === '1'
+            ? 'Low-availability email alert is back on.'
+            : 'Low-availability email alert is off. The cron will skip sending until you turn it back on.';
+    } catch (Exception $e) {
+        $error = 'Error updating alert setting: ' . htmlspecialchars($e->getMessage());
+    }
+}
+
 // Handle move order (move up / move down)
 if (!$sampleMode && $authenticated && isset($_GET['move_up'], $_GET['id']) && is_numeric($_GET['id'])) {
     $moveId = (int) $_GET['id'];
@@ -350,6 +370,7 @@ if (!$sampleMode && $authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && i
 
 // Fetch registry items if authenticated
 $items = [];
+$lowAlertEnabled = true;
 if ($sampleMode) {
     $items = getSampleRegistryItems();
 } elseif ($authenticated) {
@@ -361,6 +382,11 @@ if ($sampleMode) {
             ORDER BY sort_order ASC, id ASC
         ");
         $items = $stmt->fetchAll();
+
+        $stmt = $pdo->prepare("SELECT setting_value FROM site_settings WHERE setting_key = 'registry_low_alert_enabled'");
+        $stmt->execute();
+        $row = $stmt->fetch();
+        $lowAlertEnabled = $row ? $row['setting_value'] === '1' : true;
     } catch (Exception $e) {
         $error = 'Error loading items: ' . htmlspecialchars($e->getMessage());
     }
@@ -798,6 +824,56 @@ $page_title = "Manage Registry - Jacob & Melissa";
             color: var(--color-text-secondary);
             font-family: 'Crimson Text', serif;
             font-size: 1.1rem;
+        }
+        .low-alert-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            background-color: var(--color-surface);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--color-shadow);
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        .low-alert-copy {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            min-width: 0;
+            flex: 1 1 18rem;
+        }
+        .low-alert-status {
+            font-family: 'Crimson Text', serif;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+        .low-alert-status.on {
+            color: var(--color-green);
+        }
+        .low-alert-status.off {
+            color: var(--color-text-muted);
+        }
+        .low-alert-hint {
+            color: var(--color-text-secondary);
+            font-family: 'Crimson Text', serif;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+        .btn-hide {
+            background-color: #6c757d;
+            color: white;
+        }
+        .btn-hide:hover {
+            background-color: #5a6268;
+        }
+        .btn-show {
+            background-color: var(--color-green);
+            color: white;
+        }
+        .btn-show:hover {
+            background-color: #2d5016;
         }
         .price-band-table-container {
             background-color: var(--color-surface);
@@ -1385,6 +1461,20 @@ $page_title = "Manage Registry - Jacob & Melissa";
                         <span class="stat-value"><?php echo $purchasedItems; ?></span>
                         <span class="stat-label">Purchased</span>
                     </div>
+                </div>
+
+                <div class="low-alert-toggle">
+                    <div class="low-alert-copy">
+                        <span class="low-alert-status <?php echo $lowAlertEnabled ? 'on' : 'off'; ?>">
+                            <?php echo $lowAlertEnabled ? 'Low-availability alert: ON' : 'Low-availability alert: OFF'; ?>
+                        </span>
+                        <span class="low-alert-hint">
+                            Daily cron emails admins when available items drop to the threshold. Turn off after the wedding when depletion is expected.
+                        </span>
+                    </div>
+                    <a href="/admin-registry?toggle_low_alert=1" class="btn btn-small <?php echo $lowAlertEnabled ? 'btn-hide' : 'btn-show'; ?>">
+                        <?php echo $lowAlertEnabled ? 'Turn Off Alerts' : 'Turn On Alerts'; ?>
+                    </a>
                 </div>
 
                 <div class="price-band-table-container">
