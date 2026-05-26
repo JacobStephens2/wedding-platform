@@ -50,6 +50,8 @@ try {
                 class="gallery-image"
                 loading="lazy"
                 data-gallery-index="<?php echo $i; ?>"
+                data-caption-desc="<?php echo htmlspecialchars($photo['alt'] ?? ''); ?>"
+                data-caption-date="<?php echo htmlspecialchars(date('F j, Y', strtotime($photo['photo_date']))); ?>"
                 <?php if (!empty($photo['position'])): ?>style="object-position: <?php echo htmlspecialchars($photo['position']); ?>;"<?php endif; ?>
             >
             <div class="gallery-caption">
@@ -88,6 +90,10 @@ try {
 <div id="lightbox" class="lightbox">
     <span class="lightbox-close">&times;</span>
     <img class="lightbox-content" id="lightbox-image" src="" alt="">
+    <div class="lightbox-caption" id="lightbox-caption">
+        <span class="lightbox-caption-desc" id="lightbox-caption-desc"></span>
+        <span class="lightbox-caption-date" id="lightbox-caption-date"></span>
+    </div>
 </div>
 
 <style>
@@ -284,12 +290,22 @@ document.addEventListener('DOMContentLoaded', function() {
     var lightbox = document.getElementById('lightbox');
     var lightboxImg = document.getElementById('lightbox-image');
     var lightboxClose = document.querySelector('.lightbox-close');
+    var lightboxCaptionDesc = document.getElementById('lightbox-caption-desc');
+    var lightboxCaptionDate = document.getElementById('lightbox-caption-date');
     var currentIndex = 0;
+
+    function applyCaption(img) {
+        var desc = img.getAttribute('data-caption-desc') || '';
+        var date = img.getAttribute('data-caption-date') || '';
+        if (lightboxCaptionDesc) lightboxCaptionDesc.textContent = desc;
+        if (lightboxCaptionDate) lightboxCaptionDate.textContent = date;
+    }
 
     function openLightbox(index) {
         currentIndex = index;
         lightboxImg.src = allImages[currentIndex].src;
         lightboxImg.alt = allImages[currentIndex].alt;
+        applyCaption(allImages[currentIndex]);
         lightbox.classList.add('active');
         document.body.style.overflow = 'hidden';
     }
@@ -305,6 +321,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (currentIndex >= allImages.length) currentIndex = 0;
         lightboxImg.src = allImages[currentIndex].src;
         lightboxImg.alt = allImages[currentIndex].alt;
+        applyCaption(allImages[currentIndex]);
     }
 
     galleryImages.forEach(function(img, i) {

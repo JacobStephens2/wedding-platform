@@ -795,13 +795,15 @@ header {
 
 .lightbox.active {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    padding: 4rem 1rem 5rem;
 }
 
 .lightbox-content {
     max-width: 90%;
-    max-height: 90%;
+    max-height: calc(90vh - 5rem);
     object-fit: contain;
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
@@ -823,6 +825,41 @@ header {
 
 .lightbox-close:hover {
     opacity: 0.7;
+}
+
+.lightbox-caption {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 1rem;
+    padding: 0 1.5rem;
+    text-align: center;
+    color: #f5f5f5;
+    font-family: 'Crimson Text', serif;
+    pointer-events: none;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+.lightbox-caption-desc {
+    display: block;
+    font-size: 1rem;
+    line-height: 1.4;
+    margin-bottom: 0.2rem;
+}
+
+.lightbox-caption-desc:empty {
+    display: none;
+}
+
+.lightbox-caption-date {
+    display: block;
+    font-size: 0.82rem;
+    letter-spacing: 0.04em;
+    color: #c9c9c9;
+}
+
+.lightbox-caption-date:empty {
+    display: none;
 }
 
 /* Form Styles */
