@@ -1,6 +1,6 @@
 <?php
 /**
- * Email handler using PHPMailer with Mandrill SMTP
+ * Email handler using PHPMailer with Resend SMTP
  */
 
 use PHPMailer\PHPMailer\PHPMailer;
@@ -14,12 +14,12 @@ function sendEmail($to, $subject, $body, $replyTo = null, array $options = []) {
 
         // Server settings
         $mail->isSMTP();
-        $mail->Host = $_ENV['MANDRILL_SMTP_HOST'];
+        $mail->Host = $_ENV['SMTP_HOST'];
         $mail->SMTPAuth = true;
-        $mail->Username = $_ENV['MANDRILL_SMTP_USER'];
-        $mail->Password = $_ENV['MANDRILL_SMTP_PASS'];
+        $mail->Username = $_ENV['SMTP_USER'];
+        $mail->Password = $_ENV['SMTP_PASS'];
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port = intval($_ENV['MANDRILL_SMTP_PORT'] ?? 587);
+        $mail->Port = intval($_ENV['SMTP_PORT'] ?? 587);
 
         // Use verified sending domain from Mandrill
         // MANDRILL_FROM_EMAIL should be set to a verified domain email in Mandrill
