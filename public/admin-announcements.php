@@ -1278,7 +1278,7 @@ $page_title = "Announcements - Admin";
                             <label for="test_email">Send a test to (optional)</label>
                             <input type="email" id="test_email" name="test_email"
                                    value="<?php echo htmlspecialchars($testEmail); ?>"
-                                   placeholder="<?php echo htmlspecialchars($_ENV['MANDRILL_FROM_EMAIL'] ?? 'you@example.com'); ?>">
+                                   placeholder="<?php echo htmlspecialchars($_ENV['SMTP_FROM_EMAIL'] ?? 'you@example.com'); ?>">
                             <p class="helper-text">A single test email goes to this address — subject is prefixed with [TEST].</p>
                         </div>
                     </div>

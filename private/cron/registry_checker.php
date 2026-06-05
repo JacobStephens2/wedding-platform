@@ -70,11 +70,11 @@ $recipients = parseEmailList($_ENV['REGISTRY_CHECK_RECIPIENTS'] ?? null);
 if (empty($recipients)) {
     // Reasonable defaults based on existing site behavior:
     // - RSVP_EMAIL (usually Melissa)
-    // - MANDRILL_FROM_EMAIL / SMTP_FROM_EMAIL (usually Jacob)
+    // - SMTP_FROM_EMAIL / SMTP_FROM_EMAIL (usually Jacob)
     $fallback = [];
     $fallback[] = $_ENV['RSVP_EMAIL'] ?? null;
     $fallback[] = $_ENV['CONTACT_EMAIL'] ?? null;
-    $fallback[] = $_ENV['MANDRILL_FROM_EMAIL'] ?? null;
+    $fallback[] = $_ENV['SMTP_FROM_EMAIL'] ?? null;
     $fallback[] = $_ENV['SMTP_FROM_EMAIL'] ?? null;
     $recipients = parseEmailList(implode(',', array_filter($fallback)));
 }
