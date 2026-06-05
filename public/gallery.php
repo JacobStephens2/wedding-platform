@@ -28,18 +28,6 @@ try {
         <a href="#wedding-video">Wedding video</a>
     </nav>
 
-    <section id="wedding-video" class="wedding-video" aria-label="Wedding video">
-        <h2 class="gallery-section-heading">Wedding Video</h2>
-        <div class="video-embed">
-            <iframe src="https://player.vimeo.com/video/1190695875?h=e325e0040b"
-                    title="Jacob and Melissa Wedding Video"
-                    frameborder="0"
-                    allow="autoplay; fullscreen; picture-in-picture"
-                    allowfullscreen
-                    loading="lazy"></iframe>
-        </div>
-    </section>
-
     <h2 class="gallery-section-heading">Highlights</h2>
     <div class="gallery-grid">
         <?php foreach ($photos as $i => $photo): ?>
@@ -62,8 +50,7 @@ try {
         <?php endforeach; ?>
     </div>
 
-    <h2 class="gallery-section-heading gallery-outro-heading">Want more?</h2>
-    <section class="featured-galleries" aria-label="More from the day">
+    <section class="featured-galleries gallery-outro-heading" aria-label="More from the day">
         <a class="featured-card" href="https://baronephoto.pic-time.com/client/jasonmelissa/gallery?inviteToken=AAAAAMwAAAAHmY4IMZZirXjlVnb1WMV4Lw,,&amp;inviteptoken2=AAAAAJcAAAAJmicE83IkZpTwK9b6o7Cspw,,&amp;s=%7B%22blockId%22%3A%22gb_103483103%22%2C%22itemId%22%3A11902344563%2C%22fullScreen%22%3Afalse%7D"
            target="_blank" rel="noopener">
             <img class="featured-photo" src="/images/wedding-color-highlight.jpg" alt="Jacob and Melissa on their wedding day" loading="lazy">
@@ -83,6 +70,18 @@ try {
                 <span class="featured-cta">View the B&amp;W set &rarr;</span>
             </div>
         </a>
+    </section>
+
+    <section id="wedding-video" class="wedding-video" aria-label="Wedding video">
+        <h2 class="gallery-section-heading">Wedding Video</h2>
+        <div class="video-embed">
+            <iframe src="https://player.vimeo.com/video/1190695875?h=e325e0040b"
+                    title="Jacob and Melissa Wedding Video"
+                    frameborder="0"
+                    allow="autoplay; fullscreen; picture-in-picture"
+                    allowfullscreen
+                    loading="lazy"></iframe>
+        </div>
     </section>
 </main>
 
