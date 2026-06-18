@@ -83,6 +83,17 @@ try {
                     loading="lazy"></iframe>
         </div>
     </section>
+
+    <section id="wedding-video-2" class="wedding-video" aria-label="Wedding video">
+        <div class="video-embed">
+            <iframe src="https://www.youtube-nocookie.com/embed/RUJWq4K5kW8"
+                    title="Jacob and Melissa Wedding Video"
+                    frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen
+                    loading="lazy"></iframe>
+        </div>
+    </section>
 </main>
 
 <!-- Lightbox Modal -->
