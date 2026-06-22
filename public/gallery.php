@@ -19,7 +19,7 @@ try {
 
     <nav class="gallery-quicklinks" aria-label="Jump to">
         <span class="gallery-quicklinks-label">Jump to:</span>
-        <a href="https://baronephoto.pic-time.com/client/jasonmelissa/gallery?inviteToken=AAAAAMwAAAAHmY4IMZZirXjlVnb1WMV4Lw,,&amp;inviteptoken2=AAAAAJcAAAAJmicE83IkZpTwK9b6o7Cspw,,&amp;s=%7B%22blockId%22%3A%22gb_103483103%22%2C%22itemId%22%3A11902344563%2C%22fullScreen%22%3Afalse%7D"
+        <a href="https://drive.google.com/drive/folders/1DrRDH8wAYEs1x7WPUVAFXLeJdOEmcnRN?usp=sharing"
            target="_blank" rel="noopener">Full wedding gallery</a>
         <span class="gallery-quicklinks-sep" aria-hidden="true">&middot;</span>
         <a href="https://baronephoto.pic-time.com/client/bwportraitsjacobmelissa/gallery?ptat=AAAAAAIBAABa2GXe-gp4DBjRNYJ3qh8D9Yh0ygjq10fR_tKNeQ,,&amp;inviteptoken2=AAAAABUBAAB6MSBxUrIu5TH4WE_efiRjIA,,"
@@ -51,7 +51,7 @@ try {
     </div>
 
     <section class="featured-galleries gallery-outro-heading" aria-label="More from the day">
-        <a class="featured-card" href="https://baronephoto.pic-time.com/client/jasonmelissa/gallery?inviteToken=AAAAAMwAAAAHmY4IMZZirXjlVnb1WMV4Lw,,&amp;inviteptoken2=AAAAAJcAAAAJmicE83IkZpTwK9b6o7Cspw,,&amp;s=%7B%22blockId%22%3A%22gb_103483103%22%2C%22itemId%22%3A11902344563%2C%22fullScreen%22%3Afalse%7D"
+        <a class="featured-card" href="https://drive.google.com/drive/folders/1DrRDH8wAYEs1x7WPUVAFXLeJdOEmcnRN?usp=sharing"
            target="_blank" rel="noopener">
             <img class="featured-photo" src="/images/wedding-color-highlight.jpg" alt="Jacob and Melissa on their wedding day" loading="lazy">
             <div class="featured-body">
