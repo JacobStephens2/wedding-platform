@@ -188,15 +188,14 @@ try {
     if (!empty($songRequest)) {
         $emailBody .= "Song Request: $songRequest\n";
     }
-    $emailBody .= "\nManage guests at https://wedding.stephens.page/admin-guests";
-    
+    $emailBody .= "\nManage guests at " . BASE_URL . "/admin-guests";
+
     $subject = 'New RSVP - ' . (count($guestNames) > 0 ? $guestNames[0] : 'Unknown');
-    
-    $rsvpEmails = [
-        'melissa.longua@gmail.com',
-        'jacob@stephens.page'
-    ];
-    
+
+    // Notification recipients come from the env (RSVP_EMAIL, comma-separated for
+    // multiple), falling back to CONTACT_EMAIL.
+    $rsvpEmails = array_filter(array_map('trim', explode(',', $_ENV['RSVP_EMAIL'] ?? $_ENV['CONTACT_EMAIL'] ?? '')));
+
     foreach ($rsvpEmails as $emailAddress) {
         sendEmail($emailAddress, $subject, $emailBody);
     }

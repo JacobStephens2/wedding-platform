@@ -1,6 +1,38 @@
 # Wedding Website
 
-The wedding website of Jacob Stephens and Melissa Longua, live at [wedding.stephens.page](https://wedding.stephens.page).
+A reusable wedding-website platform. The code under `public/` is couple-agnostic;
+all couple-specific text (names, date, venues, story, page prose) lives in data,
+not templates. This instance serves Jacob Stephens and Melissa Longua, live at
+[wedding.stephens.page](https://wedding.stephens.page).
+
+## Couple content lives in data, not code
+
+Every couple-specific value is read through the helpers in `private/content.php`:
+
+- `content('key')` returns a scalar (names, date, venues, emails, links).
+- `contentBlocks('page')` returns the ordered prose sections for a page
+  (`story`, `about`, `travel`, `blessing`).
+
+Resolution order is database first, then file fallback:
+
+1. The `site_content` (scalars) and `content_blocks` (page prose) MySQL tables,
+   edited from the admin **Site Content** page (`/admin-content`).
+2. `private/content_defaults.php`, the committed reference instance. It is the
+   runtime fallback when a row is missing or the database is down, the seed
+   source, and the documented list of every couple-specific field.
+
+Story prose may place photo groups inline with `{{carousel:KEY}}` (swipeable) or
+`{{blockimages:KEY}}` (grid), where `KEY` matches a photo's `story_section` set
+in Manage Gallery.
+
+### Standing up a new couple
+
+1. Create the tables: `private/sql/create_content_tables.sql`.
+2. Edit `private/content_defaults.php` with the new couple's details and prose
+   (or leave it and edit everything in the admin after seeding).
+3. Seed the editable copy: `php private/seed_content.php`
+   (`--force` overwrites existing rows from the defaults file).
+4. Refine names, dates, venues, and page sections at `/admin-content`.
 
 ## Tech Stack
 
@@ -50,7 +82,10 @@ public/                     Web root (Apache DocumentRoot)
 └── *.php                   Page and admin files
 
 private/                    Not web-accessible
-├── config.php              App constants and configuration
+├── config.php              App constants; loads content helpers
+├── content.php             content() / contentBlocks() accessors
+├── content_defaults.php    Couple-specific content (reference instance + fallback)
+├── seed_content.php        Seed content tables from the defaults file
 ├── db.php                  PDO database connection
 ├── admin_auth.php          Session-based authentication
 ├── email_handler.php       Mandrill SMTP wrapper

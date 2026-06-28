@@ -73,7 +73,33 @@ try {
 
 $turnstileSiteKey = $_ENV['TURNSTILE_SITE_KEY'] ?? '';
 
-$page_title = "Registry - Jacob & Melissa";
+$coupleNames = content('couple_names', 'the couple');
+$paymentVenmo = content('payment_venmo', '');
+$checkPayee = content('check_payee_name', '');
+$mailLine1 = content('mailing_address_line1', '');
+$mailLine2 = content('mailing_address_line2', '');
+$honeymoonDestination = content('honeymoon_destination', '');
+
+/** Shared payment-methods markup for the house and honeymoon funds. */
+function renderFundPaymentMethods(string $venmo, string $payee, string $line1, string $line2): string {
+    $html = '<div class="house-fund-payment-methods">';
+    if ($venmo !== '') {
+        $html .= '<div class="payment-method"><strong>Venmo:</strong> ' . htmlspecialchars($venmo) . '</div>';
+    }
+    if ($payee !== '') {
+        $address = trim(implode('<br>', array_map('htmlspecialchars', array_filter([$line1, $line2], static fn($p) => $p !== ''))));
+        $html .= '<div class="payment-method"><strong>Check:</strong> Please make checks payable to '
+            . htmlspecialchars($payee) . '.';
+        if ($address !== '') {
+            $html .= ' If mailing, send to:<br><span class="address">' . $address . '</span>';
+        }
+        $html .= '</div>';
+    }
+    $html .= '</div>';
+    return $html;
+}
+
+$page_title = "Registry - " . $coupleNames;
 include __DIR__ . '/includes/header.php';
 ?>
 <?php if ($turnstileSiteKey): ?>
@@ -98,16 +124,8 @@ include __DIR__ . '/includes/header.php';
                 <p>We would be honored if you would like to contribute to our house fund as a wedding gift.</p>
                 
                 <div class="house-fund-info-container">
-                    <div class="house-fund-payment-methods">
-                        <div class="payment-method">
-                            <strong>Venmo:</strong> @Melissa-Longua
-                        </div>
-                        <div class="payment-method">
-                            <strong>Check:</strong> Please make checks payable to Jacob Stephens. If mailing, send to:<br>
-                            <span class="address">3815 Haverford Ave, Unit 1<br>Philadelphia, PA 19104</span>
-                        </div>
-                    </div>
-                    
+                    <?php echo renderFundPaymentMethods($paymentVenmo, $checkPayee, $mailLine1, $mailLine2); ?>
+
                     <div class="house-fund-total">
                         <p class="total-label">Total Contributed:</p>
                         <p class="total-amount" id="house-fund-total-amount">$<?php echo number_format($houseFundTotal, 2); ?></p>
@@ -144,19 +162,13 @@ include __DIR__ . '/includes/header.php';
                 <div class="honeymoon-fund-image">
                     <img src="/images/honeymoon-fund.jpg" alt="Honeymoon Fund">
                 </div>
-                <p>We're honeymooning in Puerto Rico! We would be honored if you would like to contribute to our honeymoon fund as a wedding gift.</p>
-                
+                <p><?php echo $honeymoonDestination !== ''
+                    ? "We're honeymooning in " . htmlspecialchars($honeymoonDestination) . '! '
+                    : ''; ?>We would be honored if you would like to contribute to our honeymoon fund as a wedding gift.</p>
+
                 <div class="honeymoon-fund-info-container">
-                    <div class="honeymoon-fund-payment-methods">
-                        <div class="payment-method">
-                            <strong>Venmo:</strong> @Melissa-Longua
-                        </div>
-                        <div class="payment-method">
-                            <strong>Check:</strong> Please make checks payable to Jacob Stephens. If mailing, send to:<br>
-                            <span class="address">3815 Haverford Ave, Unit 1<br>Philadelphia, PA 19104</span>
-                        </div>
-                    </div>
-                    
+                    <?php echo renderFundPaymentMethods($paymentVenmo, $checkPayee, $mailLine1, $mailLine2); ?>
+
                     <div class="honeymoon-fund-total">
                         <p class="total-label">Total Contributed:</p>
                         <p class="total-amount" id="honeymoon-fund-total-amount">$<?php echo number_format($honeymoonFundTotal, 2); ?></p>
@@ -253,11 +265,11 @@ include __DIR__ . '/includes/header.php';
         <p>If you've purchased this item, please mark it here so other guests know it's been taken.</p>
         <form id="purchase-form">
             <div class="form-group">
-                <label for="purchaser-name">Your Name (only visible to Melissa and Jacob)</label>
+                <label for="purchaser-name">Your Name (only visible to <?php echo htmlspecialchars($coupleNames); ?>)</label>
                 <input type="text" id="purchaser-name" name="purchaser_name" placeholder="Enter your name">
             </div>
             <div class="form-group">
-                <label for="purchaser-message">Message (optional, only visible to Melissa and Jacob)</label>
+                <label for="purchaser-message">Message (optional, only visible to <?php echo htmlspecialchars($coupleNames); ?>)</label>
                 <textarea id="purchaser-message" name="purchaser_message" rows="3" maxlength="2000" placeholder="Leave a note with your gift"></textarea>
             </div>
             <input type="hidden" id="purchase-item-id" name="item_id">

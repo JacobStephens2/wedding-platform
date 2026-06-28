@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../private/config.php';
 require_once __DIR__ . '/../private/turnstile.php';
 $turnstileSiteKey = $_ENV['TURNSTILE_SITE_KEY'] ?? '';
-$page_title = "Contact - Jacob & Melissa";
+$page_title = "Contact - " . content('couple_names', 'Our Wedding');
 include __DIR__ . '/includes/header.php';
 
 $success = false;
@@ -53,23 +53,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <main class="page-container">
     <h1 class="page-title">Contact Us</h1>
 
+    <?php
+    $mailName  = content('check_payee_name', '');
+    $mailLine1 = content('mailing_address_line1', '');
+    $mailLine2 = content('mailing_address_line2', '');
+    $phoneLabel = content('contact_phone_label', '');
+    $phone      = content('contact_phone', '');
+    $hasAddress = $mailName !== '' || $mailLine1 !== '' || $mailLine2 !== '';
+    ?>
+    <?php if ($hasAddress || $phone !== ''): ?>
     <div class="form-container mailing-address-section">
         <h3>Contact Information</h3>
         <div class="contact-details">
+            <?php if ($hasAddress): ?>
             <div class="contact-detail">
                 <span class="contact-label">Address</span>
                 <p class="mailing-address">
-                    Jacob Stephens<br>
-                    3815 Haverford Ave, Unit 1<br>
-                    Philadelphia, PA 19104
+                    <?php
+                    $parts = array_filter([$mailName, $mailLine1, $mailLine2], static fn($p) => $p !== '');
+                    echo implode('<br>' . "\n", array_map('htmlspecialchars', $parts));
+                    ?>
                 </p>
             </div>
+            <?php endif; ?>
+            <?php if ($phone !== ''): ?>
             <div class="contact-detail">
-                <span class="contact-label">Jacob's Cell</span>
-                <p class="contact-phone">(484) 356-7773</p>
+                <span class="contact-label"><?php echo htmlspecialchars($phoneLabel !== '' ? $phoneLabel : 'Phone'); ?></span>
+                <p class="contact-phone"><?php echo htmlspecialchars($phone); ?></p>
             </div>
+            <?php endif; ?>
         </div>
     </div>
+    <?php endif; ?>
     
     <?php if ($success): ?>
         <div class="form-container">

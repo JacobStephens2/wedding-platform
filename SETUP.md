@@ -68,6 +68,19 @@
    sudo chmod -R 755 /var/www/wedding.stephens.page
    ```
 
+6. **Couple Content**
+   Create the content tables and seed them with the values from
+   `private/content_defaults.php`:
+   ```bash
+   mysql -u "$DB_USER" -p "$DB_NAME" < private/sql/create_content_tables.sql
+   php private/seed_content.php
+   ```
+   Then edit names, date, venues, and page prose at `/admin-content`. For a new
+   couple, edit `private/content_defaults.php` before seeding (or run
+   `php private/seed_content.php --force` after editing it to overwrite existing
+   rows). The site still renders from the defaults file if these tables are
+   absent, so this step is safe to run at any time. See the README for details.
+
 ## Testing
 
 1. Visit `https://wedding.stephens.page` to see the home page

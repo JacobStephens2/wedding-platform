@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../private/config.php';
 require_once __DIR__ . '/../private/db.php';
-$page_title = "Gallery - Jacob & Melissa";
+$page_title = "Gallery - " . content('couple_names', 'Our Wedding');
 include __DIR__ . '/includes/header.php';
 
 $photos = [];
@@ -12,6 +12,12 @@ try {
 } catch (Exception $e) {
     error_log("Gallery error: " . $e->getMessage());
 }
+
+$coupleNames = content('couple_names', 'Our Wedding');
+$galleryFullUrl = content('gallery_full_url', '');
+$galleryBwUrl   = content('gallery_bw_url', '');
+$weddingVideoUrl  = content('wedding_video_url', '');
+$weddingVideoUrl2 = content('wedding_video_url_2', '');
 ?>
 
 <main class="page-container">
@@ -19,13 +25,19 @@ try {
 
     <nav class="gallery-quicklinks" aria-label="Jump to">
         <span class="gallery-quicklinks-label">Jump to:</span>
-        <a href="https://drive.google.com/drive/folders/1DrRDH8wAYEs1x7WPUVAFXLeJdOEmcnRN?usp=sharing"
+        <?php if ($galleryFullUrl !== ''): ?>
+        <a href="<?php echo htmlspecialchars($galleryFullUrl); ?>"
            target="_blank" rel="noopener">Full wedding gallery</a>
         <span class="gallery-quicklinks-sep" aria-hidden="true">&middot;</span>
-        <a href="https://baronephoto.pic-time.com/client/bwportraitsjacobmelissa/gallery?ptat=AAAAAAIBAABa2GXe-gp4DBjRNYJ3qh8D9Yh0ygjq10fR_tKNeQ,,&amp;inviteptoken2=AAAAABUBAAB6MSBxUrIu5TH4WE_efiRjIA,,"
+        <?php endif; ?>
+        <?php if ($galleryBwUrl !== ''): ?>
+        <a href="<?php echo htmlspecialchars($galleryBwUrl); ?>"
            target="_blank" rel="noopener">B&amp;W portraits</a>
         <span class="gallery-quicklinks-sep" aria-hidden="true">&middot;</span>
+        <?php endif; ?>
+        <?php if ($weddingVideoUrl !== ''): ?>
         <a href="#wedding-video">Wedding video</a>
+        <?php endif; ?>
     </nav>
 
     <h2 class="gallery-section-heading">Highlights</h2>
@@ -50,50 +62,60 @@ try {
         <?php endforeach; ?>
     </div>
 
+    <?php if ($galleryFullUrl !== '' || $galleryBwUrl !== ''): ?>
     <section class="featured-galleries gallery-outro-heading" aria-label="More from the day">
-        <a class="featured-card" href="https://drive.google.com/drive/folders/1DrRDH8wAYEs1x7WPUVAFXLeJdOEmcnRN?usp=sharing"
+        <?php if ($galleryFullUrl !== ''): ?>
+        <a class="featured-card" href="<?php echo htmlspecialchars($galleryFullUrl); ?>"
            target="_blank" rel="noopener">
-            <img class="featured-photo" src="/images/wedding-color-highlight.jpg" alt="Jacob and Melissa on their wedding day" loading="lazy">
+            <img class="featured-photo" src="/images/wedding-color-highlight.jpg" alt="<?php echo htmlspecialchars($coupleNames); ?> on their wedding day" loading="lazy">
             <div class="featured-body">
                 <h2>Wedding Photo Gallery</h2>
                 <p>The full set of photos from our wedding day, hosted by Barone Photo.</p>
                 <span class="featured-cta">View the full gallery &rarr;</span>
             </div>
         </a>
+        <?php endif; ?>
 
-        <a class="featured-card" href="https://baronephoto.pic-time.com/client/bwportraitsjacobmelissa/gallery?ptat=AAAAAAIBAABa2GXe-gp4DBjRNYJ3qh8D9Yh0ygjq10fR_tKNeQ,,&amp;inviteptoken2=AAAAABUBAAB6MSBxUrIu5TH4WE_efiRjIA,,"
+        <?php if ($galleryBwUrl !== ''): ?>
+        <a class="featured-card" href="<?php echo htmlspecialchars($galleryBwUrl); ?>"
            target="_blank" rel="noopener">
-            <img class="featured-photo" src="/images/wedding-bw-highlight.jpg" alt="Black-and-white portrait of Jacob and Melissa" loading="lazy">
+            <img class="featured-photo" src="/images/wedding-bw-highlight.jpg" alt="Black-and-white portrait of <?php echo htmlspecialchars($coupleNames); ?>" loading="lazy">
             <div class="featured-body">
                 <h2>Black &amp; White Portraits</h2>
                 <p>A curated set of black-and-white portraits from our wedding.</p>
                 <span class="featured-cta">View the B&amp;W set &rarr;</span>
             </div>
         </a>
+        <?php endif; ?>
     </section>
+    <?php endif; ?>
 
+    <?php if ($weddingVideoUrl !== ''): ?>
     <section id="wedding-video" class="wedding-video" aria-label="Wedding video">
         <h2 class="gallery-section-heading">Wedding Video</h2>
         <div class="video-embed">
-            <iframe src="https://player.vimeo.com/video/1190695875?h=e325e0040b"
-                    title="Jacob and Melissa Wedding Video"
+            <iframe src="<?php echo htmlspecialchars($weddingVideoUrl); ?>"
+                    title="<?php echo htmlspecialchars($coupleNames); ?> Wedding Video"
                     frameborder="0"
                     allow="autoplay; fullscreen; picture-in-picture"
                     allowfullscreen
                     loading="lazy"></iframe>
         </div>
     </section>
+    <?php endif; ?>
 
+    <?php if ($weddingVideoUrl2 !== ''): ?>
     <section id="wedding-video-2" class="wedding-video" aria-label="Wedding video">
         <div class="video-embed">
-            <iframe src="https://www.youtube-nocookie.com/embed/RUJWq4K5kW8"
-                    title="Jacob and Melissa Wedding Video"
+            <iframe src="<?php echo htmlspecialchars($weddingVideoUrl2); ?>"
+                    title="<?php echo htmlspecialchars($coupleNames); ?> Wedding Video"
                     frameborder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowfullscreen
                     loading="lazy"></iframe>
         </div>
     </section>
+    <?php endif; ?>
 </main>
 
 <!-- Lightbox Modal -->

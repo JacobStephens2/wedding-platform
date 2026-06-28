@@ -209,7 +209,7 @@ if ($sampleMode) {
     }
 }
 
-$page_title = "Seating Chart - Jacob & Melissa";
+$page_title = "Seating Chart - " . content('couple_names', 'Our Wedding');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -2735,7 +2735,7 @@ $page_title = "Seating Chart - Jacob & Melissa";
 
         let text = '';
         text += 'SEATING CHART\n';
-        text += 'Jacob & Melissa\'s Wedding Reception\n';
+        text += <?php echo json_encode(content('couple_names', 'Our Wedding') . "'s Wedding Reception\n"); ?>;
         text += totalGuests + ' guests across ' + d.tables.length + ' tables\n';
         text += line + '\n\n';
 
@@ -2834,7 +2834,7 @@ $page_title = "Seating Chart - Jacob & Melissa";
         }
 
         const html = '<!DOCTYPE html><html><head><meta charset="utf-8">'
-            + '<title>Seating Chart — Jacob &amp; Melissa</title>'
+            + '<title>Seating Chart — ' + <?php echo json_encode(content('couple_names', 'Our Wedding')); ?> + '</title>'
             + '<style>'
             + '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }'
             + 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;'
@@ -2868,7 +2868,7 @@ $page_title = "Seating Chart - Jacob & Melissa";
             + '@media (max-width: 500px) { .grid { columns: 1; } .unseated-section ul { columns: 1; } }'
             + '</style>'
             + '</head><body>'
-            + '<h1>Seating Chart &mdash; Jacob &amp; Melissa</h1>'
+            + '<h1>Seating Chart &mdash; ' + <?php echo json_encode(content('couple_names', 'Our Wedding')); ?> + '</h1>'
             + '<div class="subtitle">' + totalGuests + ' guests across ' + d.tables.length + ' tables</div>'
             + '<div class="grid">' + tablesHtml + '</div>'
             + unseatedHtml
@@ -2922,7 +2922,7 @@ $page_title = "Seating Chart - Jacob & Melissa";
         ctx.fillStyle = '#333';
         ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('Seating Chart — Jacob & Melissa', W / 2, rm.y + 24);
+        ctx.fillText('Seating Chart — ' + <?php echo json_encode(content('couple_names', 'Our Wedding')); ?>, W / 2, rm.y + 24);
 
         // Dance floor
         const df = { x: rm.x + rm.w * 0.35, y: rm.y + rm.h * 0.30, w: rm.w * 0.30, h: rm.h * 0.40 };

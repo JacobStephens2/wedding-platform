@@ -392,7 +392,7 @@ if ($sampleMode) {
     }
 }
 
-$page_title = "Manage Registry - Jacob & Melissa";
+$page_title = "Manage Registry - " . content('couple_names', 'Our Wedding');
 ?>
 <!DOCTYPE html>
 <html lang="en">
