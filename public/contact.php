@@ -30,13 +30,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $emailBody .= "Subject: $subject\n\n";
         $emailBody .= "Message:\n$message\n";
         
-        $emailSent = sendEmail(
-            $_ENV['CONTACT_EMAIL'],
-            'Contact Form: ' . $subject,
-            $emailBody,
-            $email
-        );
-        
+        // Recipients are managed from the admin Site Content page
+        // (contact_notify_email), falling back to the CONTACT_EMAIL env var.
+        $contactRecipients = contentEmails('contact_notify_email', ['CONTACT_EMAIL']);
+        $emailSent = false;
+        foreach ($contactRecipients as $recipient) {
+            if (sendEmail($recipient, 'Contact Form: ' . $subject, $emailBody, $email)) {
+                $emailSent = true;
+            }
+        }
+
         if ($emailSent) {
             $success = true;
         } else {

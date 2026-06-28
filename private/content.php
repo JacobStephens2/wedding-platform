@@ -63,6 +63,31 @@ function content(string $key, ?string $default = null): ?string
 }
 
 /**
+ * A list of email addresses from a comma-separated content value, e.g.
+ * contentEmails('rsvp_notify_emails'). When the content value is blank, falls
+ * back to the first non-empty env var in $envFallback (so deployments that have
+ * not set the admin field yet keep working). Returns a trimmed, de-duplicated
+ * list with empties removed.
+ *
+ * @param array<int,string> $envFallback env var names to try when content is blank
+ * @return array<int,string>
+ */
+function contentEmails(string $key, array $envFallback = []): array
+{
+    $raw = (string) content($key, '');
+    if (trim($raw) === '') {
+        foreach ($envFallback as $envKey) {
+            if (!empty($_ENV[$envKey])) {
+                $raw = (string) $_ENV[$envKey];
+                break;
+            }
+        }
+    }
+    $emails = array_filter(array_map('trim', explode(',', $raw)), static fn($e) => $e !== '');
+    return array_values(array_unique($emails));
+}
+
+/**
  * The ordered, published prose blocks for a page ('story', 'about', 'travel',
  * 'blessing'). Each block is ['section_key' => ..., 'heading' => ..., 'body' => ...].
  *

@@ -69,12 +69,12 @@ $dryRun = (string)($_ENV['REGISTRY_CHECK_DRY_RUN'] ?? '') === '1';
 $recipients = parseEmailList($_ENV['REGISTRY_CHECK_RECIPIENTS'] ?? null);
 if (empty($recipients)) {
     // Reasonable defaults based on existing site behavior:
-    // - RSVP_EMAIL (usually Melissa)
-    // - SMTP_FROM_EMAIL / SMTP_FROM_EMAIL (usually Jacob)
+    // - admin-managed rsvp_notify_emails (Site Content page)
+    // - RSVP_EMAIL / CONTACT_EMAIL / SMTP_FROM_EMAIL env vars
     $fallback = [];
+    $fallback[] = content('rsvp_notify_emails', null);
     $fallback[] = $_ENV['RSVP_EMAIL'] ?? null;
     $fallback[] = $_ENV['CONTACT_EMAIL'] ?? null;
-    $fallback[] = $_ENV['SMTP_FROM_EMAIL'] ?? null;
     $fallback[] = $_ENV['SMTP_FROM_EMAIL'] ?? null;
     $recipients = parseEmailList(implode(',', array_filter($fallback)));
 }

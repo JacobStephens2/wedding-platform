@@ -118,6 +118,6 @@ Configured in `private/.env`:
 | `MANDRILL_SMTP_HOST`, `MANDRILL_SMTP_PORT`, `MANDRILL_SMTP_USER`, `MANDRILL_SMTP_PASS` | Email delivery |
 | `ADMIN_PASSWORD` | Admin area access |
 | `RSVP_CHECK_PASSWORD` | RSVP dashboard access |
-| `RSVP_EMAIL`, `CONTACT_EMAIL` | Notification recipients |
+| `RSVP_EMAIL`, `CONTACT_EMAIL` | Fallback notification recipients. The active recipients are set in the admin Site Content page (`rsvp_notify_emails`, `contact_notify_email`); these env vars are only used when those fields are blank. |
 | `REGISTRY_LOW_AVAILABLE_THRESHOLD` | Low-stock alert threshold |
 | `REGISTRY_CHECK_COOLDOWN_HOURS` | Alert cooldown period |

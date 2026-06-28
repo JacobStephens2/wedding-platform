@@ -192,9 +192,10 @@ try {
 
     $subject = 'New RSVP - ' . (count($guestNames) > 0 ? $guestNames[0] : 'Unknown');
 
-    // Notification recipients come from the env (RSVP_EMAIL, comma-separated for
-    // multiple), falling back to CONTACT_EMAIL.
-    $rsvpEmails = array_filter(array_map('trim', explode(',', $_ENV['RSVP_EMAIL'] ?? $_ENV['CONTACT_EMAIL'] ?? '')));
+    // Notification recipients are managed from the admin Site Content page
+    // (rsvp_notify_emails, comma-separated), falling back to the RSVP_EMAIL /
+    // CONTACT_EMAIL env vars when that field is blank.
+    $rsvpEmails = contentEmails('rsvp_notify_emails', ['RSVP_EMAIL', 'CONTACT_EMAIL']);
 
     foreach ($rsvpEmails as $emailAddress) {
         sendEmail($emailAddress, $subject, $emailBody);
