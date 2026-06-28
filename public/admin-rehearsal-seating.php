@@ -246,7 +246,7 @@ if ($sampleMode) {
     }
 }
 
-$page_title = "Rehearsal Dinner Seating - Jacob & Melissa";
+$page_title = "Rehearsal Dinner Seating - " . content('couple_names', 'Our Wedding');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -2753,7 +2753,7 @@ $page_title = "Rehearsal Dinner Seating - Jacob & Melissa";
         d.tables.forEach(t => totalGuests += t.guests.length);
 
         let text = 'REHEARSAL DINNER SEATING\n';
-        text += 'Jacob & Melissa\n';
+        text += <?php echo json_encode(content('couple_names', 'Our Wedding') . "\n"); ?>;
         text += totalGuests + ' guests across ' + d.tables.length + ' tables\n';
         text += line + '\n\n';
 
@@ -2834,7 +2834,7 @@ $page_title = "Rehearsal Dinner Seating - Jacob & Melissa";
             unseatedHtml = '<div class="unseated-section"><h2>Unseated Guests (' + d.unseated.length + ')</h2><ul>' + items + '</ul></div>';
         }
 
-        const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Rehearsal Dinner Seating &mdash; Jacob &amp; Melissa</title><style>'
+        const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Rehearsal Dinner Seating &mdash; ' + <?php echo json_encode(content('couple_names', 'Our Wedding')); ?> + '</title><style>'
             + '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }'
             + 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; color: #222; padding: 1.5rem; line-height: 1.4; }'
             + 'h1 { text-align: center; font-size: 1.5rem; margin-bottom: 0.25rem; }'
@@ -2853,7 +2853,7 @@ $page_title = "Rehearsal Dinner Seating - Jacob & Melissa";
             + '@media (max-width: 800px) { .grid { columns: 2; } }'
             + '@media (max-width: 500px) { .grid { columns: 1; } }'
             + '</style></head><body>'
-            + '<h1>Rehearsal Dinner Seating &mdash; Jacob &amp; Melissa</h1>'
+            + '<h1>Rehearsal Dinner Seating &mdash; ' + <?php echo json_encode(content('couple_names', 'Our Wedding')); ?> + '</h1>'
             + '<div class="subtitle">' + totalGuests + ' guests across ' + d.tables.length + ' tables</div>'
             + '<div class="grid">' + tablesHtml + '</div>'
             + unseatedHtml

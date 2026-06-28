@@ -1,7 +1,17 @@
 <?php
 require_once __DIR__ . '/../private/config.php';
 $turnstileSiteKey = $_ENV['TURNSTILE_SITE_KEY'] ?? '';
-$page_title = "RSVP - Jacob & Melissa";
+$page_title = "RSVP - " . content('couple_names', 'Our Wedding');
+
+$ceremonyVenue   = content('ceremony_venue', '');
+$ceremonyAddress = content('ceremony_address', '');
+$ceremonyLabel   = content('ceremony_label', 'Ceremony');
+$ceremonyTime    = content('ceremony_time', '');
+$receptionVenue  = content('reception_venue', '');
+$receptionAddress= content('reception_address', '');
+$receptionTime   = content('reception_time', '');
+$rsvpDeadline    = content('rsvp_deadline', '');
+
 include __DIR__ . '/includes/header.php';
 ?>
 <?php if ($turnstileSiteKey): ?>
@@ -14,20 +24,20 @@ include __DIR__ . '/includes/header.php';
     <div class="locations-info">
         <h2>Wedding and Reception</h2>
         <div class="location-item">
-            <h3>St. Agatha St. James Parish</h3>
-            <p>3728 Chestnut St, Philadelphia, PA 19104</p>
-            <p>Nuptial Mass at 1:30&nbsp;p.m.</p>
+            <h3><?php echo htmlspecialchars($ceremonyVenue); ?></h3>
+            <?php if ($ceremonyAddress !== ''): ?><p><?php echo htmlspecialchars($ceremonyAddress); ?></p><?php endif; ?>
+            <?php if ($ceremonyTime !== ''): ?><p><?php echo htmlspecialchars($ceremonyLabel . ' at ' . $ceremonyTime); ?></p><?php endif; ?>
         </div>
         <div class="location-item">
-            <h3>Bala Golf Club</h3>
-            <p>2200 Belmont Ave, Philadelphia, PA 19131</p>
-            <p>Reception begins at 4:00&nbsp;p.m.</p>
+            <h3><?php echo htmlspecialchars($receptionVenue); ?></h3>
+            <?php if ($receptionAddress !== ''): ?><p><?php echo htmlspecialchars($receptionAddress); ?></p><?php endif; ?>
+            <?php if ($receptionTime !== ''): ?><p><?php echo htmlspecialchars('Reception begins at ' . $receptionTime); ?></p><?php endif; ?>
         </div>
     </div>
 
     <div class="rsvp-deadline" style="text-align:center; margin-bottom:2rem; padding:1rem; background:rgba(127,143,101,0.08); border-radius:8px;">
         <p style="font-family:'Crimson Text',serif; font-size:1.15rem; color:var(--color-dark); margin:0;">
-            Please RSVP by <strong style="color:var(--color-green);">March 11, 2026</strong>
+            Please RSVP by <strong style="color:var(--color-green);"><?php echo htmlspecialchars($rsvpDeadline); ?></strong>
         </p>
     </div>
 
@@ -498,11 +508,11 @@ document.addEventListener('DOMContentLoaded', function() {
                      + '<span class="group-member-name">' + escapeHtml(memberName) + '</span>'
                      + '<div class="event-rsvp-rows">'
                      + '<div class="event-rsvp-row">'
-                     + '<span class="event-label">Ceremony <span class="event-sublabel">(St. Agatha St. James, 1:30 p.m.)</span></span>'
+                     + '<span class="event-label">Ceremony <span class="event-sublabel">(' + <?php echo json_encode(trim($ceremonyVenue . ($ceremonyTime !== '' ? ', ' . $ceremonyTime : ''))); ?> + ')</span></span>'
                      + eventToggleHtml('btn-ceremony', curCeremony)
                      + '</div>'
                      + '<div class="event-rsvp-row">'
-                     + '<span class="event-label">Reception <span class="event-sublabel">(Bala Golf Club, 4:00 p.m.)</span></span>'
+                     + '<span class="event-label">Reception <span class="event-sublabel">(' + <?php echo json_encode(trim($receptionVenue . ($receptionTime !== '' ? ', ' . $receptionTime : ''))); ?> + ')</span></span>'
                      + eventToggleHtml('btn-reception', curReception)
                      + '</div>'
                      + '</div>'
@@ -536,11 +546,11 @@ document.addEventListener('DOMContentLoaded', function() {
                          + '</div>'
                          + '<div class="event-rsvp-rows">'
                          + '<div class="event-rsvp-row">'
-                         + '<span class="event-label">Ceremony <span class="event-sublabel">(St. Agatha St. James, 1:30 p.m.)</span></span>'
+                         + '<span class="event-label">Ceremony <span class="event-sublabel">(' + <?php echo json_encode(trim($ceremonyVenue . ($ceremonyTime !== '' ? ', ' . $ceremonyTime : ''))); ?> + ')</span></span>'
                          + eventToggleHtml('btn-po-ceremony', poCeremony)
                          + '</div>'
                          + '<div class="event-rsvp-row">'
-                         + '<span class="event-label">Reception <span class="event-sublabel">(Bala Golf Club, 4:00 p.m.)</span></span>'
+                         + '<span class="event-label">Reception <span class="event-sublabel">(' + <?php echo json_encode(trim($receptionVenue . ($receptionTime !== '' ? ', ' . $receptionTime : ''))); ?> + ')</span></span>'
                          + eventToggleHtml('btn-po-reception', poReception)
                          + '</div>'
                          + '</div>'

@@ -1,10 +1,19 @@
 <?php
 require_once __DIR__ . '/../private/config.php';
-$page_title = "Jacob & Melissa - April 11, 2026";
+require_once __DIR__ . '/../private/content.php';
+
+$coupleNames = content('couple_names', 'Our Wedding');
+$weddingDateIso = content('wedding_date', '2026-04-11');
+$weddingCity = content('wedding_city', '');
+$weddingDateLong = (date_create($weddingDateIso) ?: date_create('2026-04-11'))->format('F j, Y');
+$homeVideo = content('home_video', '');
+$homePoster = content('home_poster', '');
+
+$page_title = $coupleNames . ' - ' . $weddingDateLong;
 include __DIR__ . '/includes/header.php';
 
 // Days-since / days-to-go relative to the wedding date.
-$weddingDay = new DateTimeImmutable('2026-04-11', new DateTimeZone('America/New_York'));
+$weddingDay = new DateTimeImmutable($weddingDateIso, new DateTimeZone('America/New_York'));
 $today      = new DateTimeImmutable('today', new DateTimeZone('America/New_York'));
 $dayDelta   = (int)$today->diff($weddingDay)->format('%r%a'); // positive = future, negative = past
 
@@ -22,14 +31,18 @@ if ($dayDelta > 0) {
     <div class="background-overlay"></div>
     <div class="background-media">
         <video autoplay muted loop playsinline>
-            <source src="/assets.php?type=video&path=Jacob_and_Melissa_proposal_mobile.mp4" type="video/mp4">
-            <img src="/assets.php?type=photo&path=proposal/PeytoLakeBanff_Proposal_One_Knee_wide.jpg" alt="Jacob and Melissa">
+            <?php if ($homeVideo !== ''): ?>
+            <source src="/assets.php?type=video&path=<?php echo urlencode($homeVideo); ?>" type="video/mp4">
+            <?php endif; ?>
+            <?php if ($homePoster !== ''): ?>
+            <img src="/assets.php?type=photo&path=<?php echo urlencode($homePoster); ?>" alt="<?php echo htmlspecialchars($coupleNames); ?>">
+            <?php endif; ?>
         </video>
     </div>
 
     <div class="home-content">
-        <h1 class="couple-names">Jacob & Melissa</h1>
-        <p class="wedding-date">April 11, 2026 | Philadelphia</p>
+        <h1 class="couple-names"><?php echo htmlspecialchars($coupleNames); ?></h1>
+        <p class="wedding-date"><?php echo htmlspecialchars($weddingDateLong . ($weddingCity !== '' ? ' | ' . $weddingCity : '')); ?></p>
         <p class="countdown" id="countdown-text"><?php echo htmlspecialchars($countdownText); ?></p>
     </div>
 </main>
@@ -37,7 +50,7 @@ if ($dayDelta > 0) {
 <script>
 // Keep the countdown copy fresh as the day rolls over.
 function updateCountdown() {
-    const wedding = new Date('2026-04-11T00:00:00');
+    const wedding = new Date('<?php echo htmlspecialchars($weddingDateIso); ?>T00:00:00');
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
     const msPerDay = 1000 * 60 * 60 * 24;

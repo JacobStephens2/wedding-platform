@@ -1,20 +1,38 @@
+<?php
+require_once __DIR__ . '/../../private/content.php';
+
+$coupleNames = content('couple_names', 'Our Wedding');
+$weddingDateIso = content('wedding_date');
+$weddingDateLong = '';
+if ($weddingDateIso) {
+    $d = date_create($weddingDateIso);
+    if ($d) {
+        $weddingDateLong = $d->format('F j, Y');
+    }
+}
+$defaultTitle = $coupleNames . ($weddingDateLong ? ' - ' . $weddingDateLong : '');
+$analyticsId = content('analytics_id', '');
+$themeColor = content('theme_color', '#7f8f65');
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <?php if ($analyticsId !== ''): ?>
     <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-DQN0TVHB1Z"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=<?php echo htmlspecialchars($analyticsId); ?>"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
 
-      gtag('config', 'G-DQN0TVHB1Z');
+      gtag('config', '<?php echo htmlspecialchars($analyticsId); ?>');
     </script>
-    <title><?php echo isset($page_title) ? htmlspecialchars($page_title) : 'Jacob & Melissa - April 11, 2026'; ?></title>
+    <?php endif; ?>
+    <title><?php echo htmlspecialchars($page_title ?? $defaultTitle); ?></title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <meta name="theme-color" content="#7f8f65">
+    <meta name="theme-color" content="<?php echo htmlspecialchars($themeColor); ?>">
     <?php include __DIR__ . '/theme_init.php'; ?>
     <link rel="stylesheet" href="/css/style.css?v=<?php 
         $cssPath = __DIR__ . '/../css/style.css';
@@ -27,7 +45,7 @@
 <body>
     <header>
         <div class="header-content">
-            <h1 class="site-title"><a href="/">Jacob & Melissa</a></h1>
+            <h1 class="site-title"><a href="/"><?php echo htmlspecialchars($coupleNames); ?></a></h1>
             
             <!-- Desktop navigation -->
             <nav class="desktop-nav">

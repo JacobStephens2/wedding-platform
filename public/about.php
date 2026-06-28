@@ -1,39 +1,19 @@
 <?php
 require_once __DIR__ . '/../private/config.php';
-$page_title = "About - Jacob & Melissa";
+require_once __DIR__ . '/../private/content.php';
+$page_title = "About - " . content('couple_names', 'Our Wedding');
 include __DIR__ . '/includes/header.php';
 ?>
 
 <main class="page-container">
     <h1 class="page-title">About</h1>
 
+    <?php foreach (contentBlocks('about') as $block): ?>
     <section class="about-section">
-        <h2>Schedule</h2>
-        <p><strong>Nuptial Mass</strong> &mdash; 1:30&nbsp;p.m. at St. Agatha St. James Parish, 3728 Chestnut St, Philadelphia, PA&nbsp;19104</p>
-        <p><strong>Reception</strong> &mdash; 4:00&nbsp;p.m. at Bala Golf Club, 2200 Belmont Ave, Philadelphia, PA&nbsp;19131</p>
+        <?php if ($block['heading'] !== ''): ?><h2><?php echo $block['heading']; ?></h2><?php endif; ?>
+        <?php echo renderContentBody($block['body']); ?>
     </section>
-
-    <section class="about-section">
-        <h2>Children Welcome</h2>
-        <p>We are delighted to have children join us in celebrating our wedding! Little ones are welcome at both the ceremony and reception. We understand that children may need to move around or make some noise, and that's perfectly fine with us. We want all our loved ones, including the youngest ones, to be part of this special day.</p>
-    </section>
-    
-    <section class="about-section">
-        <h2>The Nuptial Mass</h2>
-        <p>Our wedding ceremony will be a Nuptial Mass, which is a full Catholic Mass that includes the celebration of the Sacrament of Matrimony. The Mass will include readings from Scripture, the exchange of vows, and the celebration of the Eucharist (Holy Communion).</p>
-    </section>
-    
-    <section class="about-section">
-        <h2>Holy Communion</h2>
-        <p>During the Mass, we will celebrate Holy Communion. In accordance with Catholic teaching, Holy Communion is reserved for Catholics who are in a state of grace and have received their First Holy Communion. If you are not Catholic or are not able to receive Communion, we invite you to remain in your seat during the distribution of Communion, or you may come forward with your arms crossed over your chest to receive a blessing from the priest. We are grateful for your presence and participation in our celebration, regardless of whether you receive Communion.</p>
-    </section>
-
-    <section class="about-section">
-        <h2>Sunday Mass</h2>
-        <p>For guests who would like to attend Sunday Mass on April&nbsp;12, here are a couple of nearby options:</p>
-        <p><strong>St. Agatha St. James Parish</strong> &mdash; 9:00&nbsp;a.m. and 11:30&nbsp;a.m. (with our amazing choir) at 3728 Chestnut St, Philadelphia, PA&nbsp;19104</p>
-        <p><strong>Cathedral Basilica of Saints Peter and Paul</strong> &mdash; 8:00&nbsp;a.m., 9:30&nbsp;a.m., and 11:00&nbsp;a.m. at 1723 Race St, Philadelphia, PA&nbsp;19103</p>
-    </section>
+    <?php endforeach; ?>
 </main>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>

@@ -775,7 +775,7 @@ if ($sampleMode) {
     }
 }
 
-$page_title = "Manage Guests - Jacob & Melissa";
+$page_title = "Manage Guests - " . content('couple_names', 'Our Wedding');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -1447,11 +1447,11 @@ $page_title = "Manage Guests - Jacob & Melissa";
                                  + '<span class="ar-member-name">' + escapeHtml(name) + '</span>'
                                  + '<div class="ar-event-rows">'
                                  + '<div class="ar-event-row">'
-                                 + '<span class="ar-event-label">Ceremony <span class="ar-event-sublabel">(St. Agatha St. James)</span></span>'
+                                 + '<span class="ar-event-label">Ceremony <span class="ar-event-sublabel">(' + <?php echo json_encode(content('ceremony_venue', 'Ceremony')); ?> + ')</span></span>'
                                  + arEventToggleHtml('ar-btn-ceremony', curCeremony)
                                  + '</div>'
                                  + '<div class="ar-event-row">'
-                                 + '<span class="ar-event-label">Reception <span class="ar-event-sublabel">(Bala Golf Club)</span></span>'
+                                 + '<span class="ar-event-label">Reception <span class="ar-event-sublabel">(' + <?php echo json_encode(content('reception_venue', 'Reception')); ?> + ')</span></span>'
                                  + arEventToggleHtml('ar-btn-reception', curReception)
                                  + '</div>'
                                  + '</div>'
@@ -1483,11 +1483,11 @@ $page_title = "Manage Guests - Jacob & Melissa";
                                      + '</div>'
                                      + '<div class="ar-event-rows">'
                                      + '<div class="ar-event-row">'
-                                     + '<span class="ar-event-label">Ceremony <span class="ar-event-sublabel">(St. Agatha St. James)</span></span>'
+                                     + '<span class="ar-event-label">Ceremony <span class="ar-event-sublabel">(' + <?php echo json_encode(content('ceremony_venue', 'Ceremony')); ?> + ')</span></span>'
                                      + arEventToggleHtml('ar-btn-po-ceremony', poCeremony)
                                      + '</div>'
                                      + '<div class="ar-event-row">'
-                                     + '<span class="ar-event-label">Reception <span class="ar-event-sublabel">(Bala Golf Club)</span></span>'
+                                     + '<span class="ar-event-label">Reception <span class="ar-event-sublabel">(' + <?php echo json_encode(content('reception_venue', 'Reception')); ?> + ')</span></span>'
                                      + arEventToggleHtml('ar-btn-po-reception', poReception)
                                      + '</div>'
                                      + '</div>'

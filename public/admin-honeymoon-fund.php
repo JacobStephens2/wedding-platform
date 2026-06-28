@@ -179,7 +179,7 @@ if ($sampleMode) {
     }
 }
 
-$page_title = "Manage Honeymoon Fund - Jacob & Melissa";
+$page_title = "Manage Honeymoon Fund - " . content('couple_names', 'Our Wedding');
 ?>
 <!DOCTYPE html>
 <html lang="en">

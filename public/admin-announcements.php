@@ -114,8 +114,8 @@ function renderPersonalized(string $template, array $recipient): string {
 $DEFAULT_SUBJECT = 'Our wedding photos and video are here!';
 $DEFAULT_BODY = "Hi {{first_name}},\n\n"
     . "Our wedding photos and the ceremony video are now up on the gallery: "
-    . "<https://wedding.stephens.page/gallery>\n\n"
-    . "Love,\nJacob & Melissa";
+    . "<" . BASE_URL . "/gallery>\n\n"
+    . "Love,\n" . content('couple_names', 'Your hosts');
 
 function renderMarkdownEmail(string $markdown): string {
     $parsedown = new Parsedown();
@@ -236,7 +236,7 @@ $body          = $_POST['body']      ?? $DEFAULT_BODY;
 // Markdown source as the plain-text alt body.
 $isHtml        = true;
 $replyTo       = trim($_POST['reply_to'] ?? '');
-$fromName      = trim($_POST['from_name'] ?? '') ?: 'Jacob and Melissa';
+$fromName      = trim($_POST['from_name'] ?? '') ?: content('couple_names', 'Wedding');
 $testEmail     = trim($_POST['test_email'] ?? '');
 $customRecipientsRaw = (string)($_POST['custom_recipients'] ?? '');
 // If a saved custom audience is selected on initial GET and the user hasn't typed
@@ -1207,7 +1207,7 @@ $page_title = "Announcements - Admin";
                             <label for="from_name">From name</label>
                             <input type="text" id="from_name" name="from_name"
                                    value="<?php echo htmlspecialchars($fromName); ?>"
-                                   placeholder="Jacob and Melissa">
+                                   placeholder="<?php echo htmlspecialchars(content('couple_names', 'Wedding')); ?>">
                         </div>
                         <div>
                             <label for="reply_to">Reply-To (optional)</label>

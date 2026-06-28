@@ -545,7 +545,7 @@ usort($allGifts, function (array $a, array $b) {
     return strcasecmp((string) $a['title'], (string) $b['title']);
 });
 
-$page_title = "Manage Gifts - Jacob & Melissa";
+$page_title = "Manage Gifts - " . content('couple_names', 'Our Wedding');
 ?>
 <!DOCTYPE html>
 <html lang="en">

@@ -8,7 +8,7 @@ $auth = $sampleMode ? ['authenticated' => true, 'error' => ''] : requireAdminAut
 $authenticated = $auth['authenticated'];
 $error = $auth['error'];
 
-$page_title = "Admin - Jacob & Melissa";
+$page_title = "Admin - " . content('couple_names', 'Our Wedding');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -118,6 +118,9 @@ $page_title = "Admin - Jacob & Melissa";
                 <h1 class="page-title">Admin Menu</h1>
                 
                 <ul class="admin-menu">
+                    <li class="admin-menu-item">
+                        <a href="<?php echo htmlspecialchars(adminUrl('/admin-content')); ?>">Site Content</a>
+                    </li>
                     <li class="admin-menu-item">
                         <a href="<?php echo htmlspecialchars(adminUrl('/check-rsvps')); ?>">Check RSVPs</a>
                     </li>

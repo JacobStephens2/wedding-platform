@@ -243,7 +243,7 @@ if ($sampleMode) {
     }
 }
 
-$page_title = "Manage Gallery - Jacob & Melissa";
+$page_title = "Manage Gallery - " . content('couple_names', 'Our Wedding');
 ?>
 <!DOCTYPE html>
 <html lang="en">

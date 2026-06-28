@@ -16,6 +16,7 @@ if (isAdminSampleMode() || isAdminAuthenticated()):
         <div class="admin-menu-container">
             <ul class="admin-menu-list">
                 <li><a href="<?php echo htmlspecialchars(adminUrl('/admin')); ?>">Admin Menu</a></li>
+                <li><a href="<?php echo htmlspecialchars(adminUrl('/admin-content')); ?>">Site Content</a></li>
                 <li><a href="<?php echo htmlspecialchars(adminUrl('/check-rsvps')); ?>">Check RSVPs</a></li>
                 <li><a href="<?php echo htmlspecialchars(adminUrl('/admin-guests')); ?>">Manage Guests</a></li>
                 <li><a href="<?php echo htmlspecialchars(adminUrl('/admin-seating')); ?>">Seating Chart</a></li>

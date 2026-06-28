@@ -119,7 +119,7 @@ if ($sampleMode) {
     }
 }
 
-$page_title = "Check RSVPs - Jacob & Melissa";
+$page_title = "Check RSVPs - " . content('couple_names', 'Our Wedding');
 ?>
 <!DOCTYPE html>
 <html lang="en">
