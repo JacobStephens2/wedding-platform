@@ -71,9 +71,9 @@ $dryRun = (string)($_ENV['SITE_CHECK_DRY_RUN'] ?? '') === '1';
 $recipients = parseEmailList($_ENV['SITE_CHECK_RECIPIENTS'] ?? null);
 if (empty($recipients)) {
     $fallback = [];
+    $fallback[] = content('rsvp_notify_emails', null); // admin-managed recipients
     $fallback[] = $_ENV['RSVP_EMAIL'] ?? null;
     $fallback[] = $_ENV['CONTACT_EMAIL'] ?? null;
-    $fallback[] = $_ENV['SMTP_FROM_EMAIL'] ?? null;
     $fallback[] = $_ENV['SMTP_FROM_EMAIL'] ?? null;
     $recipients = parseEmailList(implode(',', array_filter($fallback)));
 }

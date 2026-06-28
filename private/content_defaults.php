@@ -57,8 +57,16 @@ return [
 
         'rsvp_deadline'       => 'March 11, 2026',
 
-        // Contact (display only; notification recipients stay in .env)
+        // Contact (display only; see notification recipients below)
         'contact_email'       => 'melissa.longua@gmail.com',
+
+        // Notification recipients, editable from the admin Site Content page so
+        // no .env edit is needed to change who is alerted. Comma-separated for
+        // multiple. Left blank in this template: when blank, the code falls back
+        // to the RSVP_EMAIL / CONTACT_EMAIL env vars. The live values are stored
+        // in the database (set in the admin), not committed here.
+        'rsvp_notify_emails'  => '', // who is emailed on a new RSVP
+        'contact_notify_email'=> '', // who is emailed on a contact-form message
 
         // Branding
         'theme_color'         => '#7f8f65',

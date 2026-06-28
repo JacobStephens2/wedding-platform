@@ -67,6 +67,10 @@ $scalarGroups = [
         'theme_color'   => ['label' => 'Theme color (hex)'],
         'analytics_id'  => ['label' => 'Google Analytics ID (blank to disable)'],
     ],
+    'Notifications (who gets emailed)' => [
+        'rsvp_notify_emails'   => ['label' => 'New RSVP notifications (comma-separated)'],
+        'contact_notify_email' => ['label' => 'Contact-form messages (comma-separated)'],
+    ],
     'Home & media' => [
         'home_video'        => ['label' => 'Home hero video (filename in private/videos)'],
         'home_poster'       => ['label' => 'Home hero poster (path in private/photos)'],
