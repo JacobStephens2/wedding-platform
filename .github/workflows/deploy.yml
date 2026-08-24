@@ -1,0 +1,47 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: wedding-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Fast-forward production
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Install the restricted deploy key
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+        run: |
+          test -n "$DEPLOY_KEY"
+          install -d -m 700 "$HOME/.ssh"
+          install -m 600 /dev/null "$HOME/.ssh/deploy"
+          printf '%s\n' "$DEPLOY_KEY" > "$HOME/.ssh/deploy"
+          ssh-keygen -y -f "$HOME/.ssh/deploy" > /dev/null
+          cat > "$HOME/.ssh/known_hosts" <<'EOF'
+          stephens.page ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILhE7HuN3JlkaSZZUPcTnZ1yG+5mOS/6XH9YfWwIpTJe
+          EOF
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+      - name: Deploy triggering commit
+        env:
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          ssh \
+            -i "$HOME/.ssh/deploy" \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 \
+            jacob@stephens.page \
+            "deploy $TARGET_SHA"
