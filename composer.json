@@ -25,5 +25,10 @@
     "scripts": {
         "test": "phpunit",
         "analyse": "phpstan analyse --memory-limit=512M"
+    },
+    "config": {
+        "platform": {
+            "php": "8.3.6"
+        }
     }
 }
