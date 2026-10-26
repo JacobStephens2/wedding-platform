@@ -11,28 +11,7 @@ $error = '';
 $success = '';
 $infoMessage = '';
 $sampleMode = isAdminSampleMode();
-$authenticated = $sampleMode;
-
-if (!$sampleMode && isAdminAuthenticated()) {
-    $authenticated = true;
-}
-
-if (!$sampleMode && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_login'])) {
-    $password = trim($_POST['password'] ?? '');
-    $adminPassword = $_ENV['ADMIN_PASSWORD'] ?? '';
-    if ($password === $adminPassword) {
-        $_SESSION['admin_authenticated'] = true;
-        $authenticated = true;
-    } else {
-        $error = 'Incorrect password. Please try again.';
-    }
-}
-
-if (!$sampleMode && isset($_GET['logout'])) {
-    session_destroy();
-    header('Location: /admin-announcements');
-    exit;
-}
+['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminAuth::ADMIN, '/admin-announcements');
 
 $GUEST_AUDIENCES = [
     'all_with_email'    => 'All invited guests with email',

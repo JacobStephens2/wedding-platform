@@ -9,45 +9,7 @@ session_start();
 $error = '';
 $success = '';
 $sampleMode = isAdminSampleMode();
-$authenticated = $sampleMode;
-
-// Check unified admin auth first
-if (!$sampleMode && isAdminAuthenticated()) {
-    $authenticated = true;
-} elseif (!$sampleMode) {
-    // Fallback to old auth system for backward compatibility
-    if (isset($_SESSION['registry_admin_authenticated']) && $_SESSION['registry_admin_authenticated'] === true) {
-        $authenticated = true;
-    }
-}
-
-// Handle login
-if (!$sampleMode && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['password']) && !isset($_POST['amount'])) {
-    $password = trim($_POST['password'] ?? '');
-    
-    // Try unified admin password first
-    $adminPassword = $_ENV['ADMIN_PASSWORD'] ?? '';
-    if ($password === $adminPassword) {
-        $_SESSION['admin_authenticated'] = true;
-        $authenticated = true;
-    } else {
-        // Fallback to old password
-        $correctPassword = $_ENV['REGISTRY_ADMIN_PASSWORD'] ?? '';
-        if ($password === $correctPassword) {
-            $_SESSION['registry_admin_authenticated'] = true;
-            $authenticated = true;
-        } else {
-            $error = 'Incorrect password. Please try again.';
-        }
-    }
-}
-
-// Handle logout
-if (!$sampleMode && isset($_GET['logout'])) {
-    session_destroy();
-    header('Location: /admin-house-fund');
-    exit;
-}
+['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminAuth::REGISTRY, '/admin-house-fund');
 
 // Handle adding new contribution or updating existing contribution
 if (!$sampleMode && $authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['amount'])) {

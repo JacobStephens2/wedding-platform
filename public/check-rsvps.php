@@ -8,42 +8,7 @@ session_start();
 
 $error = '';
 $sampleMode = isAdminSampleMode();
-$authenticated = $sampleMode;
-
-// Check unified admin auth first
-if (!$sampleMode && isAdminAuthenticated()) {
-    $authenticated = true;
-} elseif (!$sampleMode) {
-    if (isset($_SESSION['rsvp_check_authenticated']) && $_SESSION['rsvp_check_authenticated'] === true) {
-        $authenticated = true;
-    }
-}
-
-// Handle login
-if (!$sampleMode && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['password'])) {
-    $password = trim($_POST['password'] ?? '');
-    
-    $adminPassword = $_ENV['ADMIN_PASSWORD'] ?? '';
-    if ($password === $adminPassword) {
-        $_SESSION['admin_authenticated'] = true;
-        $authenticated = true;
-    } else {
-        $correctPassword = $_ENV['RSVP_CHECK_PASSWORD'] ?? '';
-        if ($password === $correctPassword) {
-            $_SESSION['rsvp_check_authenticated'] = true;
-            $authenticated = true;
-        } else {
-            $error = 'Incorrect password. Please try again.';
-        }
-    }
-}
-
-// Handle logout
-if (!$sampleMode && isset($_GET['logout'])) {
-    session_destroy();
-    header('Location: /check-rsvps');
-    exit;
-}
+['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminAuth::RSVP_CHECK, '/check-rsvps');
 
 // Fetch guest RSVPs if authenticated
 $guestRsvps = [];

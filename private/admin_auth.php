@@ -1,67 +1,64 @@
 <?php
 /**
- * Unified admin authentication helper
+ * Admin authentication for pages and API endpoints.
+ *
+ * The rules (which password unlocks which area) live in Wedding\AdminAuth;
+ * this file wires it to $_SESSION, the .env passwords, and the HTTP request.
  */
 
-function requireAdminAuth() {
+use Wedding\AdminAuth;
+
+require_once __DIR__ . '/admin_sample.php';
+
+/** The request's AdminAuth, bound to $_SESSION (started on first use). */
+function adminAuth(): AdminAuth
+{
+    static $auth = null;
     if (session_status() !== PHP_SESSION_ACTIVE) {
         session_start();
     }
-    
-    $authenticated = false;
-    
-    // Check if already authenticated
-    if (isset($_SESSION['admin_authenticated']) && $_SESSION['admin_authenticated'] === true) {
-        $authenticated = true;
+    return $auth ??= new AdminAuth($_SESSION, [
+        AdminAuth::ADMIN             => $_ENV['ADMIN_PASSWORD'] ?? null,
+        AdminAuth::REGISTRY          => $_ENV['REGISTRY_ADMIN_PASSWORD'] ?? null,
+        AdminAuth::RSVP_CHECK        => $_ENV['RSVP_CHECK_PASSWORD'] ?? null,
+        AdminAuth::REHEARSAL_SEATING => $_ENV['REHEARSAL_SEATING_PASSWORD'] ?? null,
+    ]);
+}
+
+/**
+ * Gate an admin page to one area. Call it before any output.
+ *
+ * Handles the page's login form (any POST carrying a `password` field while
+ * locked) and `?logout` (clears the session, redirects to $logoutRedirect).
+ * Sample mode (?sample=1) is always authenticated and never logs in or out.
+ *
+ * @return array{authenticated:bool,error:string}
+ */
+function adminPageAuth(string $area, string $logoutRedirect): array
+{
+    if (isAdminSampleMode()) {
+        return ['authenticated' => true, 'error' => ''];
     }
-    
-    // Handle login
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['password']) && isset($_POST['admin_login'])) {
-        $password = trim($_POST['password'] ?? '');
-        $correctPassword = $_ENV['ADMIN_PASSWORD'] ?? '';
-        
-        if ($password === $correctPassword) {
-            $_SESSION['admin_authenticated'] = true;
-            $authenticated = true;
-        } else {
-            return [
-                'authenticated' => false,
-                'error' => 'Incorrect password. Please try again.'
-            ];
-        }
-    }
-    
-    // Handle logout
+
+    $auth = adminAuth();
+
     if (isset($_GET['logout'])) {
+        $auth->logout();
         session_destroy();
-        header('Location: /admin');
+        header('Location: ' . $logoutRedirect);
         exit;
     }
-    
-    return [
-        'authenticated' => $authenticated,
-        'error' => ''
-    ];
-}
 
-function isAdminAuthenticated() {
-    if (session_status() !== PHP_SESSION_ACTIVE) {
-        session_start();
+    $error = '';
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['password']) && !$auth->isAuthorized($area)
+        && !$auth->login($area, trim((string) $_POST['password']))) {
+        $error = 'Incorrect password. Please try again.';
     }
-    return isset($_SESSION['admin_authenticated']) && $_SESSION['admin_authenticated'] === true;
+
+    return ['authenticated' => $auth->isAuthorized($area), 'error' => $error];
 }
 
-function isRehearsalSeatingAuthenticated() {
-    if (session_status() !== PHP_SESSION_ACTIVE) {
-        session_start();
-    }
-    return isset($_SESSION['rehearsal_seating_authenticated']) && $_SESSION['rehearsal_seating_authenticated'] === true;
+function isAdminAuthenticated(): bool
+{
+    return adminAuth()->isAuthorized(AdminAuth::ADMIN);
 }
-
-function adminLogout() {
-    if (session_status() !== PHP_SESSION_ACTIVE) {
-        session_start();
-    }
-    session_destroy();
-}
-

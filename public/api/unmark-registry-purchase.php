@@ -24,8 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
-$authed = isAdminAuthenticated()
-    || (isset($_SESSION['registry_admin_authenticated']) && $_SESSION['registry_admin_authenticated'] === true);
+$authed = adminAuth()->isAuthorized(\Wedding\AdminAuth::REGISTRY);
 if (!$authed) {
     http_response_code(401);
     echo json_encode(['success' => false, 'error' => 'Admin authentication required']);

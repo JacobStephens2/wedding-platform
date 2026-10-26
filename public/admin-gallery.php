@@ -9,30 +9,9 @@ session_start();
 $error = '';
 $success = '';
 $sampleMode = isAdminSampleMode();
-$authenticated = $sampleMode;
+['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminAuth::ADMIN, '/admin-gallery');
 
 $storySections = ['' => '(None — gallery only)'] + storyPhotoSections();
-
-if (!$sampleMode && isAdminAuthenticated()) {
-    $authenticated = true;
-}
-
-if (!$sampleMode && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['password']) && isset($_POST['admin_login'])) {
-    $password = trim($_POST['password'] ?? '');
-    $adminPassword = $_ENV['ADMIN_PASSWORD'] ?? '';
-    if ($password === $adminPassword) {
-        $_SESSION['admin_authenticated'] = true;
-        $authenticated = true;
-    } else {
-        $error = 'Incorrect password. Please try again.';
-    }
-}
-
-if (!$sampleMode && isset($_GET['logout'])) {
-    session_destroy();
-    header('Location: /admin-gallery');
-    exit;
-}
 
 /**
  * Handle an uploaded photo file. HEIC files are converted to JPEG.

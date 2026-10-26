@@ -17,28 +17,7 @@ session_start();
 $error = '';
 $success = '';
 $sampleMode = isAdminSampleMode();
-$authenticated = $sampleMode;
-
-if (!$sampleMode && isAdminAuthenticated()) {
-    $authenticated = true;
-}
-
-// Login
-if (!$sampleMode && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['password']) && isset($_POST['admin_login'])) {
-    if (trim($_POST['password']) === ($_ENV['ADMIN_PASSWORD'] ?? '')) {
-        $_SESSION['admin_authenticated'] = true;
-        $authenticated = true;
-    } else {
-        $error = 'Incorrect password. Please try again.';
-    }
-}
-
-// Logout
-if (!$sampleMode && isset($_GET['logout'])) {
-    session_destroy();
-    header('Location: /admin-content');
-    exit;
-}
+['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminAuth::ADMIN, '/admin-content');
 
 // Field groups for the scalar editor. Keys must match content_defaults.php.
 $scalarGroups = [

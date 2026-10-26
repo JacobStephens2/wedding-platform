@@ -9,31 +9,7 @@ session_start();
 $error = '';
 $success = '';
 $sampleMode = isAdminSampleMode();
-$authenticated = $sampleMode;
-
-// Check auth
-if (!$sampleMode && isAdminAuthenticated()) {
-    $authenticated = true;
-}
-
-// Handle login
-if (!$sampleMode && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['password']) && isset($_POST['admin_login'])) {
-    $password = trim($_POST['password'] ?? '');
-    $adminPassword = $_ENV['ADMIN_PASSWORD'] ?? '';
-    if ($password === $adminPassword) {
-        $_SESSION['admin_authenticated'] = true;
-        $authenticated = true;
-    } else {
-        $error = 'Incorrect password. Please try again.';
-    }
-}
-
-// Handle logout
-if (!$sampleMode && isset($_GET['logout'])) {
-    session_destroy();
-    header('Location: /admin-guests');
-    exit;
-}
+['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminAuth::ADMIN, '/admin-guests');
 
 // Handle rehearsal contacts CSV export
 if (!$sampleMode && $authenticated && isset($_GET['export_rehearsal'])) {
