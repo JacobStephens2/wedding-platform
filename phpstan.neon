@@ -3,3 +3,6 @@ parameters:
     paths:
         - src
         - tests
+        - private/admin_auth.php
+    bootstrapFiles:
+        - private/admin_sample.php

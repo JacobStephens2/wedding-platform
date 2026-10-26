@@ -20,14 +20,14 @@ if (PHP_SAPI !== 'cli') {
 $dryRun = in_array('--dry-run', $argv ?? []);
 
 $csvPath = $argv[1] ?? '';
-if ($csvPath === '' || $csvPath === '--dry-run' || !is_readable($csvPath)) {
+if ($csvPath === '' || $csvPath === '--dry-run') {
     echo "Usage: php private/import_addresses.php path/to/guest-list.csv [--dry-run]\n";
     exit(1);
 }
 
 try {
-    $addresses = Wedding\GuestList::fromCsv((string) file_get_contents($csvPath))->addressesByMailingGroup();
-} catch (InvalidArgumentException $e) {
+    $addresses = Wedding\GuestList::fromFile($csvPath)->addressesByMailingGroup();
+} catch (InvalidArgumentException | RuntimeException $e) {
     echo "ERROR: " . $e->getMessage() . "\n";
     exit(1);
 }

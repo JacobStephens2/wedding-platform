@@ -9,7 +9,7 @@ session_start();
 $error = '';
 $success = '';
 $sampleMode = isAdminSampleMode();
-['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminAuth::REGISTRY, '/admin-gifts');
+['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminArea::Registry, '/admin-gifts');
 
 // Column names on registry_items that the admin can toggle from this page.
 // Keyed by the ?toggle_registry_<key> query param.

@@ -5,7 +5,7 @@ require_once __DIR__ . '/../private/admin_auth.php';
 require_once __DIR__ . '/../private/admin_sample.php';
 
 $sampleMode = isAdminSampleMode();
-['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminAuth::ADMIN, '/admin');
+['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminArea::Admin, '/admin');
 
 $seatingData = [];
 $unseatedGuests = [];

@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
-$authed = adminAuth()->isAuthorized(\Wedding\AdminAuth::REGISTRY);
+$authed = adminAuth()->isAuthorized(\Wedding\AdminArea::Registry);
 if (!$authed) {
     http_response_code(401);
     echo json_encode(['success' => false, 'error' => 'Admin authentication required']);

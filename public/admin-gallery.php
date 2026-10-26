@@ -9,7 +9,7 @@ session_start();
 $error = '';
 $success = '';
 $sampleMode = isAdminSampleMode();
-['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminAuth::ADMIN, '/admin-gallery');
+['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminArea::Admin, '/admin-gallery');
 
 $storySections = ['' => '(None — gallery only)'] + storyPhotoSections();
 

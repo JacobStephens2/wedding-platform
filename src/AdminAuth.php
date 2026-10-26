@@ -11,47 +11,34 @@ namespace Wedding;
  */
 final class AdminAuth
 {
-    public const ADMIN = 'admin';
-    public const REGISTRY = 'registry';
-    public const RSVP_CHECK = 'rsvp_check';
-    public const REHEARSAL_SEATING = 'rehearsal_seating';
-
-    /** Session flag per area. Names predate this class; kept so sessions survive. */
-    private const SESSION_KEYS = [
-        self::ADMIN             => 'admin_authenticated',
-        self::REGISTRY          => 'registry_admin_authenticated',
-        self::RSVP_CHECK        => 'rsvp_check_authenticated',
-        self::REHEARSAL_SEATING => 'rehearsal_seating_authenticated',
-    ];
-
     /** @var array<mixed> */
     private array $session;
 
     /**
      * @param array<mixed> $session the session store (normally $_SESSION), written through
-     * @param array<string,?string> $passwords area => configured password
+     * @param array<value-of<AdminArea>,?string> $passwords configured password per area, keyed by AdminArea value
      */
     public function __construct(array &$session, private readonly array $passwords)
     {
         $this->session = &$session;
     }
 
-    public function isAuthorized(string $area): bool
+    public function isAuthorized(AdminArea $area): bool
     {
-        return $this->hasFlag(self::ADMIN) || $this->hasFlag($area);
+        return $this->hasFlag(AdminArea::Admin) || $this->hasFlag($area);
     }
 
     /**
      * Try a password at an area's login form. The admin password grants full
      * admin; the area's own password grants just that area.
      */
-    public function login(string $area, string $password): bool
+    public function login(AdminArea $area, string $password): bool
     {
-        foreach (array_unique([self::ADMIN, $area]) as $grant) {
-            $configured = (string) ($this->passwords[$grant] ?? '');
+        foreach (array_unique([AdminArea::Admin, $area], SORT_REGULAR) as $grant) {
+            $configured = (string) ($this->passwords[$grant->value] ?? '');
             // An unset password locks the area; it never matches a blank submission.
             if ($configured !== '' && hash_equals($configured, $password)) {
-                $this->session[self::SESSION_KEYS[$grant]] = true;
+                $this->session[$grant->value] = true;
                 return true;
             }
         }
@@ -60,13 +47,13 @@ final class AdminAuth
 
     public function logout(): void
     {
-        foreach (self::SESSION_KEYS as $key) {
-            unset($this->session[$key]);
+        foreach (AdminArea::cases() as $area) {
+            unset($this->session[$area->value]);
         }
     }
 
-    private function hasFlag(string $area): bool
+    private function hasFlag(AdminArea $area): bool
     {
-        return ($this->session[self::SESSION_KEYS[$area]] ?? false) === true;
+        return ($this->session[$area->value] ?? false) === true;
     }
 }

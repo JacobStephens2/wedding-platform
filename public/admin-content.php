@@ -17,7 +17,7 @@ session_start();
 $error = '';
 $success = '';
 $sampleMode = isAdminSampleMode();
-['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminAuth::ADMIN, '/admin-content');
+['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminArea::Admin, '/admin-content');
 
 // Field groups for the scalar editor. Keys must match content_defaults.php.
 $scalarGroups = [

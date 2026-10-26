@@ -9,7 +9,7 @@ session_start();
 $error = '';
 $success = '';
 $sampleMode = isAdminSampleMode();
-['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminAuth::REGISTRY, '/admin-house-fund');
+['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminArea::Registry, '/admin-house-fund');
 
 // Handle adding new contribution or updating existing contribution
 if (!$sampleMode && $authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['amount'])) {

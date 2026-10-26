@@ -8,7 +8,7 @@ session_start();
 
 $error = '';
 $sampleMode = isAdminSampleMode();
-['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminAuth::RSVP_CHECK, '/check-rsvps');
+['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminArea::RsvpCheck, '/check-rsvps');
 
 // Fetch guest RSVPs if authenticated
 $guestRsvps = [];

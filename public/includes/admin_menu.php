@@ -10,7 +10,7 @@ if (!function_exists('isAdminSampleMode')) {
     require_once __DIR__ . '/../../private/admin_sample.php';
 }
 
-if (isAdminSampleMode() || isAdminAuthenticated()):
+if (isAdminSampleMode() || adminAuth()->isAuthorized(\Wedding\AdminArea::Admin)):
 ?>
     <nav class="admin-menu-nav">
         <div class="admin-menu-container">

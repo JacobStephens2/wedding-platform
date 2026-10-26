@@ -23,6 +23,15 @@ final class GuestList
     ) {
     }
 
+    public static function fromFile(string $path): self
+    {
+        $csv = is_readable($path) ? file_get_contents($path) : false;
+        if ($csv === false) {
+            throw new \RuntimeException("Could not read $path");
+        }
+        return self::fromCsv($csv);
+    }
+
     public static function fromCsv(string $csv): self
     {
         $stream = fopen('php://memory', 'r+');

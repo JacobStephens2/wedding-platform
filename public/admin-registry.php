@@ -9,7 +9,7 @@ session_start();
 $error = '';
 $success = '';
 $sampleMode = isAdminSampleMode();
-['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminAuth::REGISTRY, '/admin-registry');
+['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminArea::Registry, '/admin-registry');
 
 // Handle adding new item or updating existing item
 if (!$sampleMode && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['title'])) {

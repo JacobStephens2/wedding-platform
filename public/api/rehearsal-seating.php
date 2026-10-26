@@ -23,7 +23,7 @@ require_once __DIR__ . '/../../private/admin_auth.php';
 
 header('Content-Type: application/json');
 
-if (!adminAuth()->isAuthorized(\Wedding\AdminAuth::REHEARSAL_SEATING)) {
+if (!adminAuth()->isAuthorized(\Wedding\AdminArea::RehearsalSeating)) {
     http_response_code(401);
     echo json_encode(['error' => 'Authentication required.']);
     exit;

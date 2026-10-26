@@ -6,6 +6,7 @@
  * this file wires it to $_SESSION, the .env passwords, and the HTTP request.
  */
 
+use Wedding\AdminArea;
 use Wedding\AdminAuth;
 
 require_once __DIR__ . '/admin_sample.php';
@@ -17,12 +18,16 @@ function adminAuth(): AdminAuth
     if (session_status() !== PHP_SESSION_ACTIVE) {
         session_start();
     }
-    return $auth ??= new AdminAuth($_SESSION, [
-        AdminAuth::ADMIN             => $_ENV['ADMIN_PASSWORD'] ?? null,
-        AdminAuth::REGISTRY          => $_ENV['REGISTRY_ADMIN_PASSWORD'] ?? null,
-        AdminAuth::RSVP_CHECK        => $_ENV['RSVP_CHECK_PASSWORD'] ?? null,
-        AdminAuth::REHEARSAL_SEATING => $_ENV['REHEARSAL_SEATING_PASSWORD'] ?? null,
-    ]);
+    if (!$auth instanceof AdminAuth) {
+        $env = static fn (string $key): ?string => is_string($_ENV[$key] ?? null) ? $_ENV[$key] : null;
+        $auth = new AdminAuth($_SESSION, [
+            AdminArea::Admin->value            => $env('ADMIN_PASSWORD'),
+            AdminArea::Registry->value         => $env('REGISTRY_ADMIN_PASSWORD'),
+            AdminArea::RsvpCheck->value        => $env('RSVP_CHECK_PASSWORD'),
+            AdminArea::RehearsalSeating->value => $env('REHEARSAL_SEATING_PASSWORD'),
+        ]);
+    }
+    return $auth;
 }
 
 /**
@@ -34,7 +39,7 @@ function adminAuth(): AdminAuth
  *
  * @return array{authenticated:bool,error:string}
  */
-function adminPageAuth(string $area, string $logoutRedirect): array
+function adminPageAuth(AdminArea $area, string $logoutRedirect): array
 {
     if (isAdminSampleMode()) {
         return ['authenticated' => true, 'error' => ''];
@@ -50,15 +55,11 @@ function adminPageAuth(string $area, string $logoutRedirect): array
     }
 
     $error = '';
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['password']) && !$auth->isAuthorized($area)
-        && !$auth->login($area, trim((string) $_POST['password']))) {
+    $password = $_POST['password'] ?? null;
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && is_string($password) && !$auth->isAuthorized($area)
+        && !$auth->login($area, trim($password))) {
         $error = 'Incorrect password. Please try again.';
     }
 
     return ['authenticated' => $auth->isAuthorized($area), 'error' => $error];
-}
-
-function isAdminAuthenticated(): bool
-{
-    return adminAuth()->isAuthorized(AdminAuth::ADMIN);
 }

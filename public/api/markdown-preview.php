@@ -14,7 +14,7 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 
 header('Content-Type: application/json');
 
-if (!isAdminAuthenticated()) {
+if (!adminAuth()->isAuthorized(\Wedding\AdminArea::Admin)) {
     http_response_code(401);
     echo json_encode(['error' => 'Admin authentication required.']);
     exit;

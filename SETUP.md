@@ -88,7 +88,8 @@
    the git-ignored `private/sources/`) and import it:
    ```bash
    php private/import_guests.php private/sources/guest-list.csv
-   php private/import_addresses.php private/sources/guest-list.csv --dry-run
+   php private/import_addresses.php private/sources/guest-list.csv --dry-run  # preview
+   php private/import_addresses.php private/sources/guest-list.csv
    ```
    Columns: `First Name`, `Last Name`, `Group`, `id`, `Mailing Group`, and for
    addresses `Address 1`, `Address 2`, `City`, `State`, `ZIP`, `Country`.
@@ -99,7 +100,7 @@
 ```bash
 composer install
 composer test      # PHPUnit (tests/)
-composer analyse   # PHPStan, max level (src/, tests/)
+composer analyse   # PHPStan, max level (src/, tests/, auth glue)
 ```
 
 ## Testing

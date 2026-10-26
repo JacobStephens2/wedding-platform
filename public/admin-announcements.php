@@ -11,7 +11,7 @@ $error = '';
 $success = '';
 $infoMessage = '';
 $sampleMode = isAdminSampleMode();
-['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminAuth::ADMIN, '/admin-announcements');
+['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminArea::Admin, '/admin-announcements');
 
 $GUEST_AUDIENCES = [
     'all_with_email'    => 'All invited guests with email',

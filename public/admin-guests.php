@@ -9,7 +9,7 @@ session_start();
 $error = '';
 $success = '';
 $sampleMode = isAdminSampleMode();
-['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminAuth::ADMIN, '/admin-guests');
+['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminArea::Admin, '/admin-guests');
 
 // Handle rehearsal contacts CSV export
 if (!$sampleMode && $authenticated && isset($_GET['export_rehearsal'])) {

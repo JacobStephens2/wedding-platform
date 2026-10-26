@@ -16,14 +16,14 @@ if (PHP_SAPI !== 'cli') {
 }
 
 $csvPath = $argv[1] ?? '';
-if ($csvPath === '' || !is_readable($csvPath)) {
+if ($csvPath === '') {
     echo "Usage: php private/import_guests.php path/to/guest-list.csv\n";
     exit(1);
 }
 
 try {
-    $guests = Wedding\GuestList::fromCsv((string) file_get_contents($csvPath))->guests();
-} catch (InvalidArgumentException $e) {
+    $guests = Wedding\GuestList::fromFile($csvPath)->guests();
+} catch (InvalidArgumentException | RuntimeException $e) {
     echo "ERROR: " . $e->getMessage() . "\n";
     exit(1);
 }

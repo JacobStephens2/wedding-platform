@@ -8,8 +8,8 @@ session_start();
 
 $error = '';
 $sampleMode = isAdminSampleMode();
-['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminAuth::REHEARSAL_SEATING, '/admin-rehearsal-seating');
-$isFullAdmin = !$sampleMode && isAdminAuthenticated();
+['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminArea::RehearsalSeating, '/admin-rehearsal-seating');
+$isFullAdmin = !$sampleMode && adminAuth()->isAuthorized(\Wedding\AdminArea::Admin);
 
 $seatingData = [];
 $unseatedGuests = [];
