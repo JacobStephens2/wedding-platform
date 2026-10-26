@@ -16,6 +16,8 @@ permissions:
 jobs:
   deploy:
     name: Fast-forward production
+    # Deploys this repo's own instance; forks and template copies skip it.
+    if: github.repository == 'JacobStephens2/wedding-platform'
     runs-on: ubuntu-latest
     timeout-minutes: 50
     steps:

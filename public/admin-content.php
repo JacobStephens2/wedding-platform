@@ -43,7 +43,7 @@ if (!$sampleMode && isset($_GET['logout'])) {
 // Field groups for the scalar editor. Keys must match content_defaults.php.
 $scalarGroups = [
     'Couple' => [
-        'couple_names'       => ['label' => 'Couple names (e.g. "Jacob & Melissa")'],
+        'couple_names'       => ['label' => 'Couple names (e.g. "Alex & Jordan")'],
         'partner1_name'      => ['label' => 'Partner 1 first name'],
         'partner2_name'      => ['label' => 'Partner 2 first name'],
         'partner1_full_name' => ['label' => 'Partner 1 full name'],
@@ -61,9 +61,12 @@ $scalarGroups = [
         'reception_venue'  => ['label' => 'Reception venue'],
         'reception_address'=> ['label' => 'Reception address'],
         'reception_time'   => ['label' => 'Reception time'],
+        'rsvp_deadline'    => ['label' => 'RSVP deadline (as displayed)'],
     ],
     'Contact & branding' => [
         'contact_email' => ['label' => 'Public contact email'],
+        'contact_phone_label' => ['label' => 'Contact phone label (e.g. "Alex\'s Cell")'],
+        'contact_phone' => ['label' => 'Contact phone (blank to hide)'],
         'theme_color'   => ['label' => 'Theme color (hex)'],
         'analytics_id'  => ['label' => 'Google Analytics ID (blank to disable)'],
     ],
@@ -78,6 +81,17 @@ $scalarGroups = [
         'gallery_bw_url'    => ['label' => 'Gallery: B&W portraits link'],
         'wedding_video_url' => ['label' => 'Gallery: wedding video embed URL'],
         'wedding_video_url_2'=> ['label' => 'Gallery: second video embed URL'],
+        'gallery_full_image' => ['label' => 'Gallery: full gallery card image (URL, blank to hide)'],
+        'gallery_bw_image'  => ['label' => 'Gallery: B&W card image (URL, blank to hide)'],
+    ],
+    'Registry & payments' => [
+        'honeymoon_destination' => ['label' => 'Honeymoon destination'],
+        'house_fund_image'      => ['label' => 'House fund image (URL, blank to hide)'],
+        'honeymoon_fund_image'  => ['label' => 'Honeymoon fund image (URL, blank to hide)'],
+        'payment_venmo'         => ['label' => 'Venmo handle (blank to hide)'],
+        'check_payee_name'      => ['label' => 'Checks payable to'],
+        'mailing_address_line1' => ['label' => 'Mailing address line 1'],
+        'mailing_address_line2' => ['label' => 'Mailing address line 2'],
     ],
 ];
 

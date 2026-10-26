@@ -1,9 +1,10 @@
 # Wedding Website
 
-A reusable wedding-website platform. The code under `public/` is couple-agnostic;
-all couple-specific text (names, date, venues, story, page prose) lives in data,
-not templates. This instance serves Jacob Stephens and Melissa Longua, live at
-[wedding.stephens.page](https://wedding.stephens.page).
+A reusable wedding-website platform: RSVPs, registry with funds, story, gallery,
+seating charts, and guest announcements. The code is couple-agnostic; every
+couple-specific value (names, date, venues, story, page prose, photos, guest
+list) lives in data, not in the repository. Fork it or use it as a template, and
+a fresh install renders a fictional sample couple until you add your own.
 
 ## Couple content lives in data, not code
 
@@ -17,28 +18,40 @@ Resolution order is database first, then file fallback:
 
 1. The `site_content` (scalars) and `content_blocks` (page prose) MySQL tables,
    edited from the admin **Site Content** page (`/admin-content`).
-2. `private/content_defaults.php`, the committed reference instance. It is the
-   runtime fallback when a row is missing or the database is down, the seed
-   source, and the documented list of every couple-specific field.
+2. The file fallback: `private/content_defaults.local.php` if it exists
+   (git-ignored, your couple's real content), otherwise the committed sample
+   couple in `private/content_defaults.php`. It is the runtime fallback when a
+   row is missing or the database is down, the seed source, and the documented
+   list of every couple-specific field.
 
 Story prose may place photo groups inline with `{{carousel:KEY}}` (swipeable) or
 `{{blockimages:KEY}}` (grid), where `KEY` matches a photo's `story_section` set
-in Manage Gallery.
+in Manage Gallery. Manage Gallery offers exactly the keys placed in the story.
+
+Photos, videos, guest lists, and other instance files are git-ignored and live
+only on the server: photos under `private/photos/`, videos under
+`private/videos/`, public images (fund and gallery card images) under
+`public/images/`.
 
 ### Standing up a new couple
 
 1. Create the tables: `private/sql/create_content_tables.sql`.
-2. Edit `private/content_defaults.php` with the new couple's details and prose
-   (or leave it and edit everything in the admin after seeding).
+2. Copy `private/content_defaults.php` to `private/content_defaults.local.php`
+   and fill in the couple's details and prose (or skip this and edit everything
+   in the admin after seeding the sample).
 3. Seed the editable copy: `php private/seed_content.php`
    (`--force` overwrites existing rows from the defaults file).
 4. Refine names, dates, venues, and page sections at `/admin-content`.
+
+## Contributing
+
+See [CODING_STANDARDS.md](CODING_STANDARDS.md).
 
 ## Tech Stack
 
 - **Backend**: PHP 8.3+ / Apache / MySQL 8
 - **Frontend**: Vanilla JavaScript, CSS3 with custom properties
-- **Email**: PHPMailer via Mandrill SMTP
+- **Email**: PHPMailer over SMTP (e.g. Resend)
 - **Dependencies**: Composer (`vlucas/phpdotenv`, `phpmailer/phpmailer`)
 
 ## Features
@@ -50,7 +63,7 @@ in Manage Gallery.
 - **Story** — relationship timeline with photo carousels and embedded video
 - **Registry** — gift list with purchase tracking and fund progress bars
 - **Gallery** — photo grid with lightbox and swipe navigation
-- **About** — details about the Nuptial Mass and Holy Communion
+- **About** — schedule and ceremony details
 - **Travel** — parking, transportation, and hotel room blocks
 - **Contact** — visitor message form
 
@@ -84,20 +97,21 @@ public/                     Web root (Apache DocumentRoot)
 private/                    Not web-accessible
 ├── config.php              App constants; loads content helpers
 ├── content.php             content() / contentBlocks() accessors
-├── content_defaults.php    Couple-specific content (reference instance + fallback)
+├── content_defaults.php    Sample couple content (fallback + seed source)
+├── content_defaults.local.php  Your couple's content (git-ignored, overrides the sample)
 ├── seed_content.php        Seed content tables from the defaults file
 ├── db.php                  PDO database connection
 ├── admin_auth.php          Session-based authentication
-├── email_handler.php       Mandrill SMTP wrapper
+├── email_handler.php       SMTP email wrapper
 ├── sql/                    Database schema and migrations
 ├── cron/                   Scheduled scripts
-├── photos/                 Organized by story section
-└── videos/                 Private video storage
+├── photos/                 Private photos (git-ignored)
+└── videos/                 Private videos (git-ignored)
 ```
 
 ## Setup
 
-See [SETUP.md](SETUP.md) for full installation instructions including Apache config, environment variables, SSL, and cron setup.
+See [SETUP.md](SETUP.md) for full installation instructions including Apache config, environment variables, SSL, and cron setup. `private/.env.example` lists every environment variable.
 
 ### Quick Start
 
@@ -115,7 +129,8 @@ Configured in `private/.env`:
 | Variable | Purpose |
 |---|---|
 | `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS` | MySQL connection |
-| `MANDRILL_SMTP_HOST`, `MANDRILL_SMTP_PORT`, `MANDRILL_SMTP_USER`, `MANDRILL_SMTP_PASS` | Email delivery |
+| `BASE_URL` | Public site URL (used in emails and cron scripts) |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM_EMAIL`, `SMTP_FROM_NAME` | Email delivery |
 | `ADMIN_PASSWORD` | Admin area access |
 | `RSVP_CHECK_PASSWORD` | RSVP dashboard access |
 | `RSVP_EMAIL`, `CONTACT_EMAIL` | Fallback notification recipients. The active recipients are set in the admin Site Content page (`rsvp_notify_emails`, `contact_notify_email`); these env vars are only used when those fields are blank. |

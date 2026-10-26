@@ -1,5 +1,4 @@
 -- Track non-registry gifts and thank-you card status
-USE wedding_stephens_page;
 
 -- Thank-you tracking for registry items (for purchased items)
 ALTER TABLE registry_items

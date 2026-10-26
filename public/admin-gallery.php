@@ -11,20 +11,7 @@ $success = '';
 $sampleMode = isAdminSampleMode();
 $authenticated = $sampleMode;
 
-$storySections = [
-    ''                   => '(None — gallery only)',
-    'a_prayer_and_dance' => 'A Prayer and a Dance',
-    'the_sidewalk'       => 'The Sidewalk',
-    'tacos_and_theology' => 'Tacos and Theology',
-    'the_balcony'        => 'The Balcony',
-    'the_first_snow'     => 'The First Snow',
-    'pastaio'            => 'Pastaio',
-    'the_novena'         => 'The Novena',
-    'the_blessing'       => 'The Blessing',
-    'proposal'           => 'Written in Stone and Sky (Proposal)',
-    'blessing'           => 'Written in Stone and Sky (Blessing)',
-    'divine_mercy'       => 'Divine Mercy\'s Design',
-];
+$storySections = ['' => '(None — gallery only)'] + storyPhotoSections();
 
 if (!$sampleMode && isAdminAuthenticated()) {
     $authenticated = true;

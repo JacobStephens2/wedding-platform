@@ -1,7 +1,7 @@
 {
   "license": "MIT",
-    "name": "wedding/stephens-page",
-    "description": "Wedding website for Jacob Stephens and Melissa Longua",
+    "name": "jacobstephens2/wedding-platform",
+    "description": "Self-hosted wedding website: RSVPs, registry, story, gallery, and seating",
     "require": {
         "php": ">=8.3",
         "vlucas/phpdotenv": "^5.5",

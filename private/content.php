@@ -7,7 +7,9 @@
  * each value is:
  *   1. the matching row in the `site_content` / `content_blocks` MySQL tables
  *      (what the admin Content editor writes), then
- *   2. the fallback in private/content_defaults.php.
+ *   2. the fallback in private/content_defaults.local.php (git-ignored, the
+ *      deployment's real content) or, when that file is absent, the sample
+ *      couple in private/content_defaults.php.
  *
  * If the database is unavailable or the tables have not been created yet, the
  * defaults are used, so pages that never touch the DB (home, about, travel)
@@ -21,7 +23,10 @@ function contentDefaults(): array
 {
     static $defaults = null;
     if ($defaults === null) {
-        $defaults = require __DIR__ . '/content_defaults.php';
+        // A deployment's real content lives in the git-ignored local file; the
+        // committed file is the sample couple a fresh template install shows.
+        $local = __DIR__ . '/content_defaults.local.php';
+        $defaults = require (is_file($local) ? $local : __DIR__ . '/content_defaults.php');
     }
     return $defaults;
 }
@@ -142,6 +147,31 @@ function contentBlocks(string $page): array
 
     $cache[$page] = $blocks;
     return $blocks;
+}
+
+/**
+ * The photo slots the story page offers, as KEY => label, in page order: one
+ * per {{carousel:KEY}} / {{blockimages:KEY}} placeholder in the story blocks.
+ * The label is the containing block's heading, suffixed with the key when a
+ * block holds more than one slot. Used by Manage Gallery's story-section picker.
+ *
+ * @return array<string,string>
+ */
+function storyPhotoSections(): array
+{
+    $sections = [];
+    foreach (contentBlocks('story') as $block) {
+        preg_match_all('/\{\{(?:carousel|blockimages):([a-z0-9_]+)\}\}/i', $block['body'], $m);
+        $keys = array_unique($m[1]);
+        $heading = html_entity_decode(strip_tags($block['heading']), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        if ($heading === '') {
+            $heading = $block['section_key'];
+        }
+        foreach ($keys as $key) {
+            $sections[$key] = count($keys) > 1 ? "$heading ($key)" : $heading;
+        }
+    }
+    return $sections;
 }
 
 /**

@@ -7,7 +7,6 @@
 -- and edited from the admin Content page. The code falls back to the defaults
 -- file when a row (or the whole table) is absent.
 
-USE wedding_stephens_page;
 
 CREATE TABLE IF NOT EXISTS site_content (
     setting_key   VARCHAR(100) PRIMARY KEY,

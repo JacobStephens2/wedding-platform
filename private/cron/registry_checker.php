@@ -174,7 +174,7 @@ if ($shouldSend) {
     $bodyLines[] = "Checked at (UTC): " . isoNowUtc();
     $bodyLines[] = "";
     $bodyLines[] = "Add more items here:";
-    $bodyLines[] = "  https://wedding.stephens.page/admin-registry";
+    $bodyLines[] = "  " . BASE_URL . "/admin-registry";
     $body = implode("\n", $bodyLines);
 
     if ($dryRun) {

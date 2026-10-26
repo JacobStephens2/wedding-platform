@@ -1,7 +1,6 @@
 -- Migration script to add published column to registry_items table
--- Run this as MySQL root user: mysql -u root -p wedding_stephens_page < private/add_published_column.sql
+-- Run this as MySQL root user: mysql -u root -p "$DB_NAME" < private/add_published_column.sql
 
-USE wedding_stephens_page;
 
 -- Add published column to registry_items table
 -- Default to TRUE (1) so existing items are published

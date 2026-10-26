@@ -1,8 +1,7 @@
 -- Add per-event ceremony and reception RSVP columns
 -- Existing RSVPs are assumed to apply to both events (migration below)
--- Run: mysql -u wedding_user -p wedding_stephens_page < private/sql/add_ceremony_reception_columns.sql
+-- Run: mysql -u wedding_user -p "$DB_NAME" < private/sql/add_ceremony_reception_columns.sql
 
-USE wedding_stephens_page;
 
 ALTER TABLE guests
     ADD COLUMN ceremony_attending ENUM('yes', 'no') DEFAULT NULL AFTER attending,

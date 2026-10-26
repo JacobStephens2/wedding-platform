@@ -1,18 +1,18 @@
--- Database setup script for wedding.stephens.page
+-- Database setup script for the wedding site
 -- Run this as MySQL root user: mysql -u root -p < private/setup_database.sql
 
 -- Create database
-CREATE DATABASE IF NOT EXISTS wedding_stephens_page CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS wedding CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Create user (if it doesn't exist)
 CREATE USER IF NOT EXISTS 'wedding_user'@'localhost' IDENTIFIED BY '[password]';
 
 -- Grant privileges
-GRANT ALL PRIVILEGES ON wedding_stephens_page.* TO 'wedding_user'@'localhost';
+GRANT ALL PRIVILEGES ON wedding.* TO 'wedding_user'@'localhost';
 FLUSH PRIVILEGES;
 
 -- Use the database
-USE wedding_stephens_page;
+USE wedding;
 
 -- Create RSVPs table
 CREATE TABLE IF NOT EXISTS rsvps (

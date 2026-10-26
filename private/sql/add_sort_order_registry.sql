@@ -1,7 +1,6 @@
 -- Add manual sort order for registry items
--- Run: mysql -u root -p wedding_stephens_page < private/add_sort_order_registry.sql
+-- Run: mysql -u root -p "$DB_NAME" < private/add_sort_order_registry.sql
 
-USE wedding_stephens_page;
 
 SET @dbname = DATABASE();
 SET @tablename = 'registry_items';

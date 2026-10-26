@@ -1,9 +1,8 @@
 -- Named, reusable lists of admin-provided email addresses.
 -- Each audience appears alongside the built-in ones (RSVP'd Yes, etc.) on the
 -- announcements composer. Selecting one pre-fills the recipients textarea.
--- Run: mysql -u wedding_user -p wedding_stephens_page < private/sql/create_custom_audiences_table.sql
+-- Run: mysql -u wedding_user -p "$DB_NAME" < private/sql/create_custom_audiences_table.sql
 
-USE wedding_stephens_page;
 
 CREATE TABLE IF NOT EXISTS custom_audiences (
     id INT AUTO_INCREMENT PRIMARY KEY,

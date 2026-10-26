@@ -79,6 +79,8 @@ $checkPayee = content('check_payee_name', '');
 $mailLine1 = content('mailing_address_line1', '');
 $mailLine2 = content('mailing_address_line2', '');
 $honeymoonDestination = content('honeymoon_destination', '');
+$houseFundImage = content('house_fund_image', '');
+$honeymoonFundImage = content('honeymoon_fund_image', '');
 
 /** Shared payment-methods markup for the house and honeymoon funds. */
 function renderFundPaymentMethods(string $venmo, string $payee, string $line1, string $line2): string {
@@ -118,9 +120,11 @@ include __DIR__ . '/includes/header.php';
                 <span class="house-fund-toggle-icon" aria-hidden="true"></span>
             </button>
             <div class="house-fund-body" id="house-fund-body">
+                <?php if ($houseFundImage !== ''): ?>
                 <div class="house-fund-image">
-                    <img src="/images/house-fund.jpg" alt="House Fund">
+                    <img src="<?php echo htmlspecialchars($houseFundImage); ?>" alt="House Fund">
                 </div>
+                <?php endif; ?>
                 <p>We would be honored if you would like to contribute to our house fund as a wedding gift.</p>
                 
                 <div class="house-fund-info-container">
@@ -159,9 +163,11 @@ include __DIR__ . '/includes/header.php';
                 <span class="honeymoon-fund-toggle-icon" aria-hidden="true"></span>
             </button>
             <div class="honeymoon-fund-body" id="honeymoon-fund-body">
+                <?php if ($honeymoonFundImage !== ''): ?>
                 <div class="honeymoon-fund-image">
-                    <img src="/images/honeymoon-fund.jpg" alt="Honeymoon Fund">
+                    <img src="<?php echo htmlspecialchars($honeymoonFundImage); ?>" alt="Honeymoon Fund">
                 </div>
+                <?php endif; ?>
                 <p><?php echo $honeymoonDestination !== ''
                     ? "We're honeymooning in " . htmlspecialchars($honeymoonDestination) . '! '
                     : ''; ?>We would be honored if you would like to contribute to our honeymoon fund as a wedding gift.</p>

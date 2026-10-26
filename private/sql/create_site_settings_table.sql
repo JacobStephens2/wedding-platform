@@ -1,5 +1,4 @@
 -- Create site_settings key-value table
-USE wedding_stephens_page;
 CREATE TABLE IF NOT EXISTS site_settings (
     setting_key VARCHAR(100) PRIMARY KEY,
     setting_value TEXT,

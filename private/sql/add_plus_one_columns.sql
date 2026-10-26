@@ -1,7 +1,6 @@
 -- Add plus-one columns to guests table
--- Run: mysql -u wedding_user -p wedding_stephens_page < private/add_plus_one_columns.sql
+-- Run: mysql -u wedding_user -p "$DB_NAME" < private/add_plus_one_columns.sql
 
-USE wedding_stephens_page;
 
 ALTER TABLE guests
     ADD COLUMN has_plus_one TINYINT(1) NOT NULL DEFAULT 0 AFTER rsvp_submitted_at,

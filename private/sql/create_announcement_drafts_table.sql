@@ -1,7 +1,6 @@
 -- Draft state for the Announcements composer
--- Run: mysql -u wedding_user -p wedding_stephens_page < private/sql/create_announcement_drafts_table.sql
+-- Run: mysql -u wedding_user -p "$DB_NAME" < private/sql/create_announcement_drafts_table.sql
 
-USE wedding_stephens_page;
 
 CREATE TABLE IF NOT EXISTS announcement_drafts (
     id INT AUTO_INCREMENT PRIMARY KEY,

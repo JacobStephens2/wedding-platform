@@ -9,7 +9,7 @@ function getDbConnection() {
     if ($pdo === null) {
         try {
             $host = $_ENV['DB_HOST'] ?? 'localhost';
-            $dbname = $_ENV['DB_NAME'] ?? 'wedding_stephens_page';
+            $dbname = $_ENV['DB_NAME'] ?? 'wedding';
             $username = $_ENV['DB_USER'] ?? 'wedding_user';
             $password = $_ENV['DB_PASS'] ?? '';
             

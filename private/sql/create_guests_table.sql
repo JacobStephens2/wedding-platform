@@ -1,7 +1,6 @@
 -- Create guests table for invite list management
--- Run: mysql -u root -p wedding_stephens_page < private/create_guests_table.sql
+-- Run: mysql -u root -p "$DB_NAME" < private/create_guests_table.sql
 
-USE wedding_stephens_page;
 
 CREATE TABLE IF NOT EXISTS guests (
     id INT AUTO_INCREMENT PRIMARY KEY,

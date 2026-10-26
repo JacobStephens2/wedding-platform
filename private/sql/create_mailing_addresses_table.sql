@@ -1,4 +1,3 @@
-USE wedding_stephens_page;
 
 CREATE TABLE IF NOT EXISTS mailing_addresses (
     mailing_group INT PRIMARY KEY,

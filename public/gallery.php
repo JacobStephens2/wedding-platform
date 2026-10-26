@@ -16,6 +16,8 @@ try {
 $coupleNames = content('couple_names', 'Our Wedding');
 $galleryFullUrl = content('gallery_full_url', '');
 $galleryBwUrl   = content('gallery_bw_url', '');
+$galleryFullImage = content('gallery_full_image', '');
+$galleryBwImage   = content('gallery_bw_image', '');
 $weddingVideoUrl  = content('wedding_video_url', '');
 $weddingVideoUrl2 = content('wedding_video_url_2', '');
 ?>
@@ -67,10 +69,12 @@ $weddingVideoUrl2 = content('wedding_video_url_2', '');
         <?php if ($galleryFullUrl !== ''): ?>
         <a class="featured-card" href="<?php echo htmlspecialchars($galleryFullUrl); ?>"
            target="_blank" rel="noopener">
-            <img class="featured-photo" src="/images/wedding-color-highlight.jpg" alt="<?php echo htmlspecialchars($coupleNames); ?> on their wedding day" loading="lazy">
+            <?php if ($galleryFullImage !== ''): ?>
+            <img class="featured-photo" src="<?php echo htmlspecialchars($galleryFullImage); ?>" alt="<?php echo htmlspecialchars($coupleNames); ?> on their wedding day" loading="lazy">
+            <?php endif; ?>
             <div class="featured-body">
                 <h2>Wedding Photo Gallery</h2>
-                <p>The full set of photos from our wedding day, hosted by Barone Photo.</p>
+                <p>The full set of photos from our wedding day.</p>
                 <span class="featured-cta">View the full gallery &rarr;</span>
             </div>
         </a>
@@ -79,7 +83,9 @@ $weddingVideoUrl2 = content('wedding_video_url_2', '');
         <?php if ($galleryBwUrl !== ''): ?>
         <a class="featured-card" href="<?php echo htmlspecialchars($galleryBwUrl); ?>"
            target="_blank" rel="noopener">
-            <img class="featured-photo" src="/images/wedding-bw-highlight.jpg" alt="Black-and-white portrait of <?php echo htmlspecialchars($coupleNames); ?>" loading="lazy">
+            <?php if ($galleryBwImage !== ''): ?>
+            <img class="featured-photo" src="<?php echo htmlspecialchars($galleryBwImage); ?>" alt="Black-and-white portrait of <?php echo htmlspecialchars($coupleNames); ?>" loading="lazy">
+            <?php endif; ?>
             <div class="featured-body">
                 <h2>Black &amp; White Portraits</h2>
                 <p>A curated set of black-and-white portraits from our wedding.</p>

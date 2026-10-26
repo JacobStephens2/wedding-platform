@@ -1,5 +1,4 @@
 -- Create registry_items table
-USE wedding_stephens_page;
 CREATE TABLE IF NOT EXISTS registry_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(255) NOT NULL,

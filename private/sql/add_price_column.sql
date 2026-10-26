@@ -1,7 +1,6 @@
 -- Migration script to add price column to registry_items table
--- Run this as MySQL root user: mysql -u root -p wedding_stephens_page < private/add_price_column.sql
+-- Run this as MySQL root user: mysql -u root -p "$DB_NAME" < private/add_price_column.sql
 
-USE wedding_stephens_page;
 
 -- Add price column to registry_items table
 -- If the column already exists, this will produce an error which can be safely ignored

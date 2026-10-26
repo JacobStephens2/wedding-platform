@@ -2,14 +2,14 @@
 /**
  * Site Up Checker (CLI)
  *
- * Checks whether https://wedding.stephens.page is reachable and returning HTTP 200.
+ * Checks whether the site (BASE_URL) is reachable and returning HTTP 200.
  * Sends an alert email when the site is down and a recovery email when it comes back.
  *
  * Run:
  *   php private/cron/site_up_checker.php
  *
  * Env (in private/.env):
- * - SITE_CHECK_URL: string, default "https://wedding.stephens.page/"
+ * - SITE_CHECK_URL: string, default BASE_URL . "/"
  * - SITE_CHECK_TIMEOUT_SECONDS: int, default 15
  * - SITE_CHECK_COOLDOWN_MINUTES: int, default 30 (min interval between repeated down alerts)
  * - SITE_CHECK_RECIPIENTS: comma-separated emails (optional, falls back to RSVP_EMAIL + SMTP_FROM_EMAIL)
@@ -58,7 +58,7 @@ function minutesSince(?string $isoTimestamp): ?float {
 }
 
 // --- Config ---
-$url = $_ENV['SITE_CHECK_URL'] ?? 'https://wedding.stephens.page/';
+$url = $_ENV['SITE_CHECK_URL'] ?? (BASE_URL . '/');
 $timeoutSeconds = (int)($_ENV['SITE_CHECK_TIMEOUT_SECONDS'] ?? 15);
 if ($timeoutSeconds < 1) $timeoutSeconds = 15;
 

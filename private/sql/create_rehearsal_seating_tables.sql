@@ -1,4 +1,3 @@
-USE wedding_stephens_page;
 
 -- Rehearsal dinner seating tables (separate from reception seating)
 CREATE TABLE IF NOT EXISTS rehearsal_seating_tables (

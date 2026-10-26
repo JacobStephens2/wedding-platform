@@ -1372,7 +1372,7 @@ $page_title = "Rehearsal Dinner Seating - " . content('couple_names', 'Our Weddi
             <div class="share-field">
                 <label>Link</label>
                 <div class="share-value">
-                    <span id="share-url"><?php echo htmlspecialchars((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'wedding.stephens.page') . '/admin-rehearsal-seating'); ?></span>
+                    <span id="share-url"><?php echo htmlspecialchars(BASE_URL . '/admin-rehearsal-seating'); ?></span>
                     <button class="copy-icon" onclick="copyField('share-url')" title="Copy link">&#x2398;</button>
                 </div>
             </div>

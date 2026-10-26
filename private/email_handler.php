@@ -6,7 +6,7 @@
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/config.php';
 
 function sendEmail($to, $subject, $body, $replyTo = null, array $options = []) {
     try {
@@ -33,12 +33,12 @@ function sendEmail($to, $subject, $body, $replyTo = null, array $options = []) {
                 $fromEmail = 'noreply@' . $verifiedDomain;
             } else {
                 // Last resort: use the default (may cause unsigned rejection if domain not verified)
-                $fromEmail = $_ENV['RSVP_EMAIL'] ?? 'noreply@wedding.stephens.page';
+                $fromEmail = $_ENV['RSVP_EMAIL'] ?? ('noreply@' . (parse_url(BASE_URL, PHP_URL_HOST) ?: 'localhost'));
                 error_log("Warning: Using unverified FROM email address. Set SMTP_FROM_EMAIL or SMTP_VERIFIED_DOMAIN in .env to use a verified domain.");
             }
         }
 
-        $fromName = $options['fromName'] ?? ($_ENV['SMTP_FROM_NAME'] ?? 'Jacob and Melissa');
+        $fromName = $options['fromName'] ?? ($_ENV['SMTP_FROM_NAME'] ?? content('couple_names', 'Wedding Website'));
         $mail->setFrom($fromEmail, $fromName);
         $mail->addAddress($to);
 

@@ -1,5 +1,4 @@
 -- Create house_fund_contributions table
-USE wedding_stephens_page;
 
 CREATE TABLE IF NOT EXISTS house_fund_contributions (
     id INT AUTO_INCREMENT PRIMARY KEY,

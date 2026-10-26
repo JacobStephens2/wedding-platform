@@ -1,7 +1,6 @@
 -- Migration script to add purchase_message column to registry_items table
--- Run this as MySQL root user: mysql -u root -p wedding_stephens_page < private/sql/add_purchase_message_column.sql
+-- Run this as MySQL root user: mysql -u root -p "$DB_NAME" < private/sql/add_purchase_message_column.sql
 
-USE wedding_stephens_page;
 
 SET @dbname = DATABASE();
 SET @tablename = 'registry_items';
