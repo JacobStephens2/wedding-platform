@@ -83,6 +83,25 @@
    paths in Site Content. The site still renders from the defaults file if these tables are
    absent, so this step is safe to run at any time. See the README for details.
 
+9. **Guest list (optional)**
+   Export your guest-list spreadsheet as CSV (keep it out of the repo, e.g. in
+   the git-ignored `private/sources/`) and import it:
+   ```bash
+   php private/import_guests.php private/sources/guest-list.csv
+   php private/import_addresses.php private/sources/guest-list.csv --dry-run
+   ```
+   Columns: `First Name`, `Last Name`, `Group`, `id`, `Mailing Group`, and for
+   addresses `Address 1`, `Address 2`, `City`, `State`, `ZIP`, `Country`.
+   Summary rows above the header row are ignored.
+
+## Development
+
+```bash
+composer install
+composer test      # PHPUnit (tests/)
+composer analyse   # PHPStan, max level (src/, tests/)
+```
+
 ## Testing
 
 1. Visit `https://wedding.example.com` to see the home page

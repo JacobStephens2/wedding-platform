@@ -24,3 +24,5 @@ public/*.md
 notes/
 twa/
 public/downloads/*.apk
+.phpunit.cache/
+.phpunit.result.cache

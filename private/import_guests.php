@@ -1,16 +1,30 @@
 <?php
 /**
- * Import guests from CSV into the guests database table.
- * Run from CLI: php private/import_guests.php
+ * Import guests from the guest-list CSV export into the guests table.
+ * Run from CLI: php private/import_guests.php path/to/guest-list.csv
+ *
+ * Required columns: First Name, Last Name, Group, id, Mailing Group. Rows above
+ * the header (spreadsheet summary rows) and rows without a first name are skipped.
  */
 
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/db.php';
 
-$csvPath = __DIR__ . '/Guest List Feb 10 2026.csv';
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit("This script is CLI-only.\n");
+}
 
-if (!file_exists($csvPath)) {
-    echo "ERROR: CSV file not found at: $csvPath\n";
+$csvPath = $argv[1] ?? '';
+if ($csvPath === '' || !is_readable($csvPath)) {
+    echo "Usage: php private/import_guests.php path/to/guest-list.csv\n";
+    exit(1);
+}
+
+try {
+    $guests = Wedding\GuestList::fromCsv((string) file_get_contents($csvPath))->guests();
+} catch (InvalidArgumentException $e) {
+    echo "ERROR: " . $e->getMessage() . "\n";
     exit(1);
 }
 
@@ -31,38 +45,6 @@ if ($count > 0) {
     echo "Cleared existing records.\n";
 }
 
-$handle = fopen($csvPath, 'r');
-if (!$handle) {
-    echo "ERROR: Could not open CSV file.\n";
-    exit(1);
-}
-
-// Skip first two summary rows
-fgetcsv($handle);
-fgetcsv($handle);
-
-// Read header row
-$headers = fgetcsv($handle);
-if (!$headers) {
-    echo "ERROR: Could not read header row.\n";
-    exit(1);
-}
-
-// Find column indices
-$colMap = [];
-foreach ($headers as $i => $header) {
-    $colMap[trim($header)] = $i;
-}
-
-$requiredCols = ['First Name', 'Last Name', 'Group', 'id', 'Mailing Group'];
-foreach ($requiredCols as $col) {
-    if (!isset($colMap[$col])) {
-        echo "ERROR: Required column '$col' not found in CSV headers.\n";
-        echo "Available columns: " . implode(', ', $headers) . "\n";
-        exit(1);
-    }
-}
-
 $stmt = $pdo->prepare("
     INSERT INTO guests (first_name, last_name, group_name, guest_id, mailing_group)
     VALUES (:first_name, :last_name, :group_name, :guest_id, :mailing_group)
@@ -70,43 +52,22 @@ $stmt = $pdo->prepare("
 
 $imported = 0;
 $skipped = 0;
-$lineNum = 3; // We've already read 3 rows
 
-while (($row = fgetcsv($handle)) !== false) {
-    $lineNum++;
-    
-    $firstName = trim($row[$colMap['First Name']] ?? '');
-    $lastName = trim($row[$colMap['Last Name']] ?? '');
-    $groupName = trim($row[$colMap['Group']] ?? '');
-    $guestId = trim($row[$colMap['id']] ?? '');
-    $mailingGroup = trim($row[$colMap['Mailing Group']] ?? '');
-    
-    // Skip rows with no first name
-    if (empty($firstName)) {
-        echo "  SKIP line $lineNum: no first name\n";
-        $skipped++;
-        continue;
-    }
-    
-    // Parse mailing group as integer, NULL if empty
-    $mailingGroupInt = ($mailingGroup !== '' && is_numeric($mailingGroup)) ? (int)$mailingGroup : null;
-    
+foreach ($guests as $guest) {
     try {
         $stmt->execute([
-            ':first_name' => $firstName,
-            ':last_name' => $lastName,
-            ':group_name' => $groupName,
-            ':guest_id' => $guestId,
-            ':mailing_group' => $mailingGroupInt,
+            ':first_name' => $guest['first_name'],
+            ':last_name' => $guest['last_name'],
+            ':group_name' => $guest['group_name'],
+            ':guest_id' => $guest['guest_id'],
+            ':mailing_group' => $guest['mailing_group'],
         ]);
         $imported++;
     } catch (Exception $e) {
-        echo "  ERROR line $lineNum ($firstName $lastName): " . $e->getMessage() . "\n";
+        echo "  ERROR ({$guest['first_name']} {$guest['last_name']}): " . $e->getMessage() . "\n";
         $skipped++;
     }
 }
-
-fclose($handle);
 
 echo "\nImport complete!\n";
 echo "  Imported: $imported guests\n";
