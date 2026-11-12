@@ -274,32 +274,10 @@ $manualGifts = [];
 $houseFundContribs = [];
 $honeymoonFundContribs = [];
 if ($sampleMode) {
-    foreach (getSampleRegistryItems() as $item) {
-        if (!empty($item['purchased'])) {
-            $registryPurchases[] = $item + [
-                'purchase_message' => $item['purchase_message'] ?? null,
-                'admin_note' => $item['admin_note'] ?? null,
-                'received' => $item['received'] ?? 0,
-                'received_at' => $item['received_at'] ?? null,
-                'thank_you_written' => $item['thank_you_written'] ?? 0,
-                'thank_you_written_at' => $item['thank_you_written_at'] ?? null,
-                'thank_you_sent' => $item['thank_you_sent'] ?? 0,
-                'thank_you_sent_at' => $item['thank_you_sent_at'] ?? null,
-                'updated_at' => $item['updated_at'] ?? $item['created_at'] ?? null,
-            ];
-        }
-    }
-    // Sort sample registry purchases by purchaser name (case-insensitive),
-    // with entries that have no name sinking to the bottom.
-    usort($registryPurchases, function ($a, $b) {
-        $an = trim((string) ($a['purchased_by'] ?? ''));
-        $bn = trim((string) ($b['purchased_by'] ?? ''));
-        if ($an === '' && $bn !== '') return 1;
-        if ($an !== '' && $bn === '') return -1;
-        $cmp = strcasecmp($an, $bn);
-        if ($cmp !== 0) return $cmp;
-        return strcasecmp((string) ($a['title'] ?? ''), (string) ($b['title'] ?? ''));
-    });
+    $registryPurchases = array_values(array_filter(
+        getSampleRegistryItems(),
+        static fn (array $item): bool => !empty($item['purchased']),
+    ));
     $manualGifts = getSampleGifts();
     $houseFundContribs = getSampleHouseFundContributions();
     $honeymoonFundContribs = getSampleHoneymoonFundContributions();
@@ -360,152 +338,14 @@ if ($sampleMode) {
     }
 }
 
-// Compute stats
-function isGiftCompleted(array $g): bool {
-    return !empty($g['thank_you_written']) && !empty($g['thank_you_sent']);
-}
-$totalGifts = count($registryPurchases) + count($manualGifts)
-    + count($houseFundContribs) + count($honeymoonFundContribs);
-$thanksCompleted = 0;
-$thanksWritten = 0;
-$thanksSent = 0;
-$registryReceived = 0;
-$registryAwaiting = 0;
-$registryValue = 0.0;
-$offRegistryValue = 0.0;
-$houseFundValue = 0.0;
-$honeymoonFundValue = 0.0;
-$cashValue = 0.0;
-foreach ($registryPurchases as $r) {
-    if (isGiftCompleted($r)) $thanksCompleted++;
-    if (!empty($r['thank_you_written'])) $thanksWritten++;
-    if (!empty($r['thank_you_sent'])) $thanksSent++;
-    if (!empty($r['received'])) {
-        $registryReceived++;
-    } else {
-        $registryAwaiting++;
-    }
-    if (isset($r['price']) && is_numeric($r['price'])) {
-        $registryValue += (float) $r['price'];
-    }
-}
-foreach ($manualGifts as $g) {
-    if (isGiftCompleted($g)) $thanksCompleted++;
-    if (!empty($g['thank_you_written'])) $thanksWritten++;
-    if (!empty($g['thank_you_sent'])) $thanksSent++;
-    if (isset($g['value']) && is_numeric($g['value'])) {
-        if (!empty($g['is_cash'])) {
-            $cashValue += (float) $g['value'];
-        } else {
-            $offRegistryValue += (float) $g['value'];
-        }
-    }
-}
-foreach ($houseFundContribs as $f) {
-    if (isGiftCompleted($f)) $thanksCompleted++;
-    if (!empty($f['thank_you_written'])) $thanksWritten++;
-    if (!empty($f['thank_you_sent'])) $thanksSent++;
-    if (isset($f['amount']) && is_numeric($f['amount'])) {
-        $houseFundValue += (float) $f['amount'];
-    }
-}
-foreach ($honeymoonFundContribs as $f) {
-    if (isGiftCompleted($f)) $thanksCompleted++;
-    if (!empty($f['thank_you_written'])) $thanksWritten++;
-    if (!empty($f['thank_you_sent'])) $thanksSent++;
-    if (isset($f['amount']) && is_numeric($f['amount'])) {
-        $honeymoonFundValue += (float) $f['amount'];
-    }
-}
-$totalGiftValue = $registryValue + $offRegistryValue + $cashValue + $houseFundValue + $honeymoonFundValue;
-$thanksPending = $totalGifts - $thanksCompleted;
-
-// Time zones for display. Database TIMESTAMPs are stored in UTC
-// (server runs UTC), so convert to Eastern time for the couple.
-$utcTz = new DateTimeZone('UTC');
-$displayTz = new DateTimeZone('America/New_York');
-
-function formatGiftDate(?string $raw, DateTimeZone $utcTz, DateTimeZone $displayTz, string $format = 'M j, Y g:i A'): string {
-    if (!$raw) return '';
-    try {
-        $dt = new DateTime($raw, $utcTz);
-        $dt->setTimezone($displayTz);
-        return $dt->format($format);
-    } catch (Exception $e) {
-        return htmlspecialchars($raw);
-    }
-}
-
-// Normalize registry purchases and off-registry gifts into a single list
-// so they can be rendered in one unified table.
-$allGifts = [];
-foreach ($registryPurchases as $r) {
-    $allGifts[] = [
-        'source' => 'registry',
-        'id' => (int) $r['id'],
-        'title' => $r['title'] ?? '',
-        'from' => trim((string) ($r['purchased_by'] ?? '')),
-        'details' => (string) ($r['purchase_message'] ?? ''),
-        'admin_note' => (string) ($r['admin_note'] ?? ''),
-        'price' => $r['price'] ?? null,
-        'date_display' => !empty($r['received_at'])
-            ? formatGiftDate($r['received_at'], $utcTz, $displayTz, 'M j, Y')
-            : formatGiftDate($r['updated_at'] ?? null, $utcTz, $displayTz),
-        'received' => !empty($r['received']),
-        'received_at' => $r['received_at'] ?? null,
-        'written' => !empty($r['thank_you_written']),
-        'sent' => !empty($r['thank_you_sent']),
-    ];
-}
-foreach ($manualGifts as $g) {
-    $allGifts[] = [
-        'source' => !empty($g['is_cash']) ? 'cash' : 'offregistry',
-        'id' => (int) $g['id'],
-        'title' => $g['description'] ?? '',
-        'from' => trim((string) ($g['purchaser_name'] ?? '')),
-        'details' => (string) ($g['notes'] ?? ''),
-        'admin_note' => '', // off-registry gifts use `details` for admin notes already
-        'price' => (isset($g['value']) && $g['value'] !== null && $g['value'] !== '') ? (float) $g['value'] : null,
-        'date_display' => !empty($g['received_on']) ? date('M j, Y', strtotime($g['received_on'])) : '',
-        'received' => null, // not tracked as a toggle for off-registry gifts
-        'received_at' => $g['received_on'] ?? null,
-        'written' => !empty($g['thank_you_written']),
-        'sent' => !empty($g['thank_you_sent']),
-    ];
-}
-// Append fund contributions so donors show up in the gift manager
-// alongside registry and off-registry gifts.
-$fundSources = [
-    ['source' => 'housefund',     'label' => 'House Fund',     'contribs' => $houseFundContribs],
-    ['source' => 'honeymoonfund', 'label' => 'Honeymoon Fund', 'contribs' => $honeymoonFundContribs],
-];
-foreach ($fundSources as $fs) {
-    foreach ($fs['contribs'] as $c) {
-        $allGifts[] = [
-            'source' => $fs['source'],
-            'id' => (int) $c['id'],
-            'title' => $fs['label'] . ' contribution',
-            'from' => trim((string) ($c['contributor_name'] ?? '')),
-            'details' => '',
-            'admin_note' => '',
-            'price' => (isset($c['amount']) && is_numeric($c['amount'])) ? (float) $c['amount'] : null,
-            'date_display' => !empty($c['created_at']) ? formatGiftDate($c['created_at'], $utcTz, $displayTz, 'M j, Y') : '',
-            'received' => null,
-            'received_at' => $c['created_at'] ?? null,
-            'written' => !empty($c['thank_you_written']),
-            'sent' => !empty($c['thank_you_sent']),
-        ];
-    }
-}
-// Sort the combined list alphabetically by giver name (case-insensitive).
-// Entries without a name sink to the bottom, ties broken by title.
-usort($allGifts, function (array $a, array $b) {
-    if ($a['from'] === '' && $b['from'] !== '') return 1;
-    if ($a['from'] !== '' && $b['from'] === '') return -1;
-    $cmp = strcasecmp($a['from'], $b['from']);
-    if ($cmp !== 0) return $cmp;
-    return strcasecmp((string) $a['title'], (string) $b['title']);
-});
+$overview = \Wedding\GiftOverview::fromSources(
+    registryPurchases: $registryPurchases,
+    manualGifts: $manualGifts,
+    houseFundContributions: $houseFundContribs,
+    honeymoonFundContributions: $honeymoonFundContribs,
+);
+$allGifts = $overview->rows;
+$summary = $overview->summary;
 
 $page_title = "Manage Gifts - " . content('couple_names', 'Our Wedding');
 ?>
@@ -1088,47 +928,47 @@ $page_title = "Manage Gifts - " . content('couple_names', 'Our Wedding');
 
                     <div class="summary-stats">
                         <div class="stat-card">
-                            <span class="stat-value"><?php echo (int) $totalGifts; ?></span>
+                            <span class="stat-value"><?php echo (int) $summary['total_gifts']; ?></span>
                             <span class="stat-label">Total gifts</span>
                         </div>
                         <div class="stat-card">
-                            <span class="stat-value"><?php echo (int) $registryAwaiting; ?></span>
+                            <span class="stat-value"><?php echo (int) $summary['awaiting_delivery']; ?></span>
                             <span class="stat-label">Awaiting delivery</span>
                         </div>
                         <div class="stat-card">
-                            <span class="stat-value"><?php echo (int) $thanksCompleted; ?></span>
+                            <span class="stat-value"><?php echo (int) $summary['completed']; ?></span>
                             <span class="stat-label">Thank-you completed</span>
                         </div>
                         <div class="stat-card">
-                            <span class="stat-value"><?php echo (int) $thanksWritten; ?></span>
+                            <span class="stat-value"><?php echo (int) $summary['written']; ?></span>
                             <span class="stat-label">Written</span>
                         </div>
                         <div class="stat-card">
-                            <span class="stat-value"><?php echo (int) $thanksSent; ?></span>
+                            <span class="stat-value"><?php echo (int) $summary['sent']; ?></span>
                             <span class="stat-label">Sent</span>
                         </div>
                         <div class="stat-card">
-                            <span class="stat-value"><?php echo (int) $thanksPending; ?></span>
+                            <span class="stat-value"><?php echo (int) $summary['outstanding']; ?></span>
                             <span class="stat-label">Outstanding</span>
                         </div>
                         <div class="stat-card">
-                            <span class="stat-value">$<?php echo number_format($totalGiftValue, 2); ?></span>
+                            <span class="stat-value">$<?php echo number_format($summary['total_value'], 2); ?></span>
                             <span class="stat-label">Total gift value</span>
                         </div>
                         <div class="stat-card">
-                            <span class="stat-value">$<?php echo number_format($registryValue, 2); ?></span>
+                            <span class="stat-value">$<?php echo number_format($summary['registry_value'], 2); ?></span>
                             <span class="stat-label">Registry value</span>
                         </div>
                         <div class="stat-card">
-                            <span class="stat-value">$<?php echo number_format($offRegistryValue, 2); ?></span>
+                            <span class="stat-value">$<?php echo number_format($summary['offregistry_value'], 2); ?></span>
                             <span class="stat-label">Off-registry value</span>
                         </div>
                         <div class="stat-card">
-                            <span class="stat-value">$<?php echo number_format($honeymoonFundValue, 2); ?></span>
+                            <span class="stat-value">$<?php echo number_format($summary['honeymoonfund_value'], 2); ?></span>
                             <span class="stat-label">Honeymoon fund value</span>
                         </div>
                         <div class="stat-card">
-                            <span class="stat-value">$<?php echo number_format($cashValue, 2); ?></span>
+                            <span class="stat-value">$<?php echo number_format($summary['cash_value'], 2); ?></span>
                             <span class="stat-label">Cash gifts</span>
                         </div>
                     </div>
@@ -1243,77 +1083,28 @@ $page_title = "Manage Gifts - " . content('couple_names', 'Our Wedding');
                                 </thead>
                                 <tbody>
                                     <?php foreach ($allGifts as $g):
-                                        $isRegistry = $g['source'] === 'registry';
-                                        $isCash = $g['source'] === 'cash';
-                                        // Off-registry behaviors (inline edit, edit/delete actions,
-                                        // toggle endpoints) apply to both plain off-registry gifts
-                                        // and cash-flagged off-registry gifts. The only thing that
-                                        // differs is the source badge.
-                                        $isOffRegistry = $g['source'] === 'offregistry' || $isCash;
-                                        $isHouseFund = $g['source'] === 'housefund';
-                                        $isHoneymoonFund = $g['source'] === 'honeymoonfund';
-                                        $isFund = $isHouseFund || $isHoneymoonFund;
-                                        $completed = $g['written'] && $g['sent'];
-                                        $noName = $g['from'] === '';
-                                        $rowClasses = ['gift-row', 'source-' . $g['source']];
-                                        if ($completed) $rowClasses[] = 'thanked';
-                                        elseif ($noName) $rowClasses[] = 'noname';
-                                        if ($isRegistry && !$g['received']) $rowClasses[] = 'awaiting-delivery';
-                                        $sourceSearchTag = 'registry';
-                                        if ($isCash) $sourceSearchTag = 'cash off-registry off registry';
-                                        elseif ($isOffRegistry) $sourceSearchTag = 'off-registry off registry';
-                                        elseif ($isHouseFund) $sourceSearchTag = 'house fund housefund';
-                                        elseif ($isHoneymoonFund) $sourceSearchTag = 'honeymoon fund honeymoonfund';
-                                        $searchParts = array_filter([
-                                            $g['title'],
-                                            $g['from'],
-                                            $g['details'],
-                                            $sourceSearchTag,
-                                        ]);
-                                        $searchBlob = strtolower(trim(preg_replace('/\s+/', ' ', implode(' ', $searchParts))));
-                                        // For filter UX, off-registry gifts and fund contributions
-                                        // are treated as "received" since admins only record them
-                                        // after the gift/contribution arrives.
-                                        $receivedAttr = $isRegistry ? ($g['received'] ? 'yes' : 'no') : 'yes';
-                                        $writtenAttr = $g['written'] ? 'yes' : 'no';
-                                        $sentAttr = $g['sent'] ? 'yes' : 'no';
-                                        // Sort keys. Empty strings use "~" so they sort last in ascending.
-                                        $statusRank = $completed ? 3 : ($g['sent'] ? 2 : ($g['written'] ? 1 : 0));
-                                        $fromSort = $g['from'] !== '' ? mb_strtolower($g['from']) : '~';
-                                        $titleSort = mb_strtolower($g['title'] ?? '');
-                                        $priceSort = $g['price'] !== null && $g['price'] !== '' ? (float) $g['price'] : -1;
-                                        $dateSort = !empty($g['received_at']) ? strtotime($g['received_at']) : 0;
-                                        $sourceSortKey = 'a';
-                                        if ($isOffRegistry) $sourceSortKey = 'b';
-                                        elseif ($isHouseFund) $sourceSortKey = 'c';
-                                        elseif ($isHoneymoonFund) $sourceSortKey = 'd';
+                                        $isRegistry = $g['action_kind'] === 'registry';
+                                        $isOffRegistry = $g['action_kind'] === 'manual';
+                                        $isFund = $g['action_kind'] === 'fund';
+                                        $completed = $g['completed'];
+                                        $noName = $g['no_name'];
                                     ?>
-                                        <tr class="<?php echo htmlspecialchars(implode(' ', $rowClasses)); ?>"
-                                            data-search="<?php echo htmlspecialchars($searchBlob); ?>"
-                                            data-received="<?php echo $receivedAttr; ?>"
-                                            data-written="<?php echo $writtenAttr; ?>"
-                                            data-sent="<?php echo $sentAttr; ?>"
-                                            data-sort-source="<?php echo htmlspecialchars($sourceSortKey); ?>"
-                                            data-sort-status="<?php echo (int) $statusRank; ?>"
-                                            data-sort-from="<?php echo htmlspecialchars($fromSort); ?>"
-                                            data-sort-title="<?php echo htmlspecialchars($titleSort); ?>"
-                                            data-sort-price="<?php echo htmlspecialchars((string) $priceSort); ?>"
-                                            data-sort-date="<?php echo (int) $dateSort; ?>"
-                                            data-sort-received="<?php echo $receivedAttr === 'yes' ? 1 : 0; ?>"
-                                            data-sort-written="<?php echo $writtenAttr === 'yes' ? 1 : 0; ?>"
-                                            data-sort-sent="<?php echo $sentAttr === 'yes' ? 1 : 0; ?>">
+                                        <tr class="<?php echo htmlspecialchars(implode(' ', $g['row_classes'])); ?>"
+                                            data-search="<?php echo htmlspecialchars($g['search']); ?>"
+                                            data-received="<?php echo $g['filter']['received']; ?>"
+                                            data-written="<?php echo $g['filter']['written']; ?>"
+                                            data-sent="<?php echo $g['filter']['sent']; ?>"
+                                            data-sort-source="<?php echo htmlspecialchars($g['sort']['source']); ?>"
+                                            data-sort-status="<?php echo (int) $g['sort']['status']; ?>"
+                                            data-sort-from="<?php echo htmlspecialchars($g['sort']['from']); ?>"
+                                            data-sort-title="<?php echo htmlspecialchars($g['sort']['title']); ?>"
+                                            data-sort-price="<?php echo htmlspecialchars((string) $g['sort']['price']); ?>"
+                                            data-sort-date="<?php echo (int) $g['sort']['date']; ?>"
+                                            data-sort-received="<?php echo (int) $g['sort']['received']; ?>"
+                                            data-sort-written="<?php echo (int) $g['sort']['written']; ?>"
+                                            data-sort-sent="<?php echo (int) $g['sort']['sent']; ?>">
                                             <td>
-                                                <?php
-                                                    $sourceBadgeClass = 'registry';
-                                                    $sourceBadgeLabel = 'Registry';
-                                                    if ($isCash) { $sourceBadgeClass = 'cash'; $sourceBadgeLabel = 'Cash'; }
-                                                    elseif ($isOffRegistry) { $sourceBadgeClass = 'offregistry'; $sourceBadgeLabel = 'Off-Registry'; }
-                                                    elseif ($isHouseFund) { $sourceBadgeClass = 'housefund'; $sourceBadgeLabel = 'House Fund'; }
-                                                    elseif ($isHoneymoonFund) { $sourceBadgeClass = 'honeymoonfund'; $sourceBadgeLabel = 'Honeymoon Fund'; }
-                                                ?>
-                                                <span class="badge-source <?php echo $sourceBadgeClass; ?>">
-                                                    <?php echo htmlspecialchars($sourceBadgeLabel); ?>
-                                                </span>
+                                                <span class="badge-source <?php echo htmlspecialchars($g['source']); ?>"><?php echo htmlspecialchars($g['source_label']); ?></span>
                                             </td>
                                             <td>
                                                 <?php if ($completed): ?>
@@ -1353,8 +1144,7 @@ $page_title = "Manage Gifts - " . content('couple_names', 'Our Wedding');
                                                         <?php echo htmlspecialchars($g['title']); ?>
                                                     </button>
                                                 <?php elseif ($isFund): ?>
-                                                    <?php $fundAdminUrl = $isHouseFund ? '/admin-house-fund' : '/admin-honeymoon-fund'; ?>
-                                                    <a href="<?php echo $fundAdminUrl; ?>" class="gift-title-link" title="Manage this contribution">
+                                                    <a href="<?php echo htmlspecialchars($g['management_url']); ?>" class="gift-title-link" title="Manage this contribution">
                                                         <?php echo htmlspecialchars($g['title']); ?>
                                                     </a>
                                                 <?php else: ?>
@@ -1378,8 +1168,7 @@ $page_title = "Manage Gifts - " . content('couple_names', 'Our Wedding');
                                                             data-item-note="<?php echo htmlspecialchars($g['admin_note']); ?>"
                                                             title="<?php echo htmlspecialchars($noteTooltip); ?>">
                                                 <?php elseif ($isFund): ?>
-                                                    <?php $fundAdminUrl = $isHouseFund ? '/admin-house-fund' : '/admin-honeymoon-fund'; ?>
-                                                    <a href="<?php echo $fundAdminUrl; ?>"
+                                                    <a href="<?php echo htmlspecialchars($g['management_url']); ?>"
                                                        class="note-cell-button"
                                                        title="<?php echo htmlspecialchars($noteTooltip); ?>">
                                                 <?php else: ?>
@@ -1436,10 +1225,10 @@ $page_title = "Manage Gifts - " . content('couple_names', 'Our Wedding');
                                                 <?php if ($isRegistry): ?>
                                                     <a href="/admin-gifts?toggle_registry_received=<?php echo (int) $g['id']; ?>#gifts-table"
                                                        class="btn-small js-toggle-status <?php echo $g['received'] ? 'btn-thanks-active' : 'btn-received'; ?>"
-                                                       data-source="registry"
+                                                       data-source="<?php echo htmlspecialchars($g['action_source']); ?>"
                                                        data-id="<?php echo (int) $g['id']; ?>"
                                                        data-field="received"
-                                                       title="<?php echo $g['received'] && !empty($g['received_at']) ? 'Received ' . htmlspecialchars(formatGiftDate($g['received_at'], $utcTz, $displayTz, 'M j, Y')) : 'Mark gift as received'; ?>">
+                                                       title="<?php echo $g['received'] && $g['received_date'] !== '' ? 'Received ' . htmlspecialchars($g['received_date']) : 'Mark gift as received'; ?>">
                                                         <?php echo $g['received'] ? '✓ Received' : 'Mark Received'; ?>
                                                     </a>
                                                 <?php elseif ($isFund): ?>
@@ -1449,30 +1238,18 @@ $page_title = "Manage Gifts - " . content('couple_names', 'Our Wedding');
                                                 <?php endif; ?>
                                             </td>
                                             <td class="actions-cell">
-                                                <?php
-                                                    if ($isRegistry) $writtenHref = 'toggle_registry_written';
-                                                    elseif ($isHouseFund) $writtenHref = 'toggle_housefund_written';
-                                                    elseif ($isHoneymoonFund) $writtenHref = 'toggle_honeymoonfund_written';
-                                                    else $writtenHref = 'toggle_gift_written';
-                                                ?>
-                                                <a href="/admin-gifts?<?php echo $writtenHref; ?>=<?php echo (int) $g['id']; ?>#gifts-table"
+                                                <a href="/admin-gifts?toggle_<?php echo htmlspecialchars($g['toggle_prefix']); ?>_written=<?php echo (int) $g['id']; ?>#gifts-table"
                                                    class="btn-small js-toggle-status <?php echo $g['written'] ? 'btn-thanks-active' : 'btn-thanks-written'; ?>"
-                                                   data-source="<?php echo htmlspecialchars($isCash ? 'offregistry' : $g['source']); ?>"
+                                                   data-source="<?php echo htmlspecialchars($g['action_source']); ?>"
                                                    data-id="<?php echo (int) $g['id']; ?>"
                                                    data-field="written">
                                                     <?php echo $g['written'] ? '✓ Written' : 'Mark Written'; ?>
                                                 </a>
                                             </td>
                                             <td class="actions-cell">
-                                                <?php
-                                                    if ($isRegistry) $sentHref = 'toggle_registry_sent';
-                                                    elseif ($isHouseFund) $sentHref = 'toggle_housefund_sent';
-                                                    elseif ($isHoneymoonFund) $sentHref = 'toggle_honeymoonfund_sent';
-                                                    else $sentHref = 'toggle_gift_sent';
-                                                ?>
-                                                <a href="/admin-gifts?<?php echo $sentHref; ?>=<?php echo (int) $g['id']; ?>#gifts-table"
+                                                <a href="/admin-gifts?toggle_<?php echo htmlspecialchars($g['toggle_prefix']); ?>_sent=<?php echo (int) $g['id']; ?>#gifts-table"
                                                    class="btn-small js-toggle-status <?php echo $g['sent'] ? 'btn-thanks-active' : 'btn-thanks-sent'; ?>"
-                                                   data-source="<?php echo htmlspecialchars($isCash ? 'offregistry' : $g['source']); ?>"
+                                                   data-source="<?php echo htmlspecialchars($g['action_source']); ?>"
                                                    data-id="<?php echo (int) $g['id']; ?>"
                                                    data-field="sent">
                                                     <?php echo $g['sent'] ? '✓ Sent' : 'Mark Sent'; ?>
@@ -1483,8 +1260,7 @@ $page_title = "Manage Gifts - " . content('couple_names', 'Our Wedding');
                                                     <a href="/admin-gifts?edit=<?php echo (int) $g['id']; ?>#add-gift" class="btn-small btn-edit">Edit</a>
                                                     <a href="/admin-gifts?delete=<?php echo (int) $g['id']; ?>#gifts-table" class="btn-small btn-delete" onclick="return confirm('Delete this gift entry?');">Delete</a>
                                                 <?php elseif ($isFund): ?>
-                                                    <?php $fundAdminUrl = $isHouseFund ? '/admin-house-fund' : '/admin-honeymoon-fund'; ?>
-                                                    <a href="<?php echo $fundAdminUrl; ?>" class="btn-small btn-edit">Manage</a>
+                                                    <a href="<?php echo htmlspecialchars($g['management_url']); ?>" class="btn-small btn-edit">Manage</a>
                                                 <?php else: ?>
                                                     <button type="button" class="btn-small btn-delete js-unmark-purchased"
                                                             data-id="<?php echo (int) $g['id']; ?>"
