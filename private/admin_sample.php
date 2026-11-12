@@ -585,6 +585,15 @@ function getSampleRsvpData(string $sort = 'rsvp_submitted_at', string $order = '
     ];
 }
 
+/**
+ * @return list<array{
+ *   id:int, title:string, description:string, url:string, image_url:string, price:string,
+ *   purchased:int, purchased_by:?string, created_at:string, published:int, sort_order:int, most_wanted:int,
+ *   purchase_message?:?string, admin_note?:string, received?:int, received_at?:?string,
+ *   thank_you_written?:int, thank_you_written_at?:?string, thank_you_sent?:int, thank_you_sent_at?:?string,
+ *   updated_at?:string
+ * }>
+ */
 function getSampleRegistryItems(): array
 {
     return [
@@ -686,6 +695,13 @@ function getSampleRegistryItems(): array
     ];
 }
 
+/**
+ * @return list<array{
+ *   id:int, description:string, purchaser_name:?string, notes:string, received_on:string,
+ *   value:?float, is_cash:int, thank_you_written:int, thank_you_written_at:?string,
+ *   thank_you_sent:int, thank_you_sent_at:?string, created_at:string
+ * }>
+ */
 function getSampleGifts(): array
 {
     return [
@@ -734,6 +750,12 @@ function getSampleGifts(): array
     ];
 }
 
+/**
+ * @return list<array{
+ *   id:int, amount:float, contributor_name:string, created_at:string,
+ *   thank_you_written:int, thank_you_written_at:?string, thank_you_sent:int, thank_you_sent_at:?string
+ * }>
+ */
 function getSampleHouseFundContributions(): array
 {
     return [
@@ -755,6 +777,12 @@ function getSampleHouseFundContributions(): array
     ];
 }
 
+/**
+ * @return list<array{
+ *   id:int, amount:float, contributor_name:string, created_at:string,
+ *   thank_you_written:int, thank_you_written_at:?string, thank_you_sent:int, thank_you_sent_at:?string
+ * }>
+ */
 function getSampleHoneymoonFundContributions(): array
 {
     return [
