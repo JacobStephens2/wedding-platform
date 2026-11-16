@@ -11,100 +11,40 @@ $success = '';
 $sampleMode = isAdminSampleMode();
 ['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminArea::Registry, '/admin-gifts');
 
-// Column names on registry_items that the admin can toggle from this page.
-// Keyed by the ?toggle_registry_<key> query param.
-$registryToggleColumns = [
-    'received' => ['col' => 'received',          'col_at' => 'received_at'],
-    'written'  => ['col' => 'thank_you_written', 'col_at' => 'thank_you_written_at'],
-    'sent'     => ['col' => 'thank_you_sent',    'col_at' => 'thank_you_sent_at'],
+// Decode legacy links in their existing priority order. Gift status owns all
+// source eligibility, persistence selection, and independent stage changes.
+$toggleLinks = [
+    'toggle_registry_received' => ['registry', 'received'],
+    'toggle_registry_written' => ['registry', 'written'],
+    'toggle_registry_sent' => ['registry', 'sent'],
+    'toggle_gift_written' => ['offregistry', 'written'],
+    'toggle_gift_sent' => ['offregistry', 'sent'],
+    'toggle_housefund_written' => ['housefund', 'written'],
+    'toggle_housefund_sent' => ['housefund', 'sent'],
+    'toggle_honeymoonfund_written' => ['honeymoonfund', 'written'],
+    'toggle_honeymoonfund_sent' => ['honeymoonfund', 'sent'],
 ];
-
-// Handle toggling received / thank-you written / thank-you sent on a registry purchase
-foreach ($registryToggleColumns as $key => $cols) {
-    $param = 'toggle_registry_' . $key;
-    if (!$sampleMode && $authenticated && isset($_GET[$param]) && is_numeric($_GET[$param])) {
+if (!$sampleMode && $authenticated) {
+    $giftStatus = new \Wedding\GiftStatus(static fn (): PDO => getDbConnection());
+    foreach ($toggleLinks as $param => [$source, $field]) {
+        if (!isset($_GET[$param]) || !is_numeric($_GET[$param])) {
+            continue;
+        }
+        $id = (int) $_GET[$param];
         try {
-            $pdo = getDbConnection();
-            $id = (int) $_GET[$param];
-            $col = $cols['col'];
-            $colAt = $cols['col_at'];
-            $stmt = $pdo->prepare("SELECT $col FROM registry_items WHERE id = ? AND purchased = 1");
-            $stmt->execute([$id]);
-            $row = $stmt->fetch();
-            if ($row) {
-                $newValue = $row[$col] ? 0 : 1;
-                $stageAt = $newValue ? date('Y-m-d H:i:s') : null;
-                // Preserve updated_at so marking these fields doesn't jump the row
-                // in any updated_at-based sort used by other admin screens.
-                $upd = $pdo->prepare("UPDATE registry_items SET $col = ?, $colAt = ?, updated_at = updated_at WHERE id = ?");
-                $upd->execute([$newValue, $stageAt, $id]);
+            if ($id > 0) {
+                $giftStatus->toggle($source, $id, $field);
             }
-            header('Location: /admin-gifts#gifts-table');
-            exit;
+        } catch (OutOfBoundsException $e) {
+            // Missing/unpurchased records have always redirected silently.
         } catch (Exception $e) {
-            $error = 'Error updating status: ' . htmlspecialchars($e->getMessage());
+            $error = ($source === 'registry' ? 'Error updating status: ' : 'Error updating thank-you status: ')
+                . htmlspecialchars($e->getMessage());
+            // A failed parameter must not prevent a later supplied link working.
+            continue;
         }
-    }
-}
-
-// Allowed thank-you stages (used below for gift table toggles)
-$allowedStages = ['written', 'sent'];
-
-// Handle toggling thank-you written/sent status for a manual gift
-foreach ($allowedStages as $stage) {
-    $param = 'toggle_gift_' . $stage;
-    if (!$sampleMode && $authenticated && isset($_GET[$param]) && is_numeric($_GET[$param])) {
-        try {
-            $pdo = getDbConnection();
-            $id = (int) $_GET[$param];
-            $col = 'thank_you_' . $stage;
-            $colAt = $col . '_at';
-            $stmt = $pdo->prepare("SELECT $col FROM gifts WHERE id = ?");
-            $stmt->execute([$id]);
-            $row = $stmt->fetch();
-            if ($row) {
-                $newValue = $row[$col] ? 0 : 1;
-                $stageAt = $newValue ? date('Y-m-d H:i:s') : null;
-                $upd = $pdo->prepare("UPDATE gifts SET $col = ?, $colAt = ? WHERE id = ?");
-                $upd->execute([$newValue, $stageAt, $id]);
-            }
-            header('Location: /admin-gifts#gifts-table');
-            exit;
-        } catch (Exception $e) {
-            $error = 'Error updating thank-you status: ' . htmlspecialchars($e->getMessage());
-        }
-    }
-}
-
-// Handle toggling thank-you written/sent status for a fund contribution
-$fundTables = [
-    'housefund'     => 'house_fund_contributions',
-    'honeymoonfund' => 'honeymoon_fund_contributions',
-];
-foreach ($fundTables as $fundKey => $fundTable) {
-    foreach ($allowedStages as $stage) {
-        $param = 'toggle_' . $fundKey . '_' . $stage;
-        if (!$sampleMode && $authenticated && isset($_GET[$param]) && is_numeric($_GET[$param])) {
-            try {
-                $pdo = getDbConnection();
-                $id = (int) $_GET[$param];
-                $col = 'thank_you_' . $stage;
-                $colAt = $col . '_at';
-                $stmt = $pdo->prepare("SELECT $col FROM $fundTable WHERE id = ?");
-                $stmt->execute([$id]);
-                $row = $stmt->fetch();
-                if ($row) {
-                    $newValue = $row[$col] ? 0 : 1;
-                    $stageAt = $newValue ? date('Y-m-d H:i:s') : null;
-                    $upd = $pdo->prepare("UPDATE $fundTable SET $col = ?, $colAt = ? WHERE id = ?");
-                    $upd->execute([$newValue, $stageAt, $id]);
-                }
-                header('Location: /admin-gifts#gifts-table');
-                exit;
-            } catch (Exception $e) {
-                $error = 'Error updating thank-you status: ' . htmlspecialchars($e->getMessage());
-            }
-        }
+        header('Location: /admin-gifts#gifts-table');
+        exit;
     }
 }
 
