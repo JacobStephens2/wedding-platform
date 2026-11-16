@@ -47,6 +47,28 @@ only on the server: photos under `private/photos/`, videos under
 
 See [CODING_STANDARDS.md](CODING_STANDARDS.md).
 
+### Tests
+
+Run `composer install`, then `composer test` and `composer analyse`. Gift status
+tests require local MariaDB (`mariadb-install-db` and `mariadbd`), PHP's PDO MySQL,
+POSIX and cURL extensions, and permission to launch local processes and bind a
+loopback port. On Debian/Ubuntu install `mariadb-server php-mysql php-curl` (POSIX
+is included with CLI PHP). Missing prerequisites fail clearly; coverage is never
+silently skipped. Run the tests as an ordinary OS user.
+
+The tests automatically provision a unique disposable MariaDB data directory,
+socket and PID file with `--no-defaults`, socket authentication, networking
+disabled and UTC sessions. Request tests copy the actual callers into an isolated
+temporary application with synthetic sessions and a loopback PHP server. They
+never load deployment configuration or credentials, or connect to a deployment
+database. Startup waits are bounded; owned child processes are stopped and waited
+for, and temporary resources removed, including after failed assertions.
+
+For focused work run `vendor/bin/phpunit tests/GiftStatusTest.php` or
+`vendor/bin/phpunit tests/GiftStatusEntrypointTest.php`. After changing the callers,
+also run `php -l public/admin-gifts.php` and
+`php -l public/api/toggle-gift-status.php`.
+
 ## Tech Stack
 
 - **Backend**: PHP 8.3+ / Apache / MySQL 8
