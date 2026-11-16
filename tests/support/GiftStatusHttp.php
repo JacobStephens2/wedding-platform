@@ -108,14 +108,6 @@ final class GiftStatusHttp
         return is_file($this->directory->path . '/acquisitions');
     }
 
-    public function clearAcquisitions(): void
-    {
-        $path = $this->directory->path . '/acquisitions';
-        if (is_file($path)) {
-            unlink($path);
-        }
-    }
-
     public function log(): string
     {
         return $this->server?->output() ?? '';
