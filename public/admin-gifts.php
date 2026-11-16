@@ -15,7 +15,7 @@ $sampleMode = isAdminSampleMode();
 // Gift status owns all source eligibility, persistence selection, and independent stage changes.
 if (!$sampleMode && $authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_gift_status'])) {
     $submittedToken = is_string($_POST['csrf_token'] ?? null) ? $_POST['csrf_token'] : '';
-    $rejection = adminVerifyPost($submittedToken);
+    $rejection = adminVerifyRequest($submittedToken);
     if ($rejection !== null) {
         http_response_code(403);
         ?>
@@ -293,17 +293,21 @@ $allGifts = $overview->rows;
 $summary = $overview->summary;
 $csrfToken = ($authenticated && !$sampleMode) ? adminCsrf()->token() : '';
 $toggleFormAction = adminUrl('/admin-gifts') . '#gifts-table';
+$toggleStages = [
+    'received' => ['inactiveClass' => 'btn-received', 'activeLabel' => '✓ Received', 'inactiveLabel' => 'Mark Received'],
+    'written' => ['inactiveClass' => 'btn-thanks-written', 'activeLabel' => '✓ Written', 'inactiveLabel' => 'Mark Written'],
+    'sent' => ['inactiveClass' => 'btn-thanks-sent', 'activeLabel' => '✓ Sent', 'inactiveLabel' => 'Mark Sent'],
+];
 $renderToggleForm = static function (
     string $source,
     int $id,
     string $field,
     bool $active,
-    string $inactiveClass,
-    string $activeLabel,
-    string $inactiveLabel,
     ?string $title = null
-) use ($toggleFormAction, $csrfToken): void {
-    $btnClass = 'btn-small js-toggle-status ' . ($active ? 'btn-thanks-active' : $inactiveClass);
+) use ($toggleFormAction, $csrfToken, $toggleStages): void {
+    $stage = $toggleStages[$field];
+    $btnClass = 'btn-small js-toggle-status ' . ($active ? 'btn-thanks-active' : $stage['inactiveClass']);
+    $label = $active ? $stage['activeLabel'] : $stage['inactiveLabel'];
     ?>
     <form method="POST" action="<?php echo htmlspecialchars($toggleFormAction); ?>" class="toggle-status-form">
         <input type="hidden" name="toggle_gift_status" value="1">
@@ -312,12 +316,12 @@ $renderToggleForm = static function (
         <input type="hidden" name="id" value="<?php echo $id; ?>">
         <input type="hidden" name="field" value="<?php echo htmlspecialchars($field); ?>">
         <button type="submit"
-                class="<?php echo $btnClass; ?>"
+                class="<?php echo htmlspecialchars($btnClass); ?>"
                 data-source="<?php echo htmlspecialchars($source); ?>"
                 data-id="<?php echo $id; ?>"
                 data-field="<?php echo htmlspecialchars($field); ?>"<?php if ($title !== null): ?>
                 title="<?php echo htmlspecialchars($title); ?>"<?php endif; ?>>
-            <?php echo $active ? $activeLabel : $inactiveLabel; ?>
+            <?php echo htmlspecialchars($label); ?>
         </button>
     </form>
     <?php
@@ -1216,9 +1220,6 @@ $page_title = "Manage Gifts - " . content('couple_names', 'Our Wedding');
                                                         (int) $g['id'],
                                                         'received',
                                                         (bool) $g['received'],
-                                                        'btn-received',
-                                                        '✓ Received',
-                                                        'Mark Received',
                                                         $receivedTitle
                                                     );
                                                     ?>
@@ -1229,30 +1230,10 @@ $page_title = "Manage Gifts - " . content('couple_names', 'Our Wedding');
                                                 <?php endif; ?>
                                             </td>
                                             <td class="actions-cell">
-                                                <?php
-                                                $renderToggleForm(
-                                                    $g['action_source'],
-                                                    (int) $g['id'],
-                                                    'written',
-                                                    (bool) $g['written'],
-                                                    'btn-thanks-written',
-                                                    '✓ Written',
-                                                    'Mark Written'
-                                                );
-                                                ?>
+                                                <?php $renderToggleForm($g['action_source'], (int) $g['id'], 'written', (bool) $g['written']); ?>
                                             </td>
                                             <td class="actions-cell">
-                                                <?php
-                                                $renderToggleForm(
-                                                    $g['action_source'],
-                                                    (int) $g['id'],
-                                                    'sent',
-                                                    (bool) $g['sent'],
-                                                    'btn-thanks-sent',
-                                                    '✓ Sent',
-                                                    'Mark Sent'
-                                                );
-                                                ?>
+                                                <?php $renderToggleForm($g['action_source'], (int) $g['id'], 'sent', (bool) $g['sent']); ?>
                                             </td>
                                             <td class="actions-cell">
                                                 <?php if ($isOffRegistry): ?>
@@ -1502,29 +1483,23 @@ $page_title = "Manage Gifts - " . content('couple_names', 'Our Wedding');
                     row.classList.toggle('awaiting-delivery', isRegistry && !received);
                 }
 
+                const TOGGLE_STAGES = <?php echo json_encode($toggleStages, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
+
                 function applyButtonState(btn, field, active, atDisplay) {
+                    const meta = TOGGLE_STAGES[field];
+                    if (!meta) return;
                     btn.classList.remove('btn-received', 'btn-thanks-written', 'btn-thanks-sent', 'btn-thanks-active');
                     if (active) {
                         btn.classList.add('btn-thanks-active');
+                        btn.textContent = meta.activeLabel;
                         if (field === 'received') {
-                            btn.textContent = '✓ Received';
                             btn.title = atDisplay ? 'Received ' + atDisplay : 'Received';
-                        } else if (field === 'written') {
-                            btn.textContent = '✓ Written';
-                        } else if (field === 'sent') {
-                            btn.textContent = '✓ Sent';
                         }
                     } else {
+                        btn.classList.add(meta.inactiveClass);
+                        btn.textContent = meta.inactiveLabel;
                         if (field === 'received') {
-                            btn.classList.add('btn-received');
-                            btn.textContent = 'Mark Received';
                             btn.title = 'Mark gift as received';
-                        } else if (field === 'written') {
-                            btn.classList.add('btn-thanks-written');
-                            btn.textContent = 'Mark Written';
-                        } else if (field === 'sent') {
-                            btn.classList.add('btn-thanks-sent');
-                            btn.textContent = 'Mark Sent';
                         }
                     }
                 }

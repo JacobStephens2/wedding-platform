@@ -47,7 +47,6 @@ final class GiftOverviewTest extends TestCase
         $this->assertSame('Cash', $cash['source_label']);
         $this->assertSame('manual', $cash['action_kind']);
         $this->assertSame('offregistry', $cash['action_source']);
-        $this->assertSame('gift', $cash['toggle_prefix']);
         $this->assertSame('yes', $cash['filter']['received']);
         $this->assertNull($cash['received']);
         $this->assertSame('b', $cash['sort']['source']);
@@ -79,7 +78,6 @@ final class GiftOverviewTest extends TestCase
         }
         $this->assertSame('/admin-house-fund', $bySource['housefund']['management_url']);
         $this->assertSame('/admin-honeymoon-fund', $bySource['honeymoonfund']['management_url']);
-        $this->assertSame('housefund', $bySource['housefund']['toggle_prefix']);
         $this->assertSame('honeymoonfund', $bySource['honeymoonfund']['action_source']);
     }
 
@@ -172,7 +170,6 @@ final class GiftOverviewTest extends TestCase
         $this->assertSame('Private reminder', $byId[1]['admin_note']);
         $this->assertSame('registry', $byId[1]['action_kind']);
         $this->assertSame('registry', $byId[1]['action_source']);
-        $this->assertSame('registry', $byId[1]['toggle_prefix']);
         $this->assertSame('cash off-registry off registry', $byId[2]['search']);
         $this->assertSame('house fund housefund', $byId[3]['search_aliases']);
         $this->assertSame('honeymoon fund honeymoonfund', $byId[4]['search_aliases']);

@@ -39,7 +39,7 @@ $input = is_array($decoded) ? $decoded : [];
 $submittedToken = array_key_exists('HTTP_X_CSRF_TOKEN', $_SERVER)
     ? (is_string($_SERVER['HTTP_X_CSRF_TOKEN']) ? $_SERVER['HTTP_X_CSRF_TOKEN'] : '')
     : (is_string($input['csrf_token'] ?? null) ? $input['csrf_token'] : '');
-$rejection = adminVerifyPost($submittedToken);
+$rejection = adminVerifyRequest($submittedToken);
 if ($rejection !== null) {
     http_response_code(403);
     echo json_encode(['success' => false, 'error' => $rejection]);

@@ -37,16 +37,16 @@ function adminCsrf(): CsrfGuard
     if (session_status() !== PHP_SESSION_ACTIVE) {
         session_start();
     }
-    return new CsrfGuard($_SESSION);
+    $baseUrl = defined('BASE_URL') && is_string(BASE_URL) ? BASE_URL : null;
+    return new CsrfGuard($_SESSION, $baseUrl);
 }
 
-/** Validate same-origin/same-site POST metadata and session-bound CSRF token. */
-function adminVerifyPost(?string $submittedToken): ?string
+/** Validate same-origin/same-site request metadata and session-bound CSRF token. */
+function adminVerifyRequest(?string $submittedToken): ?string
 {
     /** @var array<string,mixed> $server */
     $server = $_SERVER;
-    $baseUrl = defined('BASE_URL') && is_string(BASE_URL) ? BASE_URL : null;
-    return adminCsrf()->verifyPost($server, $submittedToken, $baseUrl);
+    return adminCsrf()->verifyRequest($server, $submittedToken);
 }
 
 /**

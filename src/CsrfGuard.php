@@ -16,9 +16,12 @@ final class CsrfGuard
 
     /**
      * @param array<mixed> $session the session store (normally $_SESSION), written through on token issuance
+     * @param ?string $configuredBaseUrl optional trusted application base URL for TLS-terminating proxy origin matching
      */
-    public function __construct(array &$session)
-    {
+    public function __construct(
+        array &$session,
+        private readonly ?string $configuredBaseUrl = null,
+    ) {
         $this->session = &$session;
     }
 
@@ -35,21 +38,18 @@ final class CsrfGuard
     }
 
     /**
-     * Verify that the request is a same-origin POST carrying the active session token.
+     * Verify same-origin/same-site request metadata and the session-bound anti-CSRF token.
      *
      * Requires Sec-Fetch-Site: same-origin when present, validates Origin and Referer
-     * against the request origin (plus $configuredBaseUrl when it shares the request host),
-     * and requires at least one of those same-origin request headers.
+     * against the request origin (plus configuredBaseUrl when it shares the request host),
+     * and requires at least one of those same-origin request headers. Returns null when
+     * valid or a client-safe 403 rejection reason otherwise.
      *
      * @param array<string,mixed> $server HTTP server parameters (normally $_SERVER)
      */
-    public function verifyPost(array $server, ?string $submittedToken, ?string $configuredBaseUrl = null): ?string
+    public function verifyRequest(array $server, ?string $submittedToken): ?string
     {
-        $method = $server['REQUEST_METHOD'] ?? null;
-        if (!is_string($method) || strtoupper($method) !== 'POST') {
-            return 'Method not allowed';
-        }
-        if (!$this->hasSameOriginMetadata($server, $configuredBaseUrl)) {
+        if (!$this->hasSameOriginMetadata($server)) {
             return 'Invalid request origin';
         }
         $sessionToken = $this->session[self::SESSION_KEY] ?? null;
@@ -60,9 +60,9 @@ final class CsrfGuard
     }
 
     /** @param array<string,mixed> $server */
-    private function hasSameOriginMetadata(array $server, ?string $configuredBaseUrl): bool
+    private function hasSameOriginMetadata(array $server): bool
     {
-        $expected = $this->expectedOrigins($server, $configuredBaseUrl);
+        $expected = $this->expectedOrigins($server);
         if ($expected === null) {
             return false;
         }
@@ -98,7 +98,7 @@ final class CsrfGuard
      * @param array<string,mixed> $server
      * @return ?list<string> null when HTTP_HOST is present and malformed
      */
-    private function expectedOrigins(array $server, ?string $configuredBaseUrl): ?array
+    private function expectedOrigins(array $server): ?array
     {
         if (!array_key_exists('HTTP_HOST', $server)) {
             return [];
@@ -114,8 +114,8 @@ final class CsrfGuard
         }
 
         $origins = [$requestOrigin['canonical']];
-        if (is_string($configuredBaseUrl) && $configuredBaseUrl !== '') {
-            $base = self::parseOrigin($configuredBaseUrl, false);
+        if (is_string($this->configuredBaseUrl) && $this->configuredBaseUrl !== '') {
+            $base = self::parseOrigin($this->configuredBaseUrl, false);
             $portsCompatible = $base !== null
                 && $base['host'] === $requestOrigin['host']
                 && (($requestOrigin['explicit_port'] === null && $base['explicit_port'] === null)

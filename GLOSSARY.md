@@ -11,8 +11,7 @@ and mutually exclusive value subtotal.
 
 **Mutation source**: The existing identifier used by editing and thank-you
 actions: registry, offregistry, housefund, or honeymoonfund. Cash's display source
-is cash, while its mutation source is offregistry (its `GiftOverview`
-`toggle_prefix` remains `gift`).
+is cash, while its mutation source is offregistry.
 
 **Gift status**: The independently tracked received, thank-you written, and
 thank-you sent flags and their corresponding stage timestamps. Received applies
