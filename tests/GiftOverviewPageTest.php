@@ -44,6 +44,10 @@ final class GiftOverviewPageTest extends TestCase
         $this->assertNotFalse($rows);
         $this->assertCount(12, $rows);
 
+        $toggleLinks = $xpath->query('//a[contains(@href,"toggle_")]');
+        $this->assertNotFalse($toggleLinks);
+        $this->assertCount(0, $toggleLinks);
+
         $cash = $this->element($xpath, '//tr[contains(@class,"source-cash")]');
         $this->assertSame('cash gift sample grandparents tucked into a handwritten card on the wedding day. cash off-registry off registry', $cash->getAttribute('data-search'));
         $this->assertSame('yes', $cash->getAttribute('data-received'));
@@ -55,9 +59,8 @@ final class GiftOverviewPageTest extends TestCase
         $this->assertSame('200.00', $value->getAttribute('value'));
         $this->assertTrue($value->hasAttribute('readonly'));
         foreach (['written', 'sent'] as $stage) {
-            $button = $this->element($xpath, './/a[@data-field="' . $stage . '"]', $cash);
-            $this->assertSame('offregistry', $button->getAttribute('data-source'));
-            $this->assertSame('/admin-gifts?toggle_gift_' . $stage . '=802#gifts-table', $button->getAttribute('href'));
+            $button = $this->assertTogglePostForm($xpath, $cash, 'offregistry', 802, $stage, '/admin-gifts?sample=1#gifts-table');
+            $this->assertSame('submit', $button->getAttribute('type'));
         }
         $this->element($xpath, './/a[@href="/admin-gifts?edit=802#add-gift"][@class="btn-small btn-edit"]', $cash);
         $this->element($xpath, './/a[@href="/admin-gifts?delete=802#gifts-table"]', $cash);
@@ -72,9 +75,8 @@ final class GiftOverviewPageTest extends TestCase
         $note = $this->element($xpath, './/button[contains(@class,"gift-title-link")]', $registry);
         $this->assertSame('Mention their own honeymoon story when writing the thank-you.', $note->getAttribute('data-item-note'));
         $this->assertStringNotContainsString('honeymoon story', $registry->getAttribute('data-search'));
-        $received = $this->element($xpath, './/a[@data-field="received"]', $registry);
+        $received = $this->assertTogglePostForm($xpath, $registry, 'registry', 303, 'received', '/admin-gifts?sample=1#gifts-table');
         $this->assertSame('Received Feb 8, 2026', $received->getAttribute('title'));
-        $this->assertSame('/admin-gifts?toggle_registry_received=303#gifts-table', $received->getAttribute('href'));
         $this->element($xpath, './/button[contains(@class,"js-unmark-purchased")][@data-id="303"]', $registry);
 
         foreach (['housefund' => '/admin-house-fund', 'honeymoonfund' => '/admin-honeymoon-fund'] as $source => $destination) {
@@ -89,9 +91,11 @@ final class GiftOverviewPageTest extends TestCase
                 $fundReceived = $xpath->query('.//*[@data-field="received"]', $row);
                 $this->assertNotFalse($fundReceived);
                 $this->assertCount(0, $fundReceived);
-                $written = $this->element($xpath, './/a[@data-field="written"]', $row);
-                $this->assertSame($source, $written->getAttribute('data-source'));
-                $this->assertStringContainsString('toggle_' . $source . '_written=', $written->getAttribute('href'));
+                $written = $this->element($xpath, './/button[@data-field="written"]', $row);
+                $id = (int) $written->getAttribute('data-id');
+                $this->assertGreaterThan(0, $id);
+                $this->assertTogglePostForm($xpath, $row, $source, $id, 'written', '/admin-gifts?sample=1#gifts-table');
+                $this->assertTogglePostForm($xpath, $row, $source, $id, 'sent', '/admin-gifts?sample=1#gifts-table');
             }
         }
         $this->element($xpath, '//div[@id="registry-note-modal"]');
@@ -99,6 +103,30 @@ final class GiftOverviewPageTest extends TestCase
         $this->element($xpath, '//select[@id="filter-received"]');
         $this->element($xpath, '//select[@id="filter-written"]');
         $this->element($xpath, '//select[@id="filter-sent"]');
+    }
+
+    private function assertTogglePostForm(
+        \DOMXPath $xpath,
+        \DOMNode $row,
+        string $source,
+        int $id,
+        string $field,
+        string $action,
+    ): \DOMElement {
+        $button = $this->element($xpath, './/button[@data-field="' . $field . '"]', $row);
+        $this->assertSame($source, $button->getAttribute('data-source'));
+        $this->assertSame((string) $id, $button->getAttribute('data-id'));
+        $form = $button->parentNode;
+        $this->assertInstanceOf(\DOMElement::class, $form);
+        $this->assertSame('form', strtolower($form->tagName));
+        $this->assertSame('POST', strtoupper($form->getAttribute('method')));
+        $this->assertSame($action, $form->getAttribute('action'));
+        $this->assertSame('1', $this->element($xpath, './input[@name="toggle_gift_status"]', $form)->getAttribute('value'));
+        $this->element($xpath, './input[@name="csrf_token"]', $form);
+        $this->assertSame($source, $this->element($xpath, './input[@name="source"]', $form)->getAttribute('value'));
+        $this->assertSame((string) $id, $this->element($xpath, './input[@name="id"]', $form)->getAttribute('value'));
+        $this->assertSame($field, $this->element($xpath, './input[@name="field"]', $form)->getAttribute('value'));
+        return $button;
     }
 
     private function element(\DOMXPath $xpath, string $query, ?\DOMNode $context = null): \DOMElement

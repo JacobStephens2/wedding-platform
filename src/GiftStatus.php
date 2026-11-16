@@ -11,7 +11,7 @@ use InvalidArgumentException;
 use OutOfBoundsException;
 use PDO;
 
-/** Gift status changes shared by the JSON and fallback-link adapters. */
+/** Gift status changes shared by the JSON and fallback-POST adapters. */
 final class GiftStatus
 {
     private const SOURCES = [

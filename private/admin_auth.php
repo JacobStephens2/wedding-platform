@@ -8,6 +8,7 @@
 
 use Wedding\AdminArea;
 use Wedding\AdminAuth;
+use Wedding\CsrfGuard;
 
 require_once __DIR__ . '/admin_sample.php';
 
@@ -28,6 +29,24 @@ function adminAuth(): AdminAuth
         ]);
     }
     return $auth;
+}
+
+/** The request's CsrfGuard, bound to $_SESSION (started on first use). */
+function adminCsrf(): CsrfGuard
+{
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
+    }
+    return new CsrfGuard($_SESSION);
+}
+
+/** Validate same-origin/same-site POST metadata and session-bound CSRF token. */
+function adminVerifyPost(?string $submittedToken): ?string
+{
+    /** @var array<string,mixed> $server */
+    $server = $_SERVER;
+    $baseUrl = defined('BASE_URL') && is_string(BASE_URL) ? BASE_URL : null;
+    return adminCsrf()->verifyPost($server, $submittedToken, $baseUrl);
 }
 
 /**

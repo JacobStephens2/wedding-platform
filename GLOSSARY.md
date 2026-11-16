@@ -11,12 +11,12 @@ and mutually exclusive value subtotal.
 
 **Mutation source**: The existing identifier used by editing and thank-you
 actions: registry, offregistry, housefund, or honeymoonfund. Cash's display source
-is cash, while its mutation source is offregistry and its fallback toggles use
-the gift parameter prefix.
+is cash, while its mutation source is offregistry (its `GiftOverview`
+`toggle_prefix` remains `gift`).
 
 **Gift status**: The independently tracked received, thank-you written, and
 thank-you sent flags and their corresponding stage timestamps. Received applies
 only to purchased registry items. Written and sent also apply to manually
 recorded gifts, including cash, and House/Honeymoon fund contributions.
 Implemented by `Wedding\GiftStatus` in `src/GiftStatus.php`; shared by the JSON
-toggle action and the Gift Manager's fallback links.
+toggle action and the Gift Manager's fallback `POST` forms.

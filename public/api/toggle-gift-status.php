@@ -5,8 +5,9 @@
  * without a full page reload.
  *
  * POST /api/toggle-gift-status
+ * Headers: X-CSRF-Token (or JSON "csrf_token") + same-origin POST metadata
  * Body (JSON): { "source": "registry"|"offregistry"|"housefund"|"honeymoonfund", "id": 123, "field": "received"|"written"|"sent" }
- * Response: { success: true, active: bool, field: "received", id: 123, source: "registry" }
+ * Response: { success: true, source: "registry", id: 123, field: "received", active: bool, at: ?string, at_display: ?string }
  */
 
 require_once __DIR__ . '/../../private/config.php';
@@ -31,7 +32,20 @@ if (!$authed) {
     exit;
 }
 
-$input = json_decode(file_get_contents('php://input'), true) ?: [];
+$rawBody = file_get_contents('php://input');
+$decoded = is_string($rawBody) ? json_decode($rawBody, true) : null;
+$input = is_array($decoded) ? $decoded : [];
+
+$submittedToken = array_key_exists('HTTP_X_CSRF_TOKEN', $_SERVER)
+    ? (is_string($_SERVER['HTTP_X_CSRF_TOKEN']) ? $_SERVER['HTTP_X_CSRF_TOKEN'] : '')
+    : (is_string($input['csrf_token'] ?? null) ? $input['csrf_token'] : '');
+$rejection = adminVerifyPost($submittedToken);
+if ($rejection !== null) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'error' => $rejection]);
+    exit;
+}
+
 $source = is_string($input['source'] ?? null) ? $input['source'] : '';
 $id = (int) ($input['id'] ?? 0);
 $field = is_string($input['field'] ?? null) ? $input['field'] : '';

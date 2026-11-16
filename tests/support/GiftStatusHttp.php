@@ -103,9 +103,22 @@ final class GiftStatusHttp
         }
     }
 
+    public function origin(): string
+    {
+        return 'http://' . $this->address;
+    }
+
     public function acquiredDatabase(): bool
     {
         return is_file($this->directory->path . '/acquisitions');
+    }
+
+    public function clearAcquisitions(): void
+    {
+        $path = $this->directory->path . '/acquisitions';
+        if (is_file($path)) {
+            unlink($path);
+        }
     }
 
     public function log(): string
