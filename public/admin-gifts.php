@@ -11,40 +11,45 @@ $success = '';
 $sampleMode = isAdminSampleMode();
 ['authenticated' => $authenticated, 'error' => $error] = adminPageAuth(\Wedding\AdminArea::Registry, '/admin-gifts');
 
-// Decode legacy links in their existing priority order. Gift status owns all
-// source eligibility, persistence selection, and independent stage changes.
-$toggleLinks = [
-    'toggle_registry_received' => ['registry', 'received'],
-    'toggle_registry_written' => ['registry', 'written'],
-    'toggle_registry_sent' => ['registry', 'sent'],
-    'toggle_gift_written' => ['offregistry', 'written'],
-    'toggle_gift_sent' => ['offregistry', 'sent'],
-    'toggle_housefund_written' => ['housefund', 'written'],
-    'toggle_housefund_sent' => ['housefund', 'sent'],
-    'toggle_honeymoonfund_written' => ['honeymoonfund', 'written'],
-    'toggle_honeymoonfund_sent' => ['honeymoonfund', 'sent'],
-];
-if (!$sampleMode && $authenticated) {
-    $giftStatus = new \Wedding\GiftStatus(static fn (): PDO => getDbConnection());
-    foreach ($toggleLinks as $param => [$source, $field]) {
-        if (!isset($_GET[$param]) || !is_numeric($_GET[$param])) {
-            continue;
-        }
-        $id = (int) $_GET[$param];
-        try {
-            if ($id > 0) {
-                $giftStatus->toggle($source, $id, $field);
-            }
-        } catch (OutOfBoundsException $e) {
-            // Missing/unpurchased records have always redirected silently.
-        } catch (Exception $e) {
-            $error = ($source === 'registry' ? 'Error updating status: ' : 'Error updating thank-you status: ')
-                . htmlspecialchars($e->getMessage());
-            // A failed parameter must not prevent a later supplied link working.
-            continue;
-        }
+// Handle POST gift status toggle fallback submissions after CSRF + same-origin checks.
+// Gift status owns all source eligibility, persistence selection, and independent stage changes.
+if (!$sampleMode && $authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_gift_status'])) {
+    $submittedToken = is_string($_POST['csrf_token'] ?? null) ? $_POST['csrf_token'] : '';
+    $rejection = adminVerifyRequest($submittedToken);
+    if ($rejection !== null) {
+        http_response_code(403);
+        ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forbidden - Manage Gifts</title>
+</head>
+<body>
+    <p><?php echo htmlspecialchars($rejection, ENT_QUOTES, 'UTF-8'); ?>. <a href="/admin-gifts#gifts-table">Return to Gift Manager</a>.</p>
+</body>
+</html>
+<?php
+        exit;
+    }
+
+    $source = is_string($_POST['source'] ?? null) ? $_POST['source'] : '';
+    $field = is_string($_POST['field'] ?? null) ? $_POST['field'] : '';
+    $rawId = $_POST['id'] ?? '';
+    $id = is_numeric($rawId) ? (int) $rawId : 0;
+    try {
+        $giftStatus = new \Wedding\GiftStatus(static fn (): PDO => getDbConnection());
+        $giftStatus->toggle($source, $id, $field);
         header('Location: /admin-gifts#gifts-table');
         exit;
+    } catch (InvalidArgumentException | OutOfBoundsException $e) {
+        // Missing/unpurchased or malformed command parameters redirect without mutating.
+        header('Location: /admin-gifts#gifts-table');
+        exit;
+    } catch (Exception $e) {
+        $error = ($source === 'registry' ? 'Error updating status: ' : 'Error updating thank-you status: ')
+            . htmlspecialchars($e->getMessage());
     }
 }
 
@@ -286,6 +291,41 @@ $overview = \Wedding\GiftOverview::fromSources(
 );
 $allGifts = $overview->rows;
 $summary = $overview->summary;
+$csrfToken = ($authenticated && !$sampleMode) ? adminCsrf()->token() : '';
+$toggleFormAction = adminUrl('/admin-gifts') . '#gifts-table';
+$toggleStages = [
+    'received' => ['inactiveClass' => 'btn-received', 'activeLabel' => '✓ Received', 'inactiveLabel' => 'Mark Received'],
+    'written' => ['inactiveClass' => 'btn-thanks-written', 'activeLabel' => '✓ Written', 'inactiveLabel' => 'Mark Written'],
+    'sent' => ['inactiveClass' => 'btn-thanks-sent', 'activeLabel' => '✓ Sent', 'inactiveLabel' => 'Mark Sent'],
+];
+$renderToggleForm = static function (
+    string $source,
+    int $id,
+    string $field,
+    bool $active,
+    ?string $title = null
+) use ($toggleFormAction, $csrfToken, $toggleStages): void {
+    $stage = $toggleStages[$field];
+    $btnClass = 'btn-small js-toggle-status ' . ($active ? 'btn-thanks-active' : $stage['inactiveClass']);
+    $label = $active ? $stage['activeLabel'] : $stage['inactiveLabel'];
+    ?>
+    <form method="POST" action="<?php echo htmlspecialchars($toggleFormAction); ?>" class="toggle-status-form">
+        <input type="hidden" name="toggle_gift_status" value="1">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
+        <input type="hidden" name="source" value="<?php echo htmlspecialchars($source); ?>">
+        <input type="hidden" name="id" value="<?php echo $id; ?>">
+        <input type="hidden" name="field" value="<?php echo htmlspecialchars($field); ?>">
+        <button type="submit"
+                class="<?php echo htmlspecialchars($btnClass); ?>"
+                data-source="<?php echo htmlspecialchars($source); ?>"
+                data-id="<?php echo $id; ?>"
+                data-field="<?php echo htmlspecialchars($field); ?>"<?php if ($title !== null): ?>
+                title="<?php echo htmlspecialchars($title); ?>"<?php endif; ?>>
+            <?php echo htmlspecialchars($label); ?>
+        </button>
+    </form>
+    <?php
+};
 
 $page_title = "Manage Gifts - " . content('couple_names', 'Our Wedding');
 ?>
@@ -609,6 +649,14 @@ $page_title = "Manage Gifts - " . content('couple_names', 'Our Wedding');
             color: white;
         }
         .btn-received:hover { background-color: #916dbc; }
+        .toggle-status-form {
+            display: inline;
+            margin: 0;
+        }
+        .toggle-status-form .btn-small {
+            font-family: inherit;
+            line-height: inherit;
+        }
         .js-toggle-status.is-busy {
             opacity: 0.6;
             cursor: progress;
@@ -1163,14 +1211,18 @@ $page_title = "Manage Gifts - " . content('couple_names', 'Our Wedding');
                                             <td><?php echo $g['date_display'] !== '' ? htmlspecialchars($g['date_display']) : '—'; ?></td>
                                             <td class="actions-cell">
                                                 <?php if ($isRegistry): ?>
-                                                    <a href="/admin-gifts?toggle_registry_received=<?php echo (int) $g['id']; ?>#gifts-table"
-                                                       class="btn-small js-toggle-status <?php echo $g['received'] ? 'btn-thanks-active' : 'btn-received'; ?>"
-                                                       data-source="<?php echo htmlspecialchars($g['action_source']); ?>"
-                                                       data-id="<?php echo (int) $g['id']; ?>"
-                                                       data-field="received"
-                                                       title="<?php echo $g['received'] && $g['received_date'] !== '' ? 'Received ' . htmlspecialchars($g['received_date']) : 'Mark gift as received'; ?>">
-                                                        <?php echo $g['received'] ? '✓ Received' : 'Mark Received'; ?>
-                                                    </a>
+                                                    <?php
+                                                    $receivedTitle = $g['received'] && $g['received_date'] !== ''
+                                                        ? 'Received ' . $g['received_date']
+                                                        : 'Mark gift as received';
+                                                    $renderToggleForm(
+                                                        $g['action_source'],
+                                                        (int) $g['id'],
+                                                        'received',
+                                                        (bool) $g['received'],
+                                                        $receivedTitle
+                                                    );
+                                                    ?>
                                                 <?php elseif ($isFund): ?>
                                                     <span class="no-name" title="Fund contributions are already received">—</span>
                                                 <?php else: ?>
@@ -1178,22 +1230,10 @@ $page_title = "Manage Gifts - " . content('couple_names', 'Our Wedding');
                                                 <?php endif; ?>
                                             </td>
                                             <td class="actions-cell">
-                                                <a href="/admin-gifts?toggle_<?php echo htmlspecialchars($g['toggle_prefix']); ?>_written=<?php echo (int) $g['id']; ?>#gifts-table"
-                                                   class="btn-small js-toggle-status <?php echo $g['written'] ? 'btn-thanks-active' : 'btn-thanks-written'; ?>"
-                                                   data-source="<?php echo htmlspecialchars($g['action_source']); ?>"
-                                                   data-id="<?php echo (int) $g['id']; ?>"
-                                                   data-field="written">
-                                                    <?php echo $g['written'] ? '✓ Written' : 'Mark Written'; ?>
-                                                </a>
+                                                <?php $renderToggleForm($g['action_source'], (int) $g['id'], 'written', (bool) $g['written']); ?>
                                             </td>
                                             <td class="actions-cell">
-                                                <a href="/admin-gifts?toggle_<?php echo htmlspecialchars($g['toggle_prefix']); ?>_sent=<?php echo (int) $g['id']; ?>#gifts-table"
-                                                   class="btn-small js-toggle-status <?php echo $g['sent'] ? 'btn-thanks-active' : 'btn-thanks-sent'; ?>"
-                                                   data-source="<?php echo htmlspecialchars($g['action_source']); ?>"
-                                                   data-id="<?php echo (int) $g['id']; ?>"
-                                                   data-field="sent">
-                                                    <?php echo $g['sent'] ? '✓ Sent' : 'Mark Sent'; ?>
-                                                </a>
+                                                <?php $renderToggleForm($g['action_source'], (int) $g['id'], 'sent', (bool) $g['sent']); ?>
                                             </td>
                                             <td class="actions-cell">
                                                 <?php if ($isOffRegistry): ?>
@@ -1412,8 +1452,8 @@ $page_title = "Manage Gifts - " . content('couple_names', 'Our Wedding');
             // In-place toggle for Mark Received / Mark Written / Mark Sent.
             // Hits /api/toggle-gift-status and updates the row in place so
             // the user's scroll position, sort, and filters stay intact.
-            // Sample mode is bypassed (the server would reject the call
-            // anyway) so the anchor fallback still navigates normally.
+            // Sample mode is bypassed so admin_sample.php intercepts the POST
+            // form submission with its read-only alert.
             if (!document.querySelector('.sample-mode-banner')) {
                 function updateStatusBadge(row) {
                     const written = row.dataset.written === 'yes';
@@ -1443,29 +1483,23 @@ $page_title = "Manage Gifts - " . content('couple_names', 'Our Wedding');
                     row.classList.toggle('awaiting-delivery', isRegistry && !received);
                 }
 
+                const TOGGLE_STAGES = <?php echo json_encode($toggleStages, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
+
                 function applyButtonState(btn, field, active, atDisplay) {
+                    const meta = TOGGLE_STAGES[field];
+                    if (!meta) return;
                     btn.classList.remove('btn-received', 'btn-thanks-written', 'btn-thanks-sent', 'btn-thanks-active');
                     if (active) {
                         btn.classList.add('btn-thanks-active');
+                        btn.textContent = meta.activeLabel;
                         if (field === 'received') {
-                            btn.textContent = '✓ Received';
                             btn.title = atDisplay ? 'Received ' + atDisplay : 'Received';
-                        } else if (field === 'written') {
-                            btn.textContent = '✓ Written';
-                        } else if (field === 'sent') {
-                            btn.textContent = '✓ Sent';
                         }
                     } else {
+                        btn.classList.add(meta.inactiveClass);
+                        btn.textContent = meta.inactiveLabel;
                         if (field === 'received') {
-                            btn.classList.add('btn-received');
-                            btn.textContent = 'Mark Received';
                             btn.title = 'Mark gift as received';
-                        } else if (field === 'written') {
-                            btn.classList.add('btn-thanks-written');
-                            btn.textContent = 'Mark Written';
-                        } else if (field === 'sent') {
-                            btn.classList.add('btn-thanks-sent');
-                            btn.textContent = 'Mark Sent';
                         }
                     }
                 }
@@ -1515,20 +1549,30 @@ $page_title = "Manage Gifts - " . content('couple_names', 'Our Wedding');
                     });
                 });
 
-                document.querySelectorAll('.js-toggle-status').forEach(function(btn) {
-                    btn.addEventListener('click', function(e) {
+                document.querySelectorAll('.toggle-status-form').forEach(function(form) {
+                    form.addEventListener('submit', function(e) {
                         e.preventDefault();
-                        if (btn.classList.contains('is-busy')) return;
+                        const btn = form.querySelector('.js-toggle-status');
+                        if (!btn || btn.classList.contains('is-busy')) return;
                         btn.classList.add('is-busy');
 
                         const source = btn.dataset.source;
                         const id = parseInt(btn.dataset.id, 10);
                         const field = btn.dataset.field;
+                        const tokenInput = form.querySelector('input[name="csrf_token"]');
+                        const csrfToken = tokenInput ? tokenInput.value : '';
+
+                        function submitFallback() {
+                            HTMLFormElement.prototype.submit.call(form);
+                        }
 
                         fetch('/api/toggle-gift-status.php', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ source: source, id: id, field: field })
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': csrfToken
+                            },
+                            body: JSON.stringify({ source: source, id: id, field: field, csrf_token: csrfToken })
                         })
                         .then(function(resp) { return resp.json().then(function(data) { return { ok: resp.ok, data: data }; }); })
                         .then(function(result) {
@@ -1546,12 +1590,12 @@ $page_title = "Manage Gifts - " . content('couple_names', 'Our Wedding');
                                 // without touching scroll position or sort order.
                                 applyFilter();
                             } else {
-                                // Fall back to the href navigation on failure
-                                window.location.href = btn.href;
+                                // Fall back to POST form submission on failure
+                                submitFallback();
                             }
                         })
                         .catch(function() {
-                            window.location.href = btn.href;
+                            submitFallback();
                         })
                         .finally(function() {
                             btn.classList.remove('is-busy');

@@ -7,7 +7,7 @@ namespace Wedding;
 /**
  * A read-only gift-tracking snapshot. No database or application configuration is needed.
  *
- * @phpstan-type GiftStatus array{thank_you_written?:int|string|bool|null, thank_you_sent?:int|string|bool|null, ...}
+ * @phpstan-type ThankYouStatus array{thank_you_written?:int|string|bool|null, thank_you_sent?:int|string|bool|null, ...}
  * @phpstan-type RegistryPurchase array{
  *   id:int|string, title?:?string, purchased_by?:?string, purchase_message?:?string,
  *   admin_note?:?string, price?:int|float|string|null, received?:int|string|bool|null,
@@ -39,7 +39,7 @@ namespace Wedding;
  *   written:bool, sent:bool, completed:bool, no_name:bool, awaiting_delivery:bool,
  *   source_label:string, action_kind:'registry'|'manual'|'fund',
  *   action_source:'registry'|'offregistry'|'housefund'|'honeymoonfund',
- *   toggle_prefix:string, management_url:?string, search_aliases:string, search:string,
+ *   management_url:?string, search_aliases:string, search:string,
  *   row_classes:list<string>, filter:array{received:'yes'|'no', written:'yes'|'no', sent:'yes'|'no'},
  *   sort:array{source:string, status:int, from:string, title:string, price:float, date:int, received:int, written:int, sent:int}
  * }
@@ -48,15 +48,15 @@ final class GiftOverview
 {
     private const SOURCES = [
         'registry' => ['source_label' => 'Registry', 'action_kind' => 'registry', 'action_source' => 'registry',
-            'toggle_prefix' => 'registry', 'management_url' => null, 'search_aliases' => 'registry', 'sort_source' => 'a'],
+            'management_url' => null, 'search_aliases' => 'registry', 'sort_source' => 'a'],
         'offregistry' => ['source_label' => 'Off-Registry', 'action_kind' => 'manual', 'action_source' => 'offregistry',
-            'toggle_prefix' => 'gift', 'management_url' => null, 'search_aliases' => 'off-registry off registry', 'sort_source' => 'b'],
+            'management_url' => null, 'search_aliases' => 'off-registry off registry', 'sort_source' => 'b'],
         'cash' => ['source_label' => 'Cash', 'action_kind' => 'manual', 'action_source' => 'offregistry',
-            'toggle_prefix' => 'gift', 'management_url' => null, 'search_aliases' => 'cash off-registry off registry', 'sort_source' => 'b'],
+            'management_url' => null, 'search_aliases' => 'cash off-registry off registry', 'sort_source' => 'b'],
         'housefund' => ['source_label' => 'House Fund', 'action_kind' => 'fund', 'action_source' => 'housefund',
-            'toggle_prefix' => 'housefund', 'management_url' => '/admin-house-fund', 'search_aliases' => 'house fund housefund', 'sort_source' => 'c'],
+            'management_url' => '/admin-house-fund', 'search_aliases' => 'house fund housefund', 'sort_source' => 'c'],
         'honeymoonfund' => ['source_label' => 'Honeymoon Fund', 'action_kind' => 'fund', 'action_source' => 'honeymoonfund',
-            'toggle_prefix' => 'honeymoonfund', 'management_url' => '/admin-honeymoon-fund', 'search_aliases' => 'honeymoon fund honeymoonfund', 'sort_source' => 'd'],
+            'management_url' => '/admin-honeymoon-fund', 'search_aliases' => 'honeymoon fund honeymoonfund', 'sort_source' => 'd'],
     ];
 
     /**
@@ -130,7 +130,7 @@ final class GiftOverview
 
     /**
      * @param GiftData $row
-     * @param GiftStatus $status
+     * @param ThankYouStatus $status
      * @return GiftRow
      */
     private static function projectRow(array $row, array $status): array
@@ -157,8 +157,7 @@ final class GiftOverview
             'written' => $written, 'sent' => $sent, 'completed' => $completed,
             'no_name' => $noName, 'awaiting_delivery' => $awaiting,
             'source_label' => $source['source_label'], 'action_kind' => $source['action_kind'],
-            'action_source' => $source['action_source'], 'toggle_prefix' => $source['toggle_prefix'],
-            'management_url' => $source['management_url'], 'search_aliases' => $source['search_aliases'],
+            'action_source' => $source['action_source'], 'management_url' => $source['management_url'], 'search_aliases' => $source['search_aliases'],
             'search' => strtolower(trim((string) preg_replace('/\s+/', ' ', $search))),
             'row_classes' => $classes,
             'filter' => ['received' => $received ? 'yes' : 'no', 'written' => $written ? 'yes' : 'no', 'sent' => $sent ? 'yes' : 'no'],

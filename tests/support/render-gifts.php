@@ -22,7 +22,14 @@ try {
     file_put_contents($root . '/private/db.php', '<?php function getDbConnection(): never {'
         . 'fwrite(STDERR, "Unexpected database access in sample render"); throw new LogicException("Database access is forbidden"); }');
     $_GET = ['sample' => '1', 'toggle_registry_received' => '305', 'delete' => '802'];
-    $_POST = ['description' => 'Should never be saved', 'save_gift' => '1'];
+    $_POST = [
+        'toggle_gift_status' => '1',
+        'source' => 'registry',
+        'id' => '305',
+        'field' => 'received',
+        'description' => 'Should never be saved',
+        'save_gift' => '1',
+    ];
     $_SERVER['REQUEST_METHOD'] = 'POST';
     require $root . '/public/admin-gifts.php';
 } finally {
