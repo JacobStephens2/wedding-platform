@@ -70,9 +70,12 @@ also run `php -l public/admin-gifts.php` and
 `php -l public/api/toggle-gift-status.php`.
 
 The Announcements entrypoint tests use the same MariaDB and PHP prerequisites.
-With Node.js, Playwright, and Chromium installed, run the confirmed Send check
-with `node tests/announcement-send-browser.cjs`. Set `PLAYWRIGHT_MODULE` to the
-installed Playwright package path if Node cannot resolve it from this checkout.
+For the confirmed Send check, install Node.js and Playwright. Run
+`npx playwright install chromium` where Playwright is installed to download its
+matching browser, or set `CHROMIUM_PATH` to an existing Chromium executable.
+From this checkout, run `node tests/announcement-send-browser.cjs`. Set
+`PLAYWRIGHT_MODULE` to the installed Playwright package path if Node cannot
+resolve it from this checkout.
 
 ## Tech Stack
 
