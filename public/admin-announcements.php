@@ -1,4 +1,6 @@
 <?php
+use Wedding\AnnouncementAudienceSelection;
+
 require_once __DIR__ . '/../private/config.php';
 require_once __DIR__ . '/../private/db.php';
 require_once __DIR__ . '/../private/admin_auth.php';
@@ -66,19 +68,9 @@ function audienceSql(string $audience): ?string {
     return null;
 }
 
-function fetchAudience(PDO $pdo, string $audience): array {
+function fetchAudienceRows(PDO $pdo, string $audience): array {
     $sql = audienceSql($audience);
-    if ($sql === null) return [];
-    $rows = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
-    $seen = [];
-    $out = [];
-    foreach ($rows as $r) {
-        $key = strtolower(trim($r['email']));
-        if ($key === '' || isset($seen[$key])) continue;
-        $seen[$key] = true;
-        $out[] = $r;
-    }
-    return $out;
+    return $sql === null ? [] : $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 }
 
 function renderPersonalized(string $template, array $recipient): string {
@@ -100,40 +92,6 @@ function renderMarkdownEmail(string $markdown): string {
     $parsedown = new Parsedown();
     $parsedown->setSafeMode(true);
     return $parsedown->text($markdown);
-}
-
-/**
- * Parse the custom-recipients textarea into [{first_name, last_name, email}, ...].
- * Accepts one entry per line (or comma-separated). Each entry is either
- * "email@example.com" or "First Last <email@example.com>". Invalid lines are
- * silently dropped; duplicates (by lowercase email) are collapsed.
- */
-function parseCustomRecipients(string $raw): array {
-    $tokens = preg_split('/[\r\n,]+/', $raw) ?: [];
-    $out = [];
-    $seen = [];
-    foreach ($tokens as $token) {
-        $token = trim($token);
-        if ($token === '') continue;
-        $first = '';
-        $last  = '';
-        $email = $token;
-        if (preg_match('/^(.*?)\s*<\s*([^>]+?)\s*>\s*$/', $token, $m)) {
-            $namePart = trim($m[1], " \t\"'");
-            $email = trim($m[2]);
-            if ($namePart !== '') {
-                $parts = preg_split('/\s+/', $namePart, 2);
-                $first = $parts[0] ?? '';
-                $last  = $parts[1] ?? '';
-            }
-        }
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) continue;
-        $key = strtolower($email);
-        if (isset($seen[$key])) continue;
-        $seen[$key] = true;
-        $out[] = ['first_name' => $first, 'last_name' => $last, 'email' => $email];
-    }
-    return $out;
 }
 
 // Load saved custom audiences from the DB and merge into $AUDIENCES so they're
@@ -178,7 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $draftId = (int)$_GET['draft'];
 }
 
-$loadedDraftIncluded = null;
+$storedDraftFilter = null;
 
 // If we arrived via GET ?draft=<id> (or a redirect from save), hydrate the form
 // fields from the stored draft. POST submissions take precedence over draft state.
@@ -195,10 +153,7 @@ if ($draftId && $authenticated && !$sampleMode && $_SERVER['REQUEST_METHOD'] ===
             $_POST['from_name']         = $loaded['from_name'] ?? '';
             $_POST['reply_to']          = $loaded['reply_to'] ?? '';
             $_POST['custom_recipients'] = $loaded['custom_recipients'] ?? '';
-            $includedDecoded = json_decode((string)($loaded['included_emails'] ?? ''), true);
-            if (is_array($includedDecoded)) {
-                $loadedDraftIncluded = $includedDecoded;
-            }
+            $storedDraftFilter = $loaded['included_emails'] ?? null;
             $infoMessage = 'Loaded draft from ' . date('M j, Y g:i a', strtotime($loaded['updated_at'])) . '.';
         } else {
             $draftId = null;
@@ -225,7 +180,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET'
     && isset($savedAudiencesByKey[$audience])) {
     $customRecipientsRaw = (string)$savedAudiencesByKey[$audience]['custom_recipients'];
 }
-$customRecipientsParsed = parseCustomRecipients($customRecipientsRaw);
+
+// A marker without checkbox values means every guest in that panel was unchecked.
+$submittedFilters = [];
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    foreach (array_keys($GUEST_AUDIENCES) as $key) {
+        if (!empty($_POST['included_recipients_submitted'][$key])) {
+            $checked = $_POST['included_recipients'][$key] ?? null;
+            $submittedFilters[$key] = is_array($checked) ? $checked : [];
+        }
+    }
+}
+$selection = new AnnouncementAudienceSelection($audience, $submittedFilters, $storedDraftFilter, $customRecipientsRaw);
+$customRecipientCount = $selection->customRecipientCount();
 
 // Track which saved audience the form is currently bound to so the "Save audience"
 // section can switch between "Save as new" and "Update '<name>'".
@@ -250,16 +217,7 @@ if ($authenticated && !$sampleMode && $_SERVER['REQUEST_METHOD'] === 'POST'
             header('Location: /admin-announcements?draft_deleted=1');
             exit;
         } else { // save_draft
-            $hasIncludeFilter = !empty($_POST['included_recipients_submitted'][$audience]);
-            $includedJson = null;
-            if ($hasIncludeFilter) {
-                $rawIncluded = $_POST['included_recipients'][$audience] ?? [];
-                if (!is_array($rawIncluded)) $rawIncluded = [];
-                $includedJson = json_encode(array_values(array_unique(array_map(
-                    fn($e) => strtolower(trim((string)$e)),
-                    $rawIncluded
-                ))));
-            }
+            $includedJson = $selection->draftFilter();
             $customForStorage = trim($customRecipientsRaw) !== '' ? $customRecipientsRaw : null;
             if ($draftId) {
                 $stmt = $pdo->prepare("
@@ -354,38 +312,7 @@ if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['act
     } elseif (in_array($_POST['action'], ['preview', 'test_send', 'send_blast'], true)) {
         try {
             $pdo = getDbConnection();
-            $recipients = fetchAudience($pdo, $audience);
-
-            // Apply per-recipient inclusion filter from the audience checkboxes.
-            // Marker hidden input distinguishes "user submitted an empty list (exclude everyone)"
-            // from "user never interacted with checkboxes (include everyone)".
-            $hasIncludeFilter = !empty($_POST['included_recipients_submitted'][$audience]);
-            if ($hasIncludeFilter) {
-                $rawIncluded = $_POST['included_recipients'][$audience] ?? [];
-                if (!is_array($rawIncluded)) $rawIncluded = [];
-                $includedSet = array_flip(array_map(
-                    fn($e) => strtolower(trim((string)$e)),
-                    $rawIncluded
-                ));
-                $recipients = array_values(array_filter($recipients, function ($r) use ($includedSet) {
-                    return isset($includedSet[strtolower(trim($r['email']))]);
-                }));
-            }
-
-            // Append custom recipients (admin-typed), deduped by email against the audience.
-            if (!empty($customRecipientsParsed)) {
-                $audienceEmailSet = array_flip(array_map(
-                    fn($r) => strtolower(trim($r['email'])),
-                    $recipients
-                ));
-                foreach ($customRecipientsParsed as $cr) {
-                    $key = strtolower(trim($cr['email']));
-                    if (!isset($audienceEmailSet[$key])) {
-                        $recipients[] = $cr;
-                        $audienceEmailSet[$key] = true;
-                    }
-                }
-            }
+            $recipients = $selection->resolveRecipients(fetchAudienceRows($pdo, $audience));
 
             $previewCount = count($recipients);
 
@@ -521,15 +448,12 @@ if ($authenticated && !$sampleMode) {
     }
 }
 
-$audienceCounts = [];
-$audienceRecipients = [];
+$guestPanels = [];
 if ($authenticated) {
     try {
         $pdo = getDbConnection();
-        foreach (array_keys($AUDIENCES) as $key) {
-            $recipients = fetchAudience($pdo, $key);
-            $audienceRecipients[$key] = $recipients;
-            $audienceCounts[$key] = count($recipients);
+        foreach (array_keys($GUEST_AUDIENCES) as $key) {
+            $guestPanels[$key] = $selection->guestPanel($key, fetchAudienceRows($pdo, $key));
         }
     } catch (Exception $e) {
         // ignore
@@ -1048,7 +972,7 @@ $page_title = "Announcements - Admin";
                     <h2>1. Pick an audience</h2>
                     <div class="audience-grid">
                         <?php foreach ($GUEST_AUDIENCES as $key => $label):
-                            $count = $audienceCounts[$key] ?? null;
+                            $count = isset($guestPanels[$key]) ? count($guestPanels[$key]['rows']) : null;
                             $selected = $audience === $key;
                         ?>
                             <label class="audience-option<?php echo $selected ? ' is-selected' : ''; ?>">
@@ -1067,7 +991,7 @@ $page_title = "Announcements - Admin";
                         <div class="audience-grid">
                             <?php foreach ($savedAudiences as $sa):
                                 $key = 'custom_' . $sa['id'];
-                                $count = count(parseCustomRecipients((string)$sa['custom_recipients']));
+                                $count = AnnouncementAudienceSelection::countCustomRecipients((string)$sa['custom_recipients']);
                                 $selected = $audience === $key;
                             ?>
                                 <div class="audience-option-row">
@@ -1095,31 +1019,23 @@ $page_title = "Announcements - Admin";
                             <input type="radio" name="audience" value="<?php echo htmlspecialchars($key); ?>"
                                    <?php echo $selected ? 'checked' : ''; ?>>
                             <span>Custom recipients only</span>
-                            <span class="count-badge"><?php echo isCustomAudienceKey($audience) ? count($customRecipientsParsed) : 0; ?></span>
+                            <span class="count-badge"><?php echo isCustomAudienceKey($audience) ? $customRecipientCount : 0; ?></span>
                         </label>
                     </div>
                     <p class="helper-text">Guest audiences count only guests with an email on file. Plus-ones share their primary guest's email. Choose "Custom recipients only" to type your own list, or pick a Saved audience to reuse one you've stored before.</p>
 
                     <?php foreach ($AUDIENCES as $key => $label):
-                        $recipients = $audienceRecipients[$key] ?? [];
-                        $count = count($recipients);
-                        $emailsCsv = implode(', ', array_map(function($r) { return $r['email']; }, $recipients));
-
-                        // Restore prior checkbox state if user has submitted this audience already,
-                        // OR if we're loading a draft whose audience matches this panel.
-                        $submittedIncluded = $_POST['included_recipients'][$key] ?? null;
-                        $hasSubmitted = is_array($submittedIncluded);
-                        if (!$hasSubmitted && $loadedDraftIncluded !== null && $key === $audience) {
-                            $submittedIncluded = $loadedDraftIncluded;
-                            $hasSubmitted = true;
-                        }
-                        $includedSet = $hasSubmitted
-                            ? array_flip(array_map(fn($e) => strtolower(trim((string)$e)), $submittedIncluded))
-                            : null;
+                        $panel = $guestPanels[$key] ?? $selection->guestPanel($key, []);
+                        $rows = $panel['rows'];
+                        $count = count($rows);
+                        $emailsCsv = implode(', ', array_map(fn($row) => $row['recipient']['email'], $rows));
                     ?>
                         <details class="audience-emails" data-audience="<?php echo htmlspecialchars($key); ?>"
                                  <?php echo $audience === $key ? '' : 'hidden'; ?>>
                             <summary>View email addresses in this audience (<?php echo (int)$count; ?>)</summary>
+                            <?php if (isset($GUEST_AUDIENCES[$key]) && ($count > 0 || $panel['hasExplicitFilter'])): ?>
+                                <input type="hidden" name="included_recipients_submitted[<?php echo htmlspecialchars($key); ?>]" value="1">
+                            <?php endif; ?>
                             <?php if ($count === 0): ?>
                                 <p class="helper-text" style="margin-top:0.75rem;">
                                     <?php if (isCustomAudienceKey($key)): ?>
@@ -1129,9 +1045,6 @@ $page_title = "Announcements - Admin";
                                     <?php endif; ?>
                                 </p>
                             <?php else: ?>
-                                <!-- Marker: tells the server that checkbox state for this audience was submitted (so empty = no one selected, vs no marker = include everyone). -->
-                                <input type="hidden" name="included_recipients_submitted[<?php echo htmlspecialchars($key); ?>]" value="1">
-
                                 <div class="audience-actions">
                                     <button type="button" class="btn-link" data-action="select-all" data-audience="<?php echo htmlspecialchars($key); ?>">Select all</button>
                                     <span class="action-sep">·</span>
@@ -1152,10 +1065,7 @@ $page_title = "Announcements - Admin";
                                             </tr>
                                         </thead>
                                         <tbody>
-                                        <?php foreach ($recipients as $r):
-                                            $emailLower = strtolower(trim($r['email']));
-                                            $checked = $hasSubmitted ? isset($includedSet[$emailLower]) : true;
-                                        ?>
+                                        <?php foreach ($rows as ['recipient' => $r, 'checked' => $checked]): ?>
                                             <tr<?php echo $checked ? '' : ' class="is-excluded"'; ?>>
                                                 <td style="text-align:center;">
                                                     <input type="checkbox"
@@ -1227,9 +1137,9 @@ $page_title = "Announcements - Admin";
                             This audience sends only to the addresses you type here.
                         </span>
                         Without a name, <code>{{first_name}}</code> falls back to "Friend".
-                        <?php if (!empty($customRecipientsParsed)): ?>
-                            <br><strong><?php echo count($customRecipientsParsed); ?></strong> valid address<?php
-                                echo count($customRecipientsParsed) === 1 ? '' : 'es'; ?> recognized.
+                        <?php if ($customRecipientCount > 0): ?>
+                            <br><strong><?php echo $customRecipientCount; ?></strong> valid address<?php
+                                echo $customRecipientCount === 1 ? '' : 'es'; ?> recognized.
                         <?php endif; ?>
                     </p>
 
@@ -1338,10 +1248,10 @@ $page_title = "Announcements - Admin";
                                     <?php
                                         $customRows = trim((string)($h['custom_recipients'] ?? ''));
                                         if ($customRows !== ''):
-                                            $parsedCustom = parseCustomRecipients($customRows);
+                                            $customHistoryCount = AnnouncementAudienceSelection::countCustomRecipients($customRows);
                                     ?>
                                         <details class="history-failed-list" style="margin-top:0.85rem;">
-                                            <summary style="color: var(--color-text-secondary);">Additional recipients (<?php echo count($parsedCustom); ?>)</summary>
+                                            <summary style="color: var(--color-text-secondary);">Additional recipients (<?php echo $customHistoryCount; ?>)</summary>
                                             <pre><?php echo htmlspecialchars($customRows); ?></pre>
                                         </details>
                                     <?php endif; ?>
