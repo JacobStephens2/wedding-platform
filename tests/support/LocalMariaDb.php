@@ -37,11 +37,11 @@ final class LocalMariaDb
         $root = $this->directory->path;
         $initializer = null;
         try {
-            $initializer = new OwnedProcess([$installer, '--no-defaults', '--datadir=' . $root . '/data',
+            $initializer = new OwnedProcess([$installer, '--no-defaults', '--datadir=' . $root . '/data', '--tmpdir=' . $root,
                 '--auth-root-authentication-method=socket', '--auth-root-socket-user=' . $this->username,
                 '--skip-test-db'], $root . '/install.log');
             $initializer->awaitExit();
-            $this->server = new OwnedProcess([$daemon, '--no-defaults', '--datadir=' . $root . '/data',
+            $this->server = new OwnedProcess([$daemon, '--no-defaults', '--datadir=' . $root . '/data', '--tmpdir=' . $root,
                 '--socket=' . $root . '/mysql.sock', '--pid-file=' . $root . '/mysql.pid',
                 '--skip-networking', '--default-time-zone=+00:00', '--innodb-buffer-pool-size=32M'], $root . '/server.log');
             // mariadb-install-db grants socket authentication to the installing OS user.

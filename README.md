@@ -69,6 +69,14 @@ For focused work run `vendor/bin/phpunit tests/GiftStatusTest.php` or
 also run `php -l public/admin-gifts.php` and
 `php -l public/api/toggle-gift-status.php`.
 
+The Announcements entrypoint tests use the same MariaDB and PHP prerequisites.
+For the confirmed Send check, install Node.js and Playwright. Run
+`npx playwright install chromium` where Playwright is installed to download its
+matching browser, or set `CHROMIUM_PATH` to an existing Chromium executable.
+From this checkout, run `node tests/announcement-send-browser.cjs`. Set
+`PLAYWRIGHT_MODULE` to the installed Playwright package path if Node cannot
+resolve it from this checkout.
+
 ## Tech Stack
 
 - **Backend**: PHP 8.3+ / Apache / MySQL 8
