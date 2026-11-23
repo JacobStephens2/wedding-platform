@@ -10,6 +10,7 @@ use DOMXPath;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Wedding\Tests\support\AnnouncementHttp;
+use Wedding\Tests\support\LocalHttpRequest;
 use Wedding\Tests\support\LocalMariaDb;
 
 final class AnnouncementEntrypointTest extends TestCase
@@ -19,6 +20,7 @@ final class AnnouncementEntrypointTest extends TestCase
 
     public static function setUpBeforeClass(): void
     {
+        LocalHttpRequest::requireCurl();
         self::$database = new LocalMariaDb();
         try {
             AnnouncementHttp::createSchema(self::$database);
@@ -216,9 +218,10 @@ final class AnnouncementEntrypointTest extends TestCase
     {
         $formPath = '//form[@id="blast-form"]';
         $form = $this->element($page, $formPath);
+        $submitter = $this->element($page, $formPath . '//button[@type="submit"][@value="' . $action . '"]');
         $query = $formPath . '//input[@name][not(@type="checkbox" or @type="radio") or @checked]'
             . ' | ' . $formPath . '//textarea[@name]';
-        $fields = ['action=' . urlencode($action)];
+        $fields = [urlencode($submitter->getAttribute('name')) . '=' . urlencode($submitter->getAttribute('value'))];
         foreach ($this->elements($page, $query) as $field) {
             $value = $field->tagName === 'textarea' ? $field->textContent : $field->getAttribute('value');
             $fields[] = urlencode($field->getAttribute('name')) . '=' . urlencode($value);
@@ -229,22 +232,8 @@ final class AnnouncementEntrypointTest extends TestCase
     /** @return array{status:int,body:string,headers:string} */
     private function request(string $path = '/admin-announcements', ?string $post = null): array
     {
-        $curl = curl_init($this->http->origin . $path);
-        self::assertNotFalse($curl);
-        try {
-            curl_setopt_array($curl, [CURLOPT_RETURNTRANSFER => true, CURLOPT_HEADER => true,
-                CURLOPT_COOKIE => AnnouncementHttp::SESSION_COOKIE, CURLOPT_TIMEOUT => 5, CURLOPT_PROXY => '']);
-            if ($post !== null) {
-                curl_setopt($curl, CURLOPT_POSTFIELDS, $post);
-            }
-            $response = curl_exec($curl);
-            self::assertIsString($response, curl_error($curl));
-            $headerSize = curl_getinfo($curl, CURLINFO_HEADER_SIZE);
-            return ['status' => curl_getinfo($curl, CURLINFO_HTTP_CODE),
-                'body' => substr($response, $headerSize), 'headers' => substr($response, 0, $headerSize)];
-        } finally {
-            curl_close($curl);
-        }
+        return LocalHttpRequest::send($this->http->origin . $path, $post === null ? 'GET' : 'POST', $post ?? '',
+            ['Cookie: ' . AnnouncementHttp::SESSION_COOKIE]);
     }
 
     private function element(DOMXPath $page, string $query): DOMElement

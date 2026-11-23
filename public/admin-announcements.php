@@ -1336,8 +1336,11 @@ $page_title = "Announcements - Admin";
                             e.preventDefault();
                             return;
                         }
-                        sendBtn.disabled = true;
-                        sendBtn.textContent = 'Sending… (do not close this tab)';
+                        // Keep the submitter enabled until the browser includes its action in the form data.
+                        form.addEventListener('formdata', function () {
+                            sendBtn.disabled = true;
+                            sendBtn.textContent = 'Sending… (do not close this tab)';
+                        }, { once: true });
                     });
                 })();
 
