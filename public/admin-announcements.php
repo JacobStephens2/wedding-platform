@@ -201,6 +201,37 @@ $audienceName = trim((string)($_POST['audience_name'] ?? ($activeSavedAudience['
 $recipientsPreview = null;
 $previewCount = null;
 
+// Same request verification Gift status uses, before any announcement change.
+if ($authenticated && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $postedAction = $_POST['action'] ?? null;
+    $changesAnnouncement = is_string($postedAction) && in_array($postedAction, [
+        'save_draft', 'delete_draft', 'save_audience', 'preview', 'test_send', 'send_blast',
+    ], true);
+    $deletesSavedAudience = isset($_POST['delete_audience_id'])
+        && ctype_digit((string) $_POST['delete_audience_id']);
+    if ($changesAnnouncement || $deletesSavedAudience) {
+        $submittedToken = is_string($_POST['csrf_token'] ?? null) ? $_POST['csrf_token'] : '';
+        $rejection = adminVerifyRequest($submittedToken);
+        if ($rejection !== null) {
+            http_response_code(403);
+            ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forbidden - Announcements</title>
+</head>
+<body>
+    <p><?php echo htmlspecialchars($rejection, ENT_QUOTES, 'UTF-8'); ?>. <a href="/admin-announcements">Return to Announcements</a>.</p>
+</body>
+</html>
+<?php
+            exit;
+        }
+    }
+}
+
 // Draft save/delete actions (handled before preview/test/send so they can short-circuit).
 if ($authenticated && !$sampleMode && $_SERVER['REQUEST_METHOD'] === 'POST'
     && isset($_POST['action']) && in_array($_POST['action'], ['save_draft', 'delete_draft'], true)
@@ -460,6 +491,7 @@ if ($authenticated) {
     }
 }
 
+$csrfToken = $authenticated ? adminCsrf()->token() : '';
 $page_title = "Announcements - Admin";
 ?>
 <!DOCTYPE html>
@@ -953,6 +985,7 @@ $page_title = "Announcements - Admin";
                                     <input type="hidden" name="action" value="delete_draft">
                                     <input type="hidden" name="draft_id" value="<?php echo (int)$d['id']; ?>">
                                     <input type="hidden" name="audience" value="<?php echo htmlspecialchars($d['audience']); ?>">
+                                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
                                     <button type="submit" class="btn-link btn-link-danger" aria-label="Delete draft">Delete</button>
                                 </form>
                             </li>
@@ -963,6 +996,7 @@ $page_title = "Announcements - Admin";
 
             <form method="POST" action="/admin-announcements<?php echo $sampleMode ? '?sample=1' : ''; ?>" id="blast-form">
                 <input type="hidden" name="draft_id" value="<?php echo $draftId ? (int)$draftId : ''; ?>">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
                 <?php if ($draftId): ?>
                     <div class="alert alert-info" style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
                         <span>Editing draft <strong>#<?php echo (int)$draftId; ?></strong>. Saving will overwrite it. <a href="/admin-announcements">Start a new draft</a> instead.</span>
